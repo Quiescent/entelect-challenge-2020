@@ -6,10 +6,10 @@
 (in-package :bot.sys)
 
 (defsystem :bot
-  :name "Bot"
-  :author "John Doe"
+  :name "Quantum"
+  :author "Edward Steere"
   :version "0.0.1"
-  :maintainer "john.doe@john.com"
+  :maintainer "edward.steere@gmail.com"
   :license "BSD"
   :description "Entellect challenge bot"
   :long-description "Bot for the Entellect Challenge"

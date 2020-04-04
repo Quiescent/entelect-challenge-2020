@@ -1,7 +1,7 @@
 {
-	"author":"John Doe",
-	"email":"john.doe@example.com",
-	"nickName" :"Brendan",
+	"author":"Edward Steere",
+	"email":"edward.steere@gmail.com",
+	"nickName" :"Quantum",
 	"botLocation": "/",
 	"botFileName": "bot",
 	"botLanguage": "LISP"
