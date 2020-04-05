@@ -13,7 +13,7 @@
   :license "BSD"
   :description "Entellect challenge bot"
   :long-description "Bot for the Entellect Challenge"
-  :depends-on (:yason :cl-ppcre :iterate)
+  :depends-on (:yason :cl-ppcre :iterate :metabang-bind)
   :components ((:file "bot" :depends-on ("state" "package"))
                (:file "state" :depends-on ("parsing" "package"))
                (:file "parsing" :depends-on ("package"))

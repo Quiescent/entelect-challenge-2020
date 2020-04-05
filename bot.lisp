@@ -5,13 +5,55 @@
      for round-number = (read-line)
      for state = (load-state-file round-number)
      for map = (rows state)
-     for (my-pos . opponent-pos) = (positions state)
-     for move = (determine-move map my-pos opponent-pos)
+     for (my-pos . _) = (positions state)
+     for boosting = (im-boosting state)
+     for boosts = (my-boosts state)
+     for move = (determine-move map my-pos boosting boosts)
      do (format t "C;~a;~a" (current-round state) move)))
 
-(defun determine-move (game-map my-pos opponent-pos)
-  "Produce the best move for GAME-MAP, given MY-POS and OPPONENT-POS."
-  'accelerate)
+(defmacro deep-accessor (object &rest nested-slots)
+  "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
+  (reduce (lambda (result next-name) `(slot-value ,result ,next-name))
+          (reverse (cdr nested-slots))
+          :initial-value `(slot-value ,object ,(car nested-slots))))
+
+(defmethod im-boosting ((this state))
+  "Produce t if im currently boosting in THIS state."
+  (deep-accessor this 'player 'boosting))
+
+(defmethod my-boosts ((this state))
+  "Produce the number of boosts which I have in THIS state."
+  (deep-accessor this 'player 'boost-counter))
+
+(defun determine-move (game-map my-pos boosting boosts)
+  "Produce the best move for GAME-MAP.
+
+Given that I'm at MY-POS, whether I'm BOOSTING and how many BOOSTS I
+have left."
+  (bind (((x y)      my-pos)
+         (speed-up   (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
+         (speed-down (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
+         (no-boosts  (< boosts 1)))
+    (cond
+      ((and (not boosting) boosts) 'boost)
+      ((and no-boosts speed-up)    'turn-left)
+      ((and no-boosts speed-down)  'turn-right)
+      (t                           'accelerate))))
+
+(defconstant row-length 26
+  "The number of squares visible in a row.")
+
+(defun mud-ahead-of (game-map x y)
+  "Produce the count of mud on GAME-MAP ahead of (X, Y)."
+  (iter
+    (for i from x below row-length)
+    (counting (eq 'mud (aref game-map y i)))))
+
+(defun speed-ahead-of (game-map x y)
+  "Produce the count of boosts on GAME-MAP ahead of (X, Y)."
+  (iter
+    (for i from x below row-length)
+    (counting (eq 'boost (aref game-map y i)))))
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
@@ -43,12 +85,6 @@
               (4 'finish-line)
               (5 'boost))))
     (finally (return result))))
-
-(defmacro deep-accessor (object &rest nested-slots)
-  "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
-  (reduce (lambda (result next-name) `(slot-value ,result ,next-name))
-          (reverse (cdr nested-slots))
-          :initial-value `(slot-value ,object ,(car nested-slots))))
 
 (defmethod position-to-cons ((this map-position))
   "Produce a cons cell of postions from THIS position."
