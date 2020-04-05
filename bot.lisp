@@ -1,15 +1,20 @@
 (in-package :bot)
 
 (defun main () 
-  (loop while t
-     for round-number = (read-line)
-     for state = (load-state-file round-number)
-     for map = (rows state)
-     for (my-pos . _) = (positions state)
-     for boosting = (im-boosting state)
-     for boosts = (my-boosts state)
-     for move = (determine-move map my-pos boosting boosts)
-     do (format t "C;~a;~a" (current-round state) move)))
+  (iter
+    (while t)
+    (for round-number = (read-line))
+    (for move = (move-for-round round-number))
+    (format t "C;~a;~a~%" round-number move)))
+
+(defun move-for-round (round-number)
+  "Produce a move which is appropriate for ROUND-NUMBER."
+  (bind ((state  (load-state-file round-number))
+         (map  (rows state))
+         ((my-pos . _)  (positions state))
+         (boosting  (im-boosting state))
+         (boosts  (my-boosts state)))
+    (determine-move map my-pos boosting boosts)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -23,22 +28,24 @@
 
 (defmethod my-boosts ((this state))
   "Produce the number of boosts which I have in THIS state."
-  (deep-accessor this 'player 'boost-counter))
+  (- (count-if (lambda (x) (string-equal x "BOOST"))
+               (deep-accessor this 'player 'powerups))
+     (deep-accessor this 'player 'boost-counter)))
 
 (defun determine-move (game-map my-pos boosting boosts)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING and how many BOOSTS I
 have left."
-  (bind (((x y)      my-pos)
+  (bind (((x . y)    my-pos)
          (speed-up   (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
          (speed-down (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
          (no-boosts  (< boosts 1)))
     (cond
-      ((and (not boosting) boosts) 'boost)
-      ((and no-boosts speed-up)    'turn-left)
-      ((and no-boosts speed-down)  'turn-right)
-      (t                           'accelerate))))
+      ((and (not boosting) (> boosts 0))     'use_boost)
+      ((and no-boosts      (> speed-up 0))   'turn_left)
+      ((and no-boosts      (> speed-down 0)) 'turn_right)
+      (t                                     'accelerate))))
 
 (defconstant row-length 26
   "The number of squares visible in a row.")
@@ -46,13 +53,13 @@ have left."
 (defun mud-ahead-of (game-map x y)
   "Produce the count of mud on GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below row-length)
+    (for i from x below (array-dimension game-map 1))
     (counting (eq 'mud (aref game-map y i)))))
 
 (defun speed-ahead-of (game-map x y)
   "Produce the count of boosts on GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below row-length)
+    (for i from x below (array-dimension game-map 1))
     (counting (eq 'boost (aref game-map y i)))))
 
 (defun load-state-file (round)
@@ -93,5 +100,20 @@ have left."
 
 (defmethod positions ((this state))
   "Produce the player positions in THIS state."
-  (cons (position-to-cons (deep-accessor this 'player   'map-position))
-        (position-to-cons (deep-accessor this 'opponent 'map-position))))
+  (bind ((min-x (minimum-x this)))
+    (cons (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'player   'map-position))))
+          (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'opponent 'map-position)))))))
+
+(defun to-zero-indexed (x-y)
+  "Produce a zero-indexed version of X-Y."
+  (bind (((x . y) x-y))
+    (cons (1- x) (1- y))))
+
+(defun subtract-x (x x-y)
+  "Produce (X, Y) shifted left by X."
+  (cons (- (car x-y) x) (cdr x-y)))
+
+(defmethod minimum-x ((this state))
+  "Produce the minimum value of x in the map in THIS state."
+  (1- (deep-accessor (aref (aref (slot-value this 'world-map) 0) 0)
+                     'map-position 'x)))
