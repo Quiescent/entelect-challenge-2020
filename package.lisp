@@ -1,5 +1,5 @@
 (defpackage :bot
-  (:use :cl :yason)
+  (:use :cl :yason :iterate)
   (:export #:main
            #:define-poclo
            #:camel-case
