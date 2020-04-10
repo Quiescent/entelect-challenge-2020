@@ -12,7 +12,6 @@ set -e
 
 SCRIPT_BACKUP_DIRECTORY=script_bin
 GIT_ROOT=$(git rev-parse --show-toplevel)
-CURRENT_VERSION=$(git rev-parse HEAD)
 
 function list_tags() {
     git tags -v
@@ -38,29 +37,8 @@ function tracked_by_git() {
     echo $?
 }
 
-function run_matches() {
-    VERSIONS_TO_RUN=$(git tag)
-    pushd $GIT_ROOT
-    mkdir -p "bots/$CURRENT_VERSION"
-    cp bot.json "bots/$CURRENT_VERSION"
-    for version in $VERSIONS_TO_RUN; do
-        BOT_DIRECTORY="bots/$version"
-        mkdir -p $BOT_DIRECTORY
-        cp bot.json $BOT_DIRECTORY
-        git checkout "tags/$version"
-        make
-        cp bot $BOT_DIRECTORY
-    done
-    popd
-    git checkout "$CURRENT_VERSION"
-    python3 run-against-versions.py "$CURRENT_VERSION" $VERSIONS_TO_RUN
-}
-
 function main() {
-    if [ ! -z "$(git status --porcelain)" ]; then
-        echo "Error: Will only run on a clean repo."
-        echo "Please commit your changes!"
-    elif [[ "$(pwd)" != "$GIT_ROOT"* ]]; then
+    if [[ "$(pwd)" != "$GIT_ROOT"* ]]; then
         echo "Error: Not in the project repo."
         echo "Please run this script from there."
     elif [ -z "$1" ]; then
@@ -73,7 +51,7 @@ function main() {
         backup_scripts
         run_in_backup
     else
-        echo "> Running from backup directory..."
+        echo "> In backup already..."
     fi
 }
 
