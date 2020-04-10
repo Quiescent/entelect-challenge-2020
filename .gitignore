@@ -7,3 +7,6 @@ bot
 
 # Runs of game
 rounds
+
+# Previous bots
+bots/
