@@ -10,3 +10,6 @@ rounds
 
 # Previous bots
 bots/
+
+# Temp script bin
+script_bin/*

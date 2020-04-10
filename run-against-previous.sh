@@ -74,6 +74,7 @@ function main() {
         run_in_backup
     else
         echo "> Running from backup directory..."
+        run_matches
     fi
 }
 
