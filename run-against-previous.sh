@@ -38,20 +38,25 @@ function tracked_by_git() {
     echo $?
 }
 
+function build_bot_if_not_cached() {
+    BOT_DIRECTORY=$1
+    VERSION=$2
+
+    mkdir -p "$BOT_DIRECTORY"
+    cp bot.json "$BOT_DIRECTORY"
+    if [ ! -f "$BOT_DIRECTORY/bot" ]; then
+        git checkout "$VERSION"
+        make
+        cp bot "$BOT_DIRECTORY"
+    fi
+}
+
 function run_matches() {
     VERSIONS_TO_RUN=$(git tag)
     pushd $GIT_ROOT
-    mkdir -p "bots/$CURRENT_VERSION"
-    make
-    cp bot "bots/$CURRENT_VERSION"
-    cp bot.json "bots/$CURRENT_VERSION"
-    for version in $VERSIONS_TO_RUN; do
-        BOT_DIRECTORY="bots/$version"
-        mkdir -p $BOT_DIRECTORY
-        cp bot.json $BOT_DIRECTORY
-        git checkout "tags/$version"
-        make
-        cp bot $BOT_DIRECTORY
+    build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
+    for VERSION in $VERSIONS_TO_RUN; do
+        build_bot_if_not_cached "bots/$VERSION" "tags/$VERSION"
     done
     popd
     git checkout "master"
