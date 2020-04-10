@@ -42,6 +42,8 @@ function run_matches() {
     VERSIONS_TO_RUN=$(git tag)
     pushd $GIT_ROOT
     mkdir -p "bots/$CURRENT_VERSION"
+    make
+    cp bot "bots/$CURRENT_VERSION"
     cp bot.json "bots/$CURRENT_VERSION"
     for version in $VERSIONS_TO_RUN; do
         BOT_DIRECTORY="bots/$version"
@@ -52,7 +54,7 @@ function run_matches() {
         cp bot $BOT_DIRECTORY
     done
     popd
-    git checkout "$CURRENT_VERSION"
+    git checkout "master"
     python3 run-against-versions.py "$CURRENT_VERSION" $VERSIONS_TO_RUN
 }
 
