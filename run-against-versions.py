@@ -10,8 +10,9 @@ def main(argv):
 
 def usage():
     """Print a usage help string."""
-    sys.stderr.writelines("""Usage:
-./run-against-versions <main-version> <other-version> [other-versions..]""")
+    sys.stderr.write("Usage:\n")
+    sys.stderr.write("\t./run-against-versions <main-version> <other-version> [other-versions..]\n")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
