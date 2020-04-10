@@ -51,12 +51,17 @@ function build_bot_if_not_cached() {
     fi
 }
 
+function change_bot_name() {
+    sed -i "s/Quantum/$2/g" "$1/bot.json"
+}
+
 function run_matches() {
     VERSIONS_TO_RUN=$(git tag)
     pushd $GIT_ROOT
     build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
     for VERSION in $VERSIONS_TO_RUN; do
         build_bot_if_not_cached "bots/$VERSION" "tags/$VERSION"
+        change_bot_name "bots/$VERSION" "tags/$VERSION"
     done
     popd
     git checkout "master"
