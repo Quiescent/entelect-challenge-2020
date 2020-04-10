@@ -59,9 +59,9 @@ function run_matches() {
     VERSIONS_TO_RUN=$(git tag)
     pushd $GIT_ROOT
     build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
-    for VERSION in $VERSIONS_TO_RUN; do
-        build_bot_if_not_cached "bots/$VERSION" "tags/$VERSION"
-        change_bot_name "bots/$VERSION" "tags/$VERSION"
+    for BOT_VERSION in $VERSIONS_TO_RUN; do
+        build_bot_if_not_cached "bots/$BOT_VERSION" "tags/$BOT_VERSION"
+        change_bot_name "bots/$BOT_VERSION" "$BOT_VERSION"
     done
     popd
     git checkout "master"
