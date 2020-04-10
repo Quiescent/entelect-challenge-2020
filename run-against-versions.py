@@ -6,7 +6,9 @@ def main(argv):
     """Run the version specified by the first argument against others."""
     if len(argv) < 2:
         usage()
-    print("Ran!")
+    base_version = argv[1]
+    other_versions = argv[2:]
+    print("python> Running %s against %s" % (base_version, other_versions))
 
 def usage():
     """Print a usage help string."""
