@@ -3,8 +3,11 @@
 import sys
 import json
 import subprocess
+import os
+from pathlib import Path
 
 GAME_RUNNER_DIRECTORY = "../../EntelectChallenge-2020-Overdrive/game-runner"
+GAME_RUNNER_MATCH_PATH = "%s/match-logs" % GAME_RUNNER_DIRECTORY
 GAME_RUNNER_CONFIG_PATH = "%s/game-runner-config.json" % GAME_RUNNER_DIRECTORY
 BOT_PATH_FROM_GAME_RUNNER = "../../entelect-challenge-2020/bots"
 MATCHES_TO_RUN = 5
@@ -76,7 +79,20 @@ def store_match_result(result, bot_1, bot_2, match_record):
 
 def check_latest_match_result():
     """Produce TRUE if player 1 won the last run match."""
-    return True  # TODO Implement
+    paths = sorted(
+        Path(GAME_RUNNER_MATCH_PATH).iterdir(),
+        key=os.path.getmtime)
+    paths.reverse()
+    latest_match_dir = paths[0]
+    last_round = max((int(dir[6:])
+                      for dir in os.listdir(latest_match_dir)
+                      if 'Round' in dir))
+    last_round_dir = "%s/Round %s" % (latest_match_dir, last_round)
+    with open("%s/endGameState.txt" % last_round_dir, 'r') as file:
+        for line in file:
+            if "The winner is: A - Quantum" in line:
+                return True
+    return False
 
 
 def run_one_match(bot_1, bot_2, match_record):
