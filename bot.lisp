@@ -71,6 +71,11 @@ To terminate the tree you must supply a symbol, otherwise it's assumed
 that you're supplying the next condition."
   (decision-tree-iter forms))
 
+#+nil
+(decision-tree
+ ((< 2 3) ((eq 2 2) 'blah)
+          (nil 'haha)))
+
 (defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
 
