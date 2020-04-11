@@ -57,15 +57,12 @@ NOTE: Implementation detail of `logging-cond."
   "Iteratively transform FORMS into a series of nested conds.
 
 NOTE: This is an implementation detail for `decision-tree'."
-  (progn
-    (format t "Forms: ~s~%" forms)
-    (logging-cond-iter (mapcar (lambda (form) (progn
-                                           (format t "Form: ~s~%" form)
-                                           ;; WAT.  Meditate upon this strangeness...
-                                           (if (symbolp (caddr form))
-                                               (progn (format t "Here~%") form)
-                                               `(,(car form) ,(decision-tree-iter (cdr form))))))
-                          forms))))
+  (logging-cond-iter (mapcar (lambda (form) (progn
+                                              ;; WAT.  Meditate upon this strangeness...
+                                              (if (symbolp (caddr form))
+                                                  form
+                                                  `(,(car form) ,(decision-tree-iter (cdr form))))))
+                             forms)))
 
 (defmacro decision-tree (&rest forms)
   "Create a series of nested conds from FORMS.
