@@ -49,22 +49,47 @@
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left and the SPEED at which I'm going."
-  (bind (((x . y)    my-pos)
-         (speed-up   (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
-         (speed-down (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
-         (speed-here (speed-ahead-of game-map x y))
-         (gap-here   (gap-ahead-of speed game-map x y))
-         (gap-up     (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
-         (gap-down   (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
-         (no-boosts  (< boosts 1)))
+  (bind (((x . y)           my-pos)
+         (mud-here          (mud-ahead-of game-map x y))
+         (mud-up            (if (> y 0) (mud-ahead-of game-map x (1- y)) 0))
+         (mud-down          (if (< y 3) (mud-ahead-of game-map x (1+ y)) 0))
+         (too-much-mud-here (>= 3 mud-here))
+         (too-much-mud-up   (>= 3 mud-up))
+         (too-much-mud-down (>= 3 mud-down))
+         (speed-up          (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
+         (speed-down        (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
+         (speed-here        (speed-ahead-of game-map x y))
+         (gap-here          (gap-ahead-of speed game-map x y))
+         (gap-up            (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
+         (gap-down          (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
+         (no-boosts         (< boosts 1)))
     (logging-cond
-     ((and (not boosting) (> boosts 0) (or gap-here (not (or gap-up gap-down)))) 'use_boost)
-     ((and no-boosts      (> speed-here 0))                                      'accelerate)
-     ((and no-boosts      (> speed-up 0))                                        'turn_left)
-     ((and no-boosts      (> speed-down 0))                                      'turn_right)
-     ((and gap-up (not gap-here))                                                'turn_left)
-     ((and gap-down (not gap-here))                                              'turn_right)
-     (t                                                                          'accelerate))))
+     ((and (not boosting)
+           (not too-much-mud-here)
+           (> boosts 0)
+           (or gap-here (not (or gap-up gap-down))))
+      'use_boost)
+     ((and no-boosts
+           (not too-much-mud-here)
+           (> speed-here 0))
+      'accelerate)
+     ((and no-boosts
+           (not too-much-mud-up)
+           (> speed-up 0))
+      'turn_left)
+     ((and no-boosts
+           (not too-much-mud-down)
+           (> speed-down 0))
+      'turn_right)
+     ((and gap-up
+           (not too-much-mud-up)
+           (not gap-here))
+      'turn_left)
+     ((and gap-down
+           (not too-much-mud-down)
+           (not gap-here))
+      'turn_right)
+     (t 'accelerate))))
 
 (defun gap-ahead-of (speed game-map x y)
   "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."

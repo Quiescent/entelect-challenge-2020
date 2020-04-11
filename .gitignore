@@ -13,3 +13,7 @@ bots/
 
 # Temp script bin
 script_bin/*
+
+# Temp/editting
+.slime-history.eld
+scratch/
