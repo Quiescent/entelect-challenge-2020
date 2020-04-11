@@ -1,6 +1,6 @@
 (in-package :bot)
 
-(defun main () 
+(defun main ()
   (iter
     (while t)
     (for round-number = (read-line))
@@ -37,6 +37,13 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
+(defmacro logging-cond (&rest forms)
+  "Print the condition which ended up being true in cond."
+  `(cond
+     ,@(mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
+                                              ,(cadr form))))
+               forms)))
+
 (defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
 
@@ -50,14 +57,14 @@ left and the SPEED at which I'm going."
          (gap-up     (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
          (gap-down   (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
          (no-boosts  (< boosts 1)))
-    (cond
-      ((and (not boosting) (> boosts 0) (or gap-here (not (or gap-up gap-down)))) (progn (print 0 *error-output*) 'use_boost))
-      ((and no-boosts      (> speed-here 0))                                      (progn (print 1 *error-output*) 'accelerate))
-      ((and no-boosts      (> speed-up 0))                                        (progn (print 2 *error-output*) 'turn_left))
-      ((and no-boosts      (> speed-down 0))                                      (progn (print 3 *error-output*) 'turn_right))
-      ((and gap-up (not gap-here))                                                (progn (print 4 *error-output*) 'turn_left))
-      ((and gap-down (not gap-here))                                              (progn (print 5 *error-output*) 'turn_right))
-      (t                                                                          (progn (print 6 *error-output*) 'accelerate)))))
+    (logging-cond
+     ((and (not boosting) (> boosts 0) (or gap-here (not (or gap-up gap-down)))) 'use_boost)
+     ((and no-boosts      (> speed-here 0))                                      'accelerate)
+     ((and no-boosts      (> speed-up 0))                                        'turn_left)
+     ((and no-boosts      (> speed-down 0))                                      'turn_right)
+     ((and gap-up (not gap-here))                                                'turn_left)
+     ((and gap-down (not gap-here))                                              'turn_right)
+     (t                                                                          'accelerate))))
 
 (defun gap-ahead-of (speed game-map x y)
   "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
