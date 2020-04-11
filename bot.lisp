@@ -9,12 +9,13 @@
 
 (defun move-for-round (round-number)
   "Produce a move which is appropriate for ROUND-NUMBER."
-  (bind ((state  (load-state-file round-number))
-         (map  (rows state))
+  (bind ((state         (load-state-file round-number))
+         (map           (rows state))
          ((my-pos . _)  (positions state))
-         (boosting  (im-boosting state))
-         (boosts  (my-boosts state)))
-    (determine-move map my-pos boosting boosts)))
+         (boosting      (im-boosting state))
+         (boosts        (my-boosts state))
+         (speed         (my-speed state)))
+    (determine-move map my-pos boosting boosts speed)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -32,20 +33,35 @@
                (deep-accessor this 'player 'powerups))
      (deep-accessor this 'player 'boost-counter)))
 
-(defun determine-move (game-map my-pos boosting boosts)
+(defmethod my-speed ((this state))
+  "Produce the which I'm going in THIS state."
+  (deep-accessor this 'player 'player-speed))
+
+(defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
 
-Given that I'm at MY-POS, whether I'm BOOSTING and how many BOOSTS I
-have left."
+Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
+left and the SPEED at which I'm going."
   (bind (((x . y)    my-pos)
          (speed-up   (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
          (speed-down (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
+         (gap-here   (gap-ahead-of speed game-map x y))
+         (gap-up     (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
+         (gap-down   (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
          (no-boosts  (< boosts 1)))
     (cond
-      ((and (not boosting) (> boosts 0))     'use_boost)
-      ((and no-boosts      (> speed-up 0))   'turn_left)
-      ((and no-boosts      (> speed-down 0)) 'turn_right)
-      (t                                     'accelerate))))
+      ((and (not boosting) (> boosts 0) (or gap-here (not (or gap-up gap-down)))) (progn (print 0 *error-output*) 'use_boost))
+      ((and no-boosts      (> speed-up 0))                                        (progn (print 1 *error-output*) 'turn_left))
+      ((and no-boosts      (> speed-down 0))                                      (progn (print 2 *error-output*) 'turn_right))
+      ((and gap-up (not gap-here))                                                (progn (print 3 *error-output*) 'turn_left))
+      ((and gap-down (not gap-here))                                              (progn (print 4 *error-output*) 'turn_right))
+      (t                                                                          (progn (print 5 *error-output*) 'accelerate)))))
+
+(defun gap-ahead-of (speed game-map x y)
+  "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
+  (iter
+    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
+    (counting (not (eq 'mud (aref game-map y i))))))
 
 (defconstant row-length 26
   "The number of squares visible in a row.")
