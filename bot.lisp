@@ -37,12 +37,42 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
-(defmacro logging-cond (&rest forms)
-  "Print the condition which ended up being true in cond."
+(defun logging-cond-iter (forms)
+  "Wrap forms in a `cond' and print the condition which succeeded.
+
+NOTE: Implementation detail of `logging-cond."
   `(cond
      ,@(mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
                                               ,(cadr form))))
                forms)))
+
+(defmacro logging-cond (&rest forms)
+  "Wrap forms in a `cond' and print the condition which succeeded."
+  `(cond
+     ,@(mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
+                                              ,(cadr form))))
+               forms)))
+
+(defun decision-tree-iter (forms)
+  "Iteratively transform FORMS into a series of nested conds.
+
+NOTE: This is an implementation detail for `decision-tree'."
+  (progn
+    (format t "Forms: ~s~%" forms)
+    (logging-cond-iter (mapcar (lambda (form) (progn
+                                           (format t "Form: ~s~%" form)
+                                           ;; WAT.  Meditate upon this strangeness...
+                                           (if (symbolp (caddr form))
+                                               (progn (format t "Here~%") form)
+                                               `(,(car form) ,(decision-tree-iter (cdr form))))))
+                          forms))))
+
+(defmacro decision-tree (&rest forms)
+  "Create a series of nested conds from FORMS.
+
+To terminate the tree you must supply a symbol, otherwise it's assumed
+that you're supplying the next condition."
+  (decision-tree-iter forms))
 
 (defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
@@ -81,11 +111,11 @@ left and the SPEED at which I'm going."
            (not too-much-mud-down)
            (> speed-down 0))
       'turn_right)
-     ((and gap-up
+     ((and (or gap-up too-much-mud-here)
            (not too-much-mud-up)
            (not gap-here))
       'turn_left)
-     ((and gap-down
+     ((and (or gap-down too-much-mud-here)
            (not too-much-mud-down)
            (not gap-here))
       'turn_right)
