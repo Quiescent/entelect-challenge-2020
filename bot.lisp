@@ -37,44 +37,63 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
+(defun first-success (result form)
+  "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
+  `(or ,result
+       (if ,(car form)
+           ,(cadr form))))
+
+#+nil
+(first-success 't '((eq 2 3) blah))
+
 (defun logging-cond-iter (forms)
   "Wrap forms in a `cond' and print the condition which succeeded.
 
 NOTE: Implementation detail of `logging-cond."
-  `(cond
-     ,@(mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
-                                              ,(cadr form))))
-               forms)))
+  `(,@(reduce #'first-success
+              (mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
+                                                          ,(cadr form))))
+                      forms)
+              :initial-value nil)))
 
 (defmacro logging-cond (&rest forms)
   "Wrap forms in a `cond' and print the condition which succeeded."
-  `(cond
-     ,@(mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
-                                              ,(cadr form))))
-               forms)))
+  (logging-cond-iter forms))
+
+#+nil
+(logging-cond
+ ((t 3))
+ ((eq 3 5) 4))
 
 (defun decision-tree-iter (forms)
   "Iteratively transform FORMS into a series of nested conds.
 
 NOTE: This is an implementation detail for `decision-tree'."
-  (logging-cond-iter (mapcar (lambda (form) (progn
-                                              ;; WAT.  Meditate upon this strangeness...
-                                              (if (symbolp (caddr form))
-                                                  form
-                                                  `(,(car form) ,(decision-tree-iter (cdr form))))))
+  (logging-cond-iter (mapcar (lambda (form)
+                               (progn
+                                 (when (equal 'quote (car form))
+                                   (error "Use unquoted symbol to terminate a tree!"))
+                                 (if (symbolp (cadr form))
+                                     (list (car form) `(quote ,@(cdr form)))
+                                     `(,(car form) ,(decision-tree-iter (cdr form))))))
                              forms)))
 
 (defmacro decision-tree (&rest forms)
   "Create a series of nested conds from FORMS.
 
-To terminate the tree you must supply a symbol, otherwise it's assumed
-that you're supplying the next condition."
+To terminate the tree you must supply an unquoted symbol, otherwise
+it's assumed that you're supplying the next condition."
   (decision-tree-iter forms))
 
 #+nil
 (decision-tree
- ((< 2 3) ((eq 2 2) 'blah)
-          (nil 'haha)))
+ ((< 2 3) ((eq 2 2) blah)
+          ((eq 3 4) haha)))
+
+;; Errors out deliberately...
+#+nil
+(decision-tree
+ ((< 2 3) ((eq 2 2) 'blah)))
 
 (defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
@@ -95,33 +114,32 @@ left and the SPEED at which I'm going."
          (gap-up            (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
          (gap-down          (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
          (no-boosts         (< boosts 1)))
-    (logging-cond
-     ((and (not boosting)
-           (not too-much-mud-here)
-           (> boosts 0)
-           (or gap-here (not (or gap-up gap-down))))
-      'use_boost)
+    (decision-tree
+     ((not boosting)
+      ((not too-much-mud-here)
+       ((> boosts 0)
+        ((or gap-here (not (or gap-up gap-down))) use_boost))))
      ((and no-boosts
            (not too-much-mud-here)
            (> speed-here 0))
-      'accelerate)
+      accelerate)
      ((and no-boosts
            (not too-much-mud-up)
            (> speed-up 0))
-      'turn_left)
+      turn_left)
      ((and no-boosts
            (not too-much-mud-down)
            (> speed-down 0))
-      'turn_right)
+      turn_right)
      ((and (or gap-up too-much-mud-here)
            (not too-much-mud-up)
            (not gap-here))
-      'turn_left)
+      turn_left)
      ((and (or gap-down too-much-mud-here)
            (not too-much-mud-down)
            (not gap-here))
-      'turn_right)
-     (t 'accelerate))))
+      turn_right)
+     (t accelerate))))
 
 (defun gap-ahead-of (speed game-map x y)
   "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
