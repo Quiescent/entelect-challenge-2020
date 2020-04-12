@@ -104,11 +104,12 @@ left and the SPEED at which I'm going."
     (progn
       ;; (format t "States: ~s~%" end-states)
       ;; (format t "far-move: ~s ~s ~s" far-x far-speed far-boosts)
-      (decision-tree
-       ((> (+ fast-speed fast-x)
-           (+ far-speed  far-x))
-        fast-move)
-       (t far-move)))))
+      ;; (decision-tree
+      ;;  ((> (+ fast-speed fast-x)
+      ;;      (+ far-speed  far-x))
+      ;;   fast-move)
+      ;;  (t far-move))
+      far-move)))
 
 (defun best-by-speed (end-states)
   "Produce the best of END-STATES by the final speed."
