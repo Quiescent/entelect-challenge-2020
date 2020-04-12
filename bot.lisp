@@ -102,24 +102,29 @@ left and the SPEED at which I'm going."
          (fewest-moves                              (only-shortest-path-length end-states))
          ((fast-move fast-x fast-speed fast-boosts) (best-by-speed fewest-moves))
          ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  fewest-moves))
-         (boosting-at-end                           (only-boosting-at-end end-states))
-         (best-speed-boosting                       (best-by-speed fewest-moves))
+         (shortest-allowable                        (1+ (length (caar fewest-moves))))
+         (at-most-one-longer                        (remove-if (lambda (state)
+                                                                 (> (length (car state)) shortest-allowable))
+                                                               end-states))
+         (boosting-at-end                           (only-boosting-at-end at-most-one-longer))
+         (best-speed-boosting                       (best-by-speed boosting-at-end))
          (fast-boosting                             (car best-speed-boosting))
-         (best-distance-boosting                    (best-by-dist  fewest-moves))
-         (far-boosting                              (car best-speed-boosting)))
+         (best-distance-boosting                    (best-by-dist  boosting-at-end))
+         (far-boosting                              (car best-distance-boosting)))
     (progn
+      (format t "Boosting at end: ~s~%" boosting-at-end)
+      (format t "This: ~s~%" best-speed-boosting)
       (decision-tree
        ((not (null boosting-at-end))
-        fast-boosting
-        (t far-boosting))
+        fast-boosting)
        (t fast-move)))))
 
 (defun only-boosting-at-end (end-states)
   "Produce only those END-STATES in which the car was boosting at the end."
   (iter
-    (for (path  (x . y) speed boosts) in end-states)
+    (for (path  pos speed boosts) in end-states)
     (when (eq speed 15)
-      (collecting (list path x speed boosts)))))
+      (collecting (list path pos speed boosts)))))
 
 (defun only-shortest-path-length (end-states)
   "Produce only those END-STATES which took the shortest number of steps."
