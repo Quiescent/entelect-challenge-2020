@@ -98,13 +98,21 @@ NOTE: Implementation detail of `logging-cond."
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left and the SPEED at which I'm going."
-  (bind ((end-states       (states-from game-map my-pos speed boosts))
-         (fewest-moves     (only-shortest-path-length end-states))
-         ((fast-move . _)  (best-by-speed fewest-moves))
-         (boost-move       'use_boost))
+  (bind ((end-states                   (states-from game-map my-pos speed boosts))
+         (fewest-moves                 (only-shortest-path-length end-states))
+         ((fast-move . _)              (best-by-speed fewest-moves))
+         ((more-boosts _ _ new-boosts) (best-by-boost-count fewest-moves))
+         (boost-move                   'use_boost))
     (decision-tree
-     ((> boosts 0) boost-move)
-     (t fast-move))))
+     ((> new-boosts boosts) more-boosts)
+     ((> boosts 0)          boost-move)
+     (t                     fast-move))))
+
+(defun best-by-boost-count (end-states)
+  "Produce the best of END-STATES by the final speed."
+  (iter
+    (for (path (x . y) speed boosts) in end-states)
+    (finding (list (car (last path)) x speed boosts) maximizing boosts)))
 
 (defun only-boosting-at-end (end-states)
   "Produce only those END-STATES in which the car was boosting at the end."
