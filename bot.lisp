@@ -100,15 +100,15 @@ NOTE: Implementation detail of `logging-cond."
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left and the SPEED at which I'm going."
   (bind (((x . y)           my-pos)
-         (mud-here          (mud-ahead-of game-map x y))
-         (mud-up            (if (> y 0) (mud-ahead-of game-map x (1- y)) 0))
-         (mud-down          (if (< y 3) (mud-ahead-of game-map x (1+ y)) 0))
+         (mud-here          (mud-ahead-of speed game-map x y))
+         (mud-up            (if (> y 0) (mud-ahead-of speed game-map x (1- y)) 0))
+         (mud-down          (if (< y 3) (mud-ahead-of speed game-map x (1+ y)) 0))
          (too-much-mud-here (>= mud-here 3))
          (too-much-mud-up   (>= mud-up 3))
          (too-much-mud-down (>= mud-down 3))
-         (speed-up          (if (> y 0) (speed-ahead-of game-map x (1- y)) 0))
-         (speed-down        (if (< y 3) (speed-ahead-of game-map x (1+ y)) 0))
-         (speed-here        (speed-ahead-of game-map x y))
+         (speed-here        (speed-ahead-of speed game-map x y))
+         (speed-up          (if (> y 0) (speed-ahead-of speed game-map x (1- y)) 0))
+         (speed-down        (if (< y 3) (speed-ahead-of speed game-map x (1+ y)) 0))
          (gap-here          (gap-ahead-of speed game-map x y))
          (gap-up            (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
          (gap-down          (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
@@ -152,16 +152,16 @@ left and the SPEED at which I'm going."
 (defconstant row-length 26
   "The number of squares visible in a row.")
 
-(defun mud-ahead-of (game-map x y)
-  "Produce the count of mud on GAME-MAP ahead of (X, Y)."
+(defun mud-ahead-of (speed game-map x y)
+  "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below (array-dimension game-map 1))
+    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
     (counting (eq 'mud (aref game-map y i)))))
 
-(defun speed-ahead-of (game-map x y)
-  "Produce the count of boosts on GAME-MAP ahead of (X, Y)."
+(defun speed-ahead-of (speed game-map x y)
+  "Produce the count of boosts on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below (array-dimension game-map 1))
+    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
     (counting (eq 'boost (aref game-map y i)))))
 
 (defun load-state-file (round)
