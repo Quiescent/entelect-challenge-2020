@@ -108,6 +108,7 @@ left and the SPEED at which I'm going."
          ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
          (boost-move                   'use_boost))
     (decision-tree
+     ((> boosts 2)          boost-move)
      ((> new-boosts boosts) more-boosts)
      ((> boosts 0)          boost-move)
      (t                     fast-move))))
