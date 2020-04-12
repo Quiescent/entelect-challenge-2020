@@ -12,9 +12,10 @@
   (bind ((state         (load-state-file round-number))
          (map           (rows state))
          ((my-pos . _)  (positions state))
+         (my-abs-x      (my-abs-x state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosts speed)))
+    (determine-move map my-pos boosts speed my-abs-x)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -93,11 +94,12 @@ NOTE: Implementation detail of `logging-cond."
  ((t 3))
  ((eq 3 5) 4))
 
-(defun determine-move (game-map my-pos boosts speed)
+(defun determine-move (game-map my-pos boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
-left and the SPEED at which I'm going."
+left, the SPEED at which I'm going and MY-ABS-X position on the
+board."
   (bind ((end-states                   (states-from game-map my-pos speed boosts))
          (fewest-moves                 (only-shortest-path-length end-states))
          ((fast-move . _)              (best-by-speed fewest-moves))
@@ -106,8 +108,11 @@ left and the SPEED at which I'm going."
                                                     (> (length (car state)) shortest-allowable))
                                                   end-states))
          ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
-         (boost-move                   'use_boost))
+         (boost-move                   'use_boost)
+         (close                        (> my-abs-x 1450)))
     (decision-tree
+     (close ((> boosts 0) boost-move)
+            (t            fast-move))
      ((> boosts 2)          boost-move)
      ((> new-boosts boosts) more-boosts)
      ((> boosts 0)          boost-move)
@@ -332,6 +337,10 @@ Produce the new new position, etc. as values."
   (bind ((min-x (minimum-x this)))
     (cons (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'player   'map-position))))
           (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'opponent 'map-position)))))))
+
+(defmethod my-abs-x ((this state))
+  "Produce my absolute x position in THIS state."
+  (car (position-to-cons (deep-accessor this 'player 'map-position))))
 
 (defun to-zero-indexed (x-y)
   "Produce a zero-indexed version of X-Y."
