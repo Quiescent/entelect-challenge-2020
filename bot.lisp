@@ -135,7 +135,7 @@ left and the SPEED at which I'm going."
 ;; Hitting Mud:
 ;;  - decelerates the car;
 
-(defvar all-moves '(accelerate boost turn_right turn_left)
+(defvar all-moves '(accelerate use_boost turn_right turn_left)
   "All the moves which I can make.")
 
 (defun states-from (game-map my-pos speed boosts)
@@ -239,7 +239,7 @@ Produce the new new position, etc. as values."
   (case move
     (turn_right (< y 3))
     (turn_left  (> y 0))
-    (boost      (> boosts 0))
+    (use_boost  (> boosts 0))
     (t          t)))
 
 (defun gap-ahead-of (speed game-map x y)
