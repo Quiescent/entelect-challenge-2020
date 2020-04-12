@@ -99,29 +99,33 @@ NOTE: Implementation detail of `logging-cond."
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left and the SPEED at which I'm going."
   (bind ((end-states                                (states-from game-map my-pos speed boosts))
-         ((fast-move fast-x fast-speed fast-boosts) (best-by-speed end-states))
-         ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  end-states)))
+         (fewest-moves                              (only-shortest-path-length end-states))
+         ((fast-move fast-x fast-speed fast-boosts) (best-by-speed fewest-moves))
+         ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  fewest-moves)))
     (progn
-      ;; (format t "States: ~s~%" end-states)
-      ;; (format t "far-move: ~s ~s ~s" far-x far-speed far-boosts)
-      ;; (decision-tree
-      ;;  ((> (+ fast-speed fast-x)
-      ;;      (+ far-speed  far-x))
-      ;;   fast-move)
-      ;;  (t far-move))
-      far-move)))
+      (format t "States: ~s~%" fewest-moves)
+      (format t "far-move: ~s ~s ~s" far-x far-speed far-boosts)
+      (decision-tree
+       ((= fast-x far-x)
+        fast-move)
+       (t far-move)))))
+
+(defun only-shortest-path-length (end-states)
+  "Produce only those END-STATES which took the shortest number of steps."
+  (bind ((shortest-length (iter (for (path . _) in end-states) (minimize (length path)))))
+    (remove-if (lambda (end-state) (> (length (car end-state)) shortest-length)) end-states)))
 
 (defun best-by-speed (end-states)
   "Produce the best of END-STATES by the final speed."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing (- speed (* 10 (length path))))))
+    (finding (list (car (last path)) x speed boosts) maximizing speed)))
 
 (defun best-by-dist (end-states)
   "Produce the best of END-STATES by the final distance."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing (- x (* 10 (length path))))))
+    (finding (list (car (last path)) x speed boosts) maximizing x)))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
