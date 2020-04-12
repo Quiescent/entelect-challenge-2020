@@ -76,13 +76,13 @@ NOTE: Implementation detail of `logging-cond."
                 :initial-value nil)))
 
   (defun first-success (result form)
-  "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
-  `(or ,result
-       (if ,(car form)
-           ,(cadr form))))
+    "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
+    `(or ,result
+         (if ,(car form)
+             ,(cadr form))))
 
-#+nil
-(first-success 't '((eq 2 3) blah)))
+  #+nil
+  (first-success 't '((eq 2 3) blah)))
 
 (defmacro logging-cond (&rest forms)
   "Wrap forms in a `cond' and print the condition which succeeded."
@@ -101,14 +101,29 @@ left and the SPEED at which I'm going."
   (bind ((end-states                                (states-from game-map my-pos speed boosts))
          (fewest-moves                              (only-shortest-path-length end-states))
          ((fast-move fast-x fast-speed fast-boosts) (best-by-speed fewest-moves))
-         ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  fewest-moves)))
+         ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  fewest-moves))
+         (boosting-at-end                           (only-boosting-at-end end-states))
+         (best-speed-boosting                       (best-by-speed fewest-moves))
+         (fast-boosting                             (car best-speed-boosting))
+         (best-distance-boosting                    (best-by-dist  fewest-moves))
+         (far-boosting                              (car best-speed-boosting)))
     (progn
-      (format t "States: ~s~%" fewest-moves)
-      (format t "far-move: ~s ~s ~s" far-x far-speed far-boosts)
       (decision-tree
+       ((not (null boosting-at-end))
+        ((= (nth 1 best-speed-boosting)
+            (nth 1 best-distance-boosting))
+         fast-boosting)
+        (t far-boosting))
        ((= fast-x far-x)
         fast-move)
        (t far-move)))))
+
+(defun only-boosting-at-end (end-states)
+  "Produce only those END-STATES in which the car was boosting at the end."
+  (iter
+    (for (path  (x . y) speed boosts) in end-states)
+    (when (eq speed 15)
+      (collecting (list path x speed boosts)))))
 
 (defun only-shortest-path-length (end-states)
   "Produce only those END-STATES which took the shortest number of steps."
