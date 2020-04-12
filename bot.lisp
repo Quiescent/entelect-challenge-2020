@@ -126,6 +126,123 @@ left and the SPEED at which I'm going."
        turn_right))
      (t accelerate))))
 
+;; Speeds:
+;; MINIMUM_SPEED = 0
+;; SPEED_STATE_1 = 3
+;; INITIAL_SPEED = 5
+;; SPEED_STATE_2 = 6
+;; SPEED_STATE_3 = 8
+;; MAXIMUM_SPEED = 9
+;; BOOST_SPEED = 15
+;;
+;; Boost:
+;;  - boosting bosts for 5 turns;
+;;  - hitting something reduces speed to MAXIMUM_SPEED;
+;;
+;; Hitting Mud:
+;;  - decelerates the car;
+
+(defconstant all-moves '(accelerate boost turn_right turn_left)
+  "All the moves which I can make.")
+
+(defun states-from (game-map my-pos speed boosts)
+  "Produce all possible states using GAME-MAP.
+
+Where my car is at MY-POS and is going at SPEED and I have BOOSTS
+boosts left.
+
+First element of a path is the path taken.
+Second is my current position.
+Third is my speed.
+Fourth is my boosts left."
+  (iter
+    (with paths-to-explore = (list (list nil my-pos speed boosts)))
+    (with explored = (make-hash-table :test #'equal))
+    (with found-paths)
+    (while (not (null paths-to-explore)))
+    (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
+      (when (gethash path explored)
+        (next-iteration))
+      (if (end-state current-pos game-map)
+          (push (list path current-pos current-speed current-boosts)
+                found-paths)
+          (iter
+            (for move in all-moves)
+            (when (not (move-can-be-made move current-boosts (cdr current-pos)))
+              (next-iteration))
+            (bind (((:values new-pos new-speed new-boosts)
+                    (make-move move game-map current-pos current-speed current-boosts)))
+              (push (list (cons move path) new-pos new-speed new-boosts)
+                    paths-to-explore)))))
+    (finally (return found-paths))))
+
+(defun make-move (move game-map position speed boosts)
+  "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
+
+Produce the new new position, etc. as values."
+  (case move
+    (accelerate (bind ((new-speed   (increase-speed speed))
+                       ((x . y)     position)
+                       (new-pos     (cons (+ x new-speed) y))
+                       (muds-hit    (mud-ahead-of new-speed game-map x y))
+                       (final-speed (decrease-speed-by muds-hit new-speed)))
+                  (values new-pos final-speed boosts)))
+    (turn_left (bind (((x . y)     position)
+                      (new-pos     (cons (+ x (1- speed)) (1- y)))
+                      (muds-hit    (mud-ahead-of (1- speed) game-map x (1- y)))
+                      (final-speed (decrease-speed-by muds-hit speed)))
+                 (values new-pos final-speed boosts)))
+    (turn_right (bind (((x . y)     position)
+                       (new-pos     (cons (+ x (1- speed)) (1+ y)))
+                       (muds-hit    (mud-ahead-of (1- speed) game-map x (1+ y)))
+                       (final-speed (decrease-speed-by muds-hit speed)))
+                  (values new-pos final-speed boosts)))
+    (use_boost  (bind ((new-speed   15)
+                       ((x . y)     position)
+                       (new-pos     (cons (+ x new-speed) y))
+                       (muds-hit    (mud-ahead-of new-speed game-map x y))
+                       (final-speed (decrease-speed-by muds-hit new-speed)))
+                  (values new-pos final-speed boosts)))))
+
+(defun decrease-speed-by (times speed)
+  "Reduce SPEED TIMES times."
+  (iter
+    (with final-speed = speed)
+    (for i from 0 below times)
+    (setf final-speed (decrease-speed final-speed))
+    (finally (return final-speed))))
+
+(defun increase-speed (speed)
+  "Produce the speed which is one faster than SPEED."
+  (case speed
+    (0 3)
+    (5 6)
+    (6 8)
+    (8 9)
+    (t speed)))
+
+(defun decrease-speed (speed)
+  "Produce the speed which is one slower than SPEED."
+  (case speed
+    (3  0)
+    (6  5)
+    (8  6)
+    (9  8)
+    (15 9)
+    (t speed)))
+
+(defun end-state (position game-map)
+  "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
+  (> (car position) (array-dimension game-map 1)))
+
+(defun move-can-be-made (move boosts y)
+  "Produce T if the MOVE can be made from Y coordinate."
+  (case move
+    (turn_right (< y 3))
+    (turn_left  (> y 0))
+    (boost      (> boosts 0))
+    (t          t)))
+
 (defun gap-ahead-of (speed game-map x y)
   "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
   (iter
