@@ -101,23 +101,26 @@ left and the SPEED at which I'm going."
   (bind ((end-states                                (states-from game-map my-pos speed boosts))
          ((fast-move fast-x fast-speed fast-boosts) (best-by-speed end-states))
          ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  end-states)))
-    (decision-tree
-     ((> (+ fast-speed fast-x)
-         (+ far-speed  far-x))
-      fast-move)
-     (t far-move))))
+    (progn
+      ;; (format t "States: ~s~%" end-states)
+      ;; (format t "far-move: ~s ~s ~s" far-x far-speed far-boosts)
+      (decision-tree
+       ((> (+ fast-speed fast-x)
+           (+ far-speed  far-x))
+        fast-move)
+       (t far-move)))))
 
 (defun best-by-speed (end-states)
   "Produce the best of END-STATES by the final speed."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing speed)))
+    (finding (list (car (last path)) x speed boosts) maximizing (- speed (* 10 (length path))))))
 
 (defun best-by-dist (end-states)
   "Produce the best of END-STATES by the final distance."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing x)))
+    (finding (list (car (last path)) x speed boosts) maximizing (- x (* 10 (length path))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
