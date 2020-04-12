@@ -135,7 +135,7 @@ left and the SPEED at which I'm going."
 ;; Hitting Mud:
 ;;  - decelerates the car;
 
-(defconstant all-moves '(accelerate boost turn_right turn_left)
+(defvar all-moves '(accelerate boost turn_right turn_left)
   "All the moves which I can make.")
 
 (defun states-from (game-map my-pos speed boosts)
@@ -149,10 +149,12 @@ Second is my current position.
 Third is my speed.
 Fourth is my boosts left."
   (iter
+    (with counter = 0)
     (with paths-to-explore = (list (list nil my-pos speed boosts)))
     (with explored = (make-hash-table :test #'equal))
     (with found-paths)
-    (while (not (null paths-to-explore)))
+    (while (and (not (null paths-to-explore))
+                (< counter 100000)))
     (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
       (when (gethash path explored)
         (next-iteration))
@@ -161,12 +163,16 @@ Fourth is my boosts left."
                 found-paths)
           (iter
             (for move in all-moves)
-            (when (not (move-can-be-made move current-boosts (cdr current-pos)))
+            (when (or (not (move-can-be-made move current-boosts (cdr current-pos)))
+                      (and (= 0 current-speed)
+                           (or (eq move 'turn_right)
+                               (eq move 'turn_left))))
               (next-iteration))
             (bind (((:values new-pos new-speed new-boosts)
                     (make-move move game-map current-pos current-speed current-boosts)))
               (push (list (cons move path) new-pos new-speed new-boosts)
                     paths-to-explore)))))
+    (incf counter)
     (finally (return found-paths))))
 
 (defun make-move (move game-map position speed boosts)
