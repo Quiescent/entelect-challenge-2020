@@ -239,7 +239,7 @@ Produce the new new position, etc. as values."
 (defun gap-ahead-of (speed game-map x y)
   "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
+    (for i from (max x 0) below (min (+ x speed) (array-dimension game-map 1)))
     (counting (not (eq 'mud (aref game-map y i))))))
 
 (defconstant row-length 26
@@ -248,13 +248,13 @@ Produce the new new position, etc. as values."
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
+    (for i from (max x 0) below (min (+ x speed) (array-dimension game-map 1)))
     (counting (eq 'mud (aref game-map y i)))))
 
 (defun speed-ahead-of (speed game-map x y)
   "Produce the count of boosts on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from x below (min (+ x speed) (array-dimension game-map 1)))
+    (for i from (max x 0) below (min (+ x speed) (array-dimension game-map 1)))
     (counting (eq 'boost (aref game-map y i)))))
 
 (defun load-state-file (round)
