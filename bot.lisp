@@ -110,13 +110,9 @@ left and the SPEED at which I'm going."
     (progn
       (decision-tree
        ((not (null boosting-at-end))
-        ((= (nth 1 best-speed-boosting)
-            (nth 1 best-distance-boosting))
-         fast-boosting)
+        fast-boosting
         (t far-boosting))
-       ((= fast-x far-x)
-        fast-move)
-       (t far-move)))))
+       (t fast-move)))))
 
 (defun only-boosting-at-end (end-states)
   "Produce only those END-STATES in which the car was boosting at the end."
