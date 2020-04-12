@@ -101,7 +101,11 @@ left and the SPEED at which I'm going."
   (bind ((end-states                   (states-from game-map my-pos speed boosts))
          (fewest-moves                 (only-shortest-path-length end-states))
          ((fast-move . _)              (best-by-speed fewest-moves))
-         ((more-boosts _ _ new-boosts) (best-by-boost-count fewest-moves))
+         (shortest-allowable           (+ 2 (length (caar fewest-moves))))
+         (at-most-two-longer           (remove-if (lambda (state)
+                                                    (> (length (car state)) shortest-allowable))
+                                                  end-states))
+         ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
          (boost-move                   'use_boost))
     (decision-tree
      ((> new-boosts boosts) more-boosts)
