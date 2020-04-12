@@ -37,34 +37,6 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
-(defun first-success (result form)
-  "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
-  `(or ,result
-       (if ,(car form)
-           ,(cadr form))))
-
-#+nil
-(first-success 't '((eq 2 3) blah))
-
-(defun logging-cond-iter (forms)
-  "Wrap forms in a `cond' and print the condition which succeeded.
-
-NOTE: Implementation detail of `logging-cond."
-  `(,@(reduce #'first-success
-              (mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
-                                                          ,(cadr form))))
-                      forms)
-              :initial-value nil)))
-
-(defmacro logging-cond (&rest forms)
-  "Wrap forms in a `cond' and print the condition which succeeded."
-  (logging-cond-iter forms))
-
-#+nil
-(logging-cond
- ((t 3))
- ((eq 3 5) 4))
-
 (defun decision-tree-iter (forms)
   "Iteratively transform FORMS into a series of nested conds.
 
@@ -94,6 +66,34 @@ it's assumed that you're supplying the next condition."
 #+nil
 (decision-tree
  ((< 2 3) ((eq 2 2) 'blah)))
+
+(defun first-success (result form)
+  "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
+  `(or ,result
+       (if ,(car form)
+           ,(cadr form))))
+
+#+nil
+(first-success 't '((eq 2 3) blah))
+
+(defmacro logging-cond (&rest forms)
+  "Wrap forms in a `cond' and print the condition which succeeded."
+  (logging-cond-iter forms))
+
+#+nil
+(logging-cond
+ ((t 3))
+ ((eq 3 5) 4))
+
+(defun logging-cond-iter (forms)
+  "Wrap forms in a `cond' and print the condition which succeeded.
+
+NOTE: Implementation detail of `logging-cond."
+  `(,@(reduce #'first-success
+              (mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
+                                                          ,(cadr form))))
+                      forms)
+              :initial-value nil)))
 
 (defun determine-move (game-map my-pos boosting boosts speed)
   "Produce the best move for GAME-MAP.
