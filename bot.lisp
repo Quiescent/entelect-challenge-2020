@@ -111,11 +111,8 @@ board."
          (boost-move                   'use_boost)
          (close                        (> my-abs-x 1450)))
     (decision-tree
-     (close ((> boosts 0) boost-move)
-            (t            fast-move))
-     ((> boosts 2)          boost-move)
-     ((> new-boosts boosts) more-boosts)
      ((> boosts 0)          boost-move)
+     ((> new-boosts boosts) more-boosts)
      (t                     fast-move))))
 
 (defun best-by-boost-count (end-states)
