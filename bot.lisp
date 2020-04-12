@@ -12,10 +12,9 @@
   (bind ((state         (load-state-file round-number))
          (map           (rows state))
          ((my-pos . _)  (positions state))
-         (boosting      (im-boosting state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosting boosts speed)))
+    (determine-move map my-pos boosts speed)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -94,37 +93,31 @@ NOTE: Implementation detail of `logging-cond."
  ((t 3))
  ((eq 3 5) 4))
 
-(defun determine-move (game-map my-pos boosting boosts speed)
+(defun determine-move (game-map my-pos boosts speed)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left and the SPEED at which I'm going."
-  (bind (((x . y)           my-pos)
-         (mud-here          (mud-ahead-of speed game-map x y))
-         (mud-up            (if (> y 0) (mud-ahead-of speed game-map x (1- y)) 0))
-         (mud-down          (if (< y 3) (mud-ahead-of speed game-map x (1+ y)) 0))
-         (too-much-mud-here (>= mud-here 3))
-         (too-much-mud-up   (>= mud-up 3))
-         (too-much-mud-down (>= mud-down 3))
-         (speed-here        (speed-ahead-of speed game-map x y))
-         (speed-up          (if (> y 0) (speed-ahead-of speed game-map x (1- y)) 0))
-         (speed-down        (if (< y 3) (speed-ahead-of speed game-map x (1+ y)) 0))
-         (gap-here          (gap-ahead-of speed game-map x y))
-         (gap-up            (and (> y 0) (gap-ahead-of speed game-map x (1- y))))
-         (gap-down          (and (< y 3) (gap-ahead-of speed game-map x (1+ y))))
-         (no-boosts         (< boosts 1)))
+  (bind ((end-states                                (states-from game-map my-pos speed boosts))
+         ((fast-move fast-x fast-speed fast-boosts) (best-by-speed end-states))
+         ((far-move  far-x  far-speed  far-boosts)  (best-by-dist  end-states)))
     (decision-tree
-     ((not boosting)
-      ((> boosts 0)
-       use_boost))
-     (no-boosts
-      ((> speed-here 0)
-       accelerate)
-      ((> speed-up 0)
-       turn_left)
-      ((> speed-down 0)
-       turn_right))
-     (t accelerate))))
+     ((> (+ fast-speed fast-x)
+         (+ far-speed  far-x))
+      fast-move)
+     (t far-move))))
+
+(defun best-by-speed (end-states)
+  "Produce the best of END-STATES by the final speed."
+  (iter
+    (for (path (x . y) speed boosts) in end-states)
+    (finding (list (last path) x speed boosts) maximizing speed)))
+
+(defun best-by-dist (end-states)
+  "Produce the best of END-STATES by the final distance."
+  (iter
+    (for (path (x . y) speed boosts) in end-states)
+    (finding (list (last path) x speed boosts) maximizing x)))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
