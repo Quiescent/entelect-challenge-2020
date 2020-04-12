@@ -47,7 +47,7 @@ it's assumed that you're supplying the next condition."
                                             (when (equal 'quote (car form))
                                               (error "Use unquoted symbol to terminate a tree!"))
                                             (if (symbolp (cadr form))
-                                                (list (car form) `(quote ,@(cdr form)))
+                                                (list (car form) (cadr form))
                                                 `(,(car form) ,(decision-tree-iter (cdr form))))))
                                         forms))))
     (decision-tree-iter forms)))
@@ -111,13 +111,13 @@ left and the SPEED at which I'm going."
   "Produce the best of END-STATES by the final speed."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (last path) x speed boosts) maximizing speed)))
+    (finding (list (car (last path)) x speed boosts) maximizing speed)))
 
 (defun best-by-dist (end-states)
   "Produce the best of END-STATES by the final distance."
   (iter
     (for (path (x . y) speed boosts) in end-states)
-    (finding (list (last path) x speed boosts) maximizing x)))
+    (finding (list (car (last path)) x speed boosts) maximizing x)))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
