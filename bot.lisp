@@ -428,6 +428,17 @@ If they're not equal then pretty print both forms."
       (format t (concatenate 'string "~" (format nil "~a" (+ 1 max-length-1)) "T| "))
       (format t "~a~%" (or (nth i form-2-lines) "")))))
 
+#+nil
+(defvar empty-game-map
+  (iter
+    (with game-map = (rows (load-state-from-file "state.json")))
+    (for y from 0 below (array-dimension game-map 0))
+    (iter
+      (for x from 0 below (array-dimension game-map 1))
+      (setf (aref game-map y x) nil))
+    (finally (return game-map)))
+  "An empty game map for testing purposes.")
+
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
