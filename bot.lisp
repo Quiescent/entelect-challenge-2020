@@ -102,7 +102,7 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((end-states                   (states-from game-map my-pos speed boosts))
          (fewest-moves                 (only-shortest-path-length end-states))
-         ((fast-move . _)              (best-by-speed fewest-moves))
+         ((fast-move . _)              (best-by-dist fewest-moves))
          (shortest-allowable           (+ 2 (length (caar fewest-moves))))
          (at-most-two-longer           (remove-if (lambda (state)
                                                     (> (length (car state)) shortest-allowable))
@@ -110,10 +110,7 @@ board."
          ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
          (boost-move                   'use_boost)
          (close                        (> my-abs-x 1450)))
-    (decision-tree
-     ((> boosts 0)          boost-move)
-     ((> new-boosts boosts) more-boosts)
-     (t                     fast-move))))
+    fast-move))
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
