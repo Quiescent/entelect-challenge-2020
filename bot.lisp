@@ -242,7 +242,7 @@ Produce the new new position, etc. as values."
   "Produce the speed which is one faster than SPEED."
   (case speed
     (0 3)
-    (3 5)
+    (3 6)
     (5 6)
     (6 8)
     (8 9)
@@ -252,7 +252,8 @@ Produce the new new position, etc. as values."
   "Produce the speed which is one slower than SPEED."
   (case speed
     (3  0)
-    (6  5)
+    (5  3)
+    (6  3)
     (8  6)
     (9  8)
     (15 9)
