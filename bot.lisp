@@ -206,7 +206,7 @@ Produce the new new position, etc. as values."
                        ((x . y)     position)
                        (new-pos     (cons (+ x new-speed) y))
                        (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (new-boosts  (speed-ahead-of new-speed game-map x y))
+                       (new-boosts  (speed-ahead-of (1- new-speed) game-map (1+ x) y))
                        (final-speed (decrease-speed-by muds-hit new-speed)))
                   (values new-pos final-speed (+ new-boosts boosts))))
     (turn_left (bind (((x . y)     position)
@@ -225,7 +225,7 @@ Produce the new new position, etc. as values."
                        ((x . y)     position)
                        (new-pos     (cons (+ x new-speed) y))
                        (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (new-boosts  (speed-ahead-of new-speed game-map x y))
+                       (new-boosts  (speed-ahead-of (1- new-speed) game-map (1+ x) y))
                        (final-speed (decrease-speed-by muds-hit new-speed)))
                   (values new-pos final-speed (+ new-boosts (1- boosts)))))))
 
