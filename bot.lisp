@@ -245,6 +245,7 @@ Produce the new new position, etc. as values."
   "Produce the speed which is one faster than SPEED."
   (case speed
     (0 3)
+    (3 5)
     (5 6)
     (6 8)
     (8 9)
