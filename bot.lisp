@@ -279,11 +279,11 @@ Produce the new new position, etc. as values."
 (defconstant row-length 26
   "The number of squares visible in a row.")
 
- (defun mud-ahead-of (speed game-map x y)
+(defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
     (for i from (max x 0) below (min (1+ (+ x speed)) (array-dimension game-map 1)))
-    (counting (eq 'mud (aref game-map y i)))))
+    (counting (member (aref game-map y i) '(mud oil-spill)))))
 
 (defun speed-ahead-of (speed game-map x y)
   "Produce the count of boosts on SPEED blocks of GAME-MAP ahead of (X, Y)."
