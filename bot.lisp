@@ -13,9 +13,10 @@
          (map           (rows state))
          ((my-pos . _)  (positions state))
          (my-abs-x      (my-abs-x state))
+         (boosting      (im-boosting state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosts speed my-abs-x)))
+    (determine-move map my-pos boosting boosts speed my-abs-x)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -93,7 +94,7 @@ NOTE: Implementation detail of `logging-cond."
  ((t 3))
  ((eq 3 5) 4))
 
-(defun determine-move (game-map my-pos boosts speed my-abs-x)
+(defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
@@ -107,9 +108,15 @@ board."
                                                     (> (length (car state)) shortest-allowable))
                                                   end-states))
          ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
-         (boost-move                   'use_boost)
-         (close                        (> my-abs-x 1450)))
-    fast-move))
+         (boost-move                   'use_boost))
+    (decision-tree
+     (boosting
+      ((> new-boosts boosts) more-boosts)
+      (t                     fast-move))
+     ((> boosts 2)          boost-move)
+     ((> new-boosts boosts) more-boosts)
+     ((> boosts 0)          boost-move)
+     (t                     fast-move))))
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
