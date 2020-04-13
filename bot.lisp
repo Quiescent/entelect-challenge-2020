@@ -337,6 +337,10 @@ Produce the new new position, etc. as values."
   "Produce my absolute x position in THIS state."
   (car (position-to-cons (deep-accessor this 'player 'map-position))))
 
+(defmethod my-abs-pos ((this state))
+  "Produce my absolute position in THIS state."
+  (to-zero-indexed (position-to-cons (deep-accessor this 'player 'map-position))))
+
 (defun to-zero-indexed (x-y)
   "Produce a zero-indexed version of X-Y."
   (bind (((x . y) x-y))
@@ -427,19 +431,26 @@ If they're not equal then pretty print both forms."
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
-    (bind (((:values new-pos new-speed new-boosts)
+    (bind (((:values new-relative-pos new-speed new-boosts)
             (make-move current-move
                        (rows current-state)
                        (car (positions current-state))
                        (my-speed current-state)
-                       (my-boosts current-state))))
-      (format t "~a ~20T __~a__> ~40T~a~%"
-              (list new-pos new-speed new-boosts)
-              current-move
-              (list (car (positions next-state))
-                    (my-speed next-state)
-                    (my-boosts next-state)))
-      (should-equal (list new-pos new-speed new-boosts)
-                    (list (car (positions next-state))
-                          (my-speed next-state)
-                          (my-boosts next-state))))))
+                       (my-boosts current-state)))
+           (my-abs-pos (my-abs-pos current-state))
+           (new-pos    (cons (+ (car my-abs-pos) (car new-relative-pos))
+                             (cdr new-relative-pos)))
+           (initial    (list (my-abs-pos current-state)
+                             (my-speed current-state)
+                             (my-boosts current-state)))
+           (computed   (list new-pos new-speed new-boosts))
+           (actual     (list (my-abs-pos next-state)
+                             (my-speed next-state)
+                             (my-boosts next-state))))
+      (when (not (equal computed actual))
+        (format t "~s: ~a ~25T ~a ~40T~a /~65T~a~%"
+                round
+                initial
+                current-move
+                computed
+                actual)))))
