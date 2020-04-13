@@ -352,3 +352,96 @@ Produce the new new position, etc. as values."
   "Produce the minimum value of x in the map in THIS state."
   (1- (deep-accessor (aref (aref (slot-value this 'world-map) 0) 0)
                      'map-position 'x)))
+
+(defmacro with-consecutive-states (path player which-player &rest body)
+  "Load states from PATH for PLAYER and bind the current and next over BODY.
+
+Prepend 'WHICH-PLAYER - ' to the path for the players move and state."
+  `(iter
+     (for round from 1)
+     (when (or (not (directory (make-pathname :directory
+                                              (list :relative
+                                                    ,path
+                                                    (format nil "Round ~3,'0d" round)
+                                                    (format nil "~s - ~a" ,which-player ,player)))))
+               (not (directory (make-pathname :directory
+                                              (list :relative
+                                                    ,path
+                                                    (format nil "Round ~3,'0d" (1+ round))
+                                                    (format nil "~s - ~a" ,which-player ,player))))))
+       (terminate))
+     (bind ((current-path  (format nil
+                                   "~a/Round ~3,'0d/~s - ~a/JsonMap.json"
+                                   ,path
+                                   round
+                                   ,which-player
+                                   ,player))
+            (move-path     (format nil
+                                   "~a/Round ~3,'0d/~s - ~a/PlayerCommand.txt"
+                                   ,path
+                                   round
+                                   ,which-player
+                                   ,player))
+            (current-state (load-state-from-file current-path))
+            (current-move  (load-command-from-file move-path))
+            (next-path     (format nil
+                                   "~a/Round ~3,'0d/~s - ~a/JsonMap.json"
+                                   ,path
+                                   (1+ round)
+                                   ,which-player
+                                   ,player))
+            (next-state    (load-state-from-file next-path)))
+       ,@body)))
+
+(defun load-command-from-file (file-path)
+  "Load the players last command as a symbol from FILE-PATH."
+  (with-open-file (f file-path)
+    (read-from-string (cadr (cl-ppcre:split "Command: " (read-line f))))))
+
+(defmacro should-equal (form-1 form-2)
+  "Procude T if FORM-1 `equal's FORM-2.
+
+If they're not equal then pretty print both forms."
+  `(or (equal ,form-1 ,form-2)
+       ,(print-side-by-side form-1 form-2)))
+
+(defun print-side-by-side (form-1 form-2)
+  "Pretty print FORM-1 and FORM-2 next to each other."
+  (bind ((pp-form-1    (bind ((filler-1 (make-array '(0) :element-type 'base-char
+                                                         :fill-pointer 0 :adjustable t)))
+                         (with-output-to-string (stream filler-1)
+                           (pprint form-1 stream))
+                         filler-1))
+         (form-1-lines (cl-ppcre:split "\\n" pp-form-1))
+         (max-length-1 (apply #'max (mapcar #'length form-1-lines)))
+         (pp-form-2    (bind ((filler-2 (make-array '(0) :element-type 'base-char
+                                                         :fill-pointer 0 :adjustable t)))
+                         (with-output-to-string (stream filler-2)
+                           (pprint form-2 stream))
+                         filler-2))
+         (form-2-lines (cl-ppcre:split "\\n" pp-form-2)))
+    (iter
+      (for i from 0 below (max (length form-1-lines) (length form-2-lines)))
+      (format t "~a" (or (nth i form-1-lines) ""))
+      (format t (concatenate 'string "~" (format nil "~a" (+ 1 max-length-1)) "T| "))
+      (format t "~a~%" (or (nth i form-2-lines) "")))))
+
+(defun replay-from-folder (folder-path)
+  "Check that `make-move' produces the same result as the target engine."
+  (with-consecutive-states folder-path "Quantum" 'A
+    (bind (((:values new-pos new-speed new-boosts)
+            (make-move current-move
+                       (rows current-state)
+                       (car (positions current-state))
+                       (my-speed current-state)
+                       (my-boosts current-state))))
+      (format t "~a ~20T __~a__> ~40T~a~%"
+              (list new-pos new-speed new-boosts)
+              current-move
+              (list (car (positions next-state))
+                    (my-speed next-state)
+                    (my-boosts next-state)))
+      (should-equal (list new-pos new-speed new-boosts)
+                    (list (car (positions next-state))
+                          (my-speed next-state)
+                          (my-boosts next-state))))))
