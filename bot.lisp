@@ -197,6 +197,9 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
+;; Known short cuts:
+;;  - I don't take collisions with the other player into account;
+;;  - I don't take boost length into account;
 (defun make-move (move game-map position speed boosts)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
@@ -211,14 +214,16 @@ Produce the new new position, etc. as values."
                   (values new-pos final-speed (+ new-boosts boosts))))
     (turn_left (bind (((x . y)     position)
                       (new-pos     (cons (+ x (1- speed)) (1- y)))
-                      (muds-hit    (mud-ahead-of (1- speed) game-map x (1- y)))
-                      (new-boosts  (speed-ahead-of (1- speed) game-map x (1- y)))
+                      ;; Skipping diagonally is intentional here...
+                      (muds-hit    (mud-ahead-of (- speed 2) game-map (1+ x) (1- y)))
+                      (new-boosts  (speed-ahead-of (- speed 2) game-map (1+ x) (1- y)))
                       (final-speed (decrease-speed-by muds-hit speed)))
                  (values new-pos final-speed (+ new-boosts boosts))))
     (turn_right (bind (((x . y)     position)
                        (new-pos     (cons (+ x (1- speed)) (1+ y)))
-                       (muds-hit    (mud-ahead-of (1- speed) game-map x (1+ y)))
-                       (new-boosts  (speed-ahead-of (1- speed) game-map x (1+ y)))
+                       ;; Skipping diagonally is intentional here...
+                       (muds-hit    (mud-ahead-of (- speed 2) game-map (1+ x) (1+ y)))
+                       (new-boosts  (speed-ahead-of (- speed 2) game-map (1+ x) (1+ y)))
                        (final-speed (decrease-speed-by muds-hit speed)))
                   (values new-pos final-speed (+ new-boosts boosts))))
     (use_boost  (bind ((new-speed   15)
