@@ -103,11 +103,11 @@ board."
   (bind ((end-states                   (states-from game-map my-pos speed boosts))
          (fewest-moves                 (only-shortest-path-length end-states))
          ((fast-move . _)              (best-by-dist fewest-moves))
-         (shortest-allowable           (+ 2 (length (caar fewest-moves))))
-         (at-most-two-longer           (remove-if (lambda (state)
+         (shortest-allowable           (length (caar fewest-moves)))
+         (at-most-n-longer             (remove-if (lambda (state)
                                                     (> (length (car state)) shortest-allowable))
                                                   end-states))
-         ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-two-longer))
+         ((more-boosts _ _ new-boosts) (best-by-boost-count at-most-n-longer))
          (boost-move                   'use_boost))
     (decision-tree
      (boosting
@@ -115,7 +115,6 @@ board."
       (t                     fast-move))
      ((> boosts 2)          boost-move)
      ((> new-boosts boosts) more-boosts)
-     ((> boosts 0)          boost-move)
      (t                     fast-move))))
 
 (defun best-by-boost-count (end-states)
