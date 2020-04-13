@@ -29,9 +29,8 @@
 
 (defmethod my-boosts ((this state))
   "Produce the number of boosts which I have in THIS state."
-  (- (count-if (lambda (x) (string-equal x "BOOST"))
-               (deep-accessor this 'player 'powerups))
-     (deep-accessor this 'player 'boost-counter)))
+  (count-if (lambda (x) (string-equal x "BOOST"))
+            (deep-accessor this 'player 'powerups)))
 
 (defmethod my-speed ((this state))
   "Produce the which I'm going in THIS state."
@@ -206,7 +205,7 @@ Produce the new new position, etc. as values."
     (accelerate (bind ((new-speed   (increase-speed speed))
                        ((x . y)     position)
                        (new-pos     (cons (+ x new-speed) y))
-                       (muds-hit    (mud-ahead-of new-speed game-map x y))
+                       (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
                        (new-boosts  (speed-ahead-of new-speed game-map x y))
                        (final-speed (decrease-speed-by muds-hit new-speed)))
                   (values new-pos final-speed (+ new-boosts boosts))))
@@ -225,7 +224,7 @@ Produce the new new position, etc. as values."
     (use_boost  (bind ((new-speed   15)
                        ((x . y)     position)
                        (new-pos     (cons (+ x new-speed) y))
-                       (muds-hit    (mud-ahead-of new-speed game-map x y))
+                       (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
                        (new-boosts  (speed-ahead-of new-speed game-map x y))
                        (final-speed (decrease-speed-by muds-hit new-speed)))
                   (values new-pos final-speed (+ new-boosts (1- boosts)))))))
@@ -280,7 +279,7 @@ Produce the new new position, etc. as values."
 (defconstant row-length 26
   "The number of squares visible in a row.")
 
-(defun mud-ahead-of (speed game-map x y)
+ (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
     (for i from (max x 0) below (min (1+ (+ x speed)) (array-dimension game-map 1)))
@@ -461,7 +460,7 @@ If they're not equal then pretty print both forms."
                              (my-speed next-state)
                              (my-boosts next-state))))
       (when (not (equal computed actual))
-        (format t "~s: ~a ~25T ~a ~40T~a /~65T~a~%"
+        (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
                 round
                 initial
                 current-move
