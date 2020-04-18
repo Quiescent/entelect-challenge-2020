@@ -1,5 +1,19 @@
 (in-package :bot)
 
+(defun find-data (folder-path objective-round)
+  "Produce features for all games in FOLDER-PATH.
+
+Produce T for the label if the game was won in less than the
+OBJECTIVE-ROUND."
+  (iter
+    (for match-path in (matches-where-i-won folder-path))
+    (iter
+      (for result in (gather-statistics (concatenate 'string
+                                                     "../"
+                                                     (subseq match-path 17))
+                                        objective-round))
+      (format t "~{~a~^, ~}~%" result))))
+
 (defun gather-statistics (folder-path objective-round)
   "Produce features for states in FOLDER-PATH.
 
@@ -10,22 +24,22 @@ is the binominal label."
          results)
     (with-consecutive-states folder-path "Quantum" 'A
       (declare (ignore next-state))
-      (bind ((my-abs-pos   (my-abs-pos current-state))
-             (my-speed     (my-speed current-state))
-             (my-boosts    (my-boosts current-state))
-             (my-pos       (car (positions current-state)))
-             ((_ . y)      my-pos)
+      (bind ((my-abs-pos  (my-abs-pos current-state))
+             (my-speed    (my-speed current-state))
+             (my-boosts   (my-boosts current-state))
+             (my-pos      (car (positions current-state)))
+             ((_ . y)     my-pos)
              (new-speed   (case current-move
                             (accelerate (increase-speed my-speed))
                             (use_boost  15)
                             (otherwise  my-speed)))
-             (game-map     (rows current-state))
-             (mud-ahead    (ahead-of mud ahead new-speed game-map my-pos))
-             (mud-up       (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
-             (mud-down     (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
-             (speed-ahead  (ahead-of speed ahead new-speed game-map my-pos))
-             (speed-up     (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
-             (speed-down   (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
+             (game-map    (rows current-state))
+             (mud-ahead   (ahead-of mud ahead new-speed game-map my-pos))
+             (mud-up      (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
+             (mud-down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
+             (speed-ahead (ahead-of speed ahead new-speed game-map my-pos))
+             (speed-up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
+             (speed-down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
         (push (list my-abs-pos
                     my-speed
                     my-boosts
@@ -43,8 +57,8 @@ is the binominal label."
 (defun finished-in-less-than (objective-round absolute-folder-path)
   "Produce T if the game in ABSOLUTE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."
   (< (- (length (directory (make-pathname :directory
-                                        (list :absolute absolute-folder-path)
-                                        :name :wild
+                                          (list :absolute absolute-folder-path)
+                                          :name :wild
                                           :type :wild))) 2)
      objective-round))
 
