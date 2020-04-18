@@ -211,6 +211,49 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
+(defmacro ahead-of (type direction speed game-map pos)
+  "Produce the appropriate `ahead-of' form.
+
+Take into account the nuances of changing direction and not counting
+the current square.  e.g. changing direction means that you travel
+diagonally ignoring the squars on the rectalinear path.
+
+If TYPE is 'SPEED then produce `speed-ahead-of' if it's 'MUD then
+produce `mud-ahead-of'.
+
+If DIRECTION is 'AHEAD then don't change direction.  A DIRECTION of
+'UP corresponds to turning left and 'DOWN corresponds to turning
+right.
+
+SPEED, GAME-MAP, and POS should be un-adjusted values."
+  (bind ((fun       (ecase type
+                      (mud   'mud-ahead-of)
+                      (speed 'speed-ahead-of)))
+         (adj-speed (ecase direction
+                      (up    `(- ,speed 2))
+                      (down  `(- ,speed 2))
+                      (ahead `(1- ,speed))))
+         (adj-x     `(1+ (car ,pos)))
+         (adj-y     (ecase direction
+                      (up    `(1- (cdr ,pos)))
+                      (down  `(1+ (cdr ,pos)))
+                      (ahead `(cdr ,pos)))))
+    `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
+
+(defmacro move-car (direction speed x)
+  "Produce the new value of X when the car moves in DIRECTION at SPEED."
+  `(+ ,x ,(ecase direction
+            (up    `(1- ,speed))
+            (down  `(1- ,speed))
+            (ahead speed))))
+
+(defmacro move-lat (direction y)
+  "Produce the new value of Y when the car moves in DIRECTION."
+  (ecase direction
+    (up    `(1- ,y))
+    (down  `(1+ ,y))
+    (ahead y)))
+
 ;; Known short cuts:
 ;;  - I don't take collisions with the other player into account;
 ;;  - I don't take boost length into account;
@@ -218,35 +261,31 @@ Fourth is my boosts left."
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (case move
-    (accelerate (bind ((new-speed   (increase-speed speed))
-                       ((x . y)     position)
-                       (new-pos     (cons (+ x new-speed) y))
-                       (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (new-boosts  (speed-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (final-speed (decrease-speed-by muds-hit new-speed)))
-                  (values new-pos final-speed (+ new-boosts boosts))))
-    (turn_left (bind (((x . y)     position)
-                      (new-pos     (cons (+ x (1- speed)) (1- y)))
-                      ;; Skipping diagonally is intentional here...
-                      (muds-hit    (mud-ahead-of (- speed 2) game-map (1+ x) (1- y)))
-                      (new-boosts  (speed-ahead-of (- speed 2) game-map (1+ x) (1- y)))
-                      (final-speed (decrease-speed-by muds-hit speed)))
-                 (values new-pos final-speed (+ new-boosts boosts))))
-    (turn_right (bind (((x . y)     position)
-                       (new-pos     (cons (+ x (1- speed)) (1+ y)))
-                       ;; Skipping diagonally is intentional here...
-                       (muds-hit    (mud-ahead-of (- speed 2) game-map (1+ x) (1+ y)))
-                       (new-boosts  (speed-ahead-of (- speed 2) game-map (1+ x) (1+ y)))
-                       (final-speed (decrease-speed-by muds-hit speed)))
-                  (values new-pos final-speed (+ new-boosts boosts))))
-    (use_boost  (bind ((new-speed   15)
-                       ((x . y)     position)
-                       (new-pos     (cons (+ x new-speed) y))
-                       (muds-hit    (mud-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (new-boosts  (speed-ahead-of (1- new-speed) game-map (1+ x) y))
-                       (final-speed (decrease-speed-by muds-hit new-speed)))
-                  (values new-pos final-speed (+ new-boosts (1- boosts)))))))
+  (bind ((new-speed   (case move
+                        (accelerate (increase-speed speed))
+                        (use_boost  15)
+                        (otherwise  speed)))
+         ((x . y)     position)
+         (new-x       (case move
+                        (turn_left  (move-car up    new-speed x))
+                        (turn_right (move-car down  new-speed x))
+                        (otherwise  (move-car ahead new-speed x))))
+         (new-y       (case move
+                        (turn_left  (move-lat up    y))
+                        (turn_right (move-lat down  y))
+                        (otherwise  (move-lat ahead y))))
+         (new-pos     (cons new-x new-y))
+         (muds-hit    (case move
+                        (turn_left  (ahead-of mud up    new-speed game-map position))
+                        (turn_right (ahead-of mud down  new-speed game-map position))
+                        (otherwise  (ahead-of mud ahead new-speed game-map position))))
+         (new-boosts  (case move
+                        (turn_left  (ahead-of speed up    new-speed game-map position))
+                        (turn_right (ahead-of speed down  new-speed game-map position))
+                        (use_boost  (1- (ahead-of speed ahead new-speed game-map position)))
+                        (otherwise  (ahead-of speed ahead new-speed game-map position))))
+         (final-speed (decrease-speed-by muds-hit new-speed)))
+    (values new-pos final-speed (+ new-boosts boosts))))
 
 (defun decrease-speed-by (times speed)
   "Reduce SPEED TIMES times."
