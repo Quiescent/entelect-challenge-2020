@@ -17,4 +17,5 @@
   :components ((:file "bot" :depends-on ("state" "package"))
                (:file "state" :depends-on ("parsing" "package"))
                (:file "parsing" :depends-on ("package"))
-               (:file "package")))
+               (:file "package")
+               (:file "find-data" :depends-on ("bot"))))
