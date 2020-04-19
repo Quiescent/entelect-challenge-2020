@@ -18,7 +18,7 @@ OBJECTIVE-ROUND."
                                                        "../"
                                                        (subseq match-path 17))
                                           objective-round))
-        (format file "~{~a~^, ~}~%" result)))))
+        (format file "~{~a~^,~}~%" result)))))
 
 (defun gather-statistics (folder-path objective-round)
   "Produce features for states in FOLDER-PATH.
