@@ -59,7 +59,7 @@ is the binominal label."
                     current-move
                     less-than-objective)
               results)))
-    results))
+    (reverse results)))
 
 (defun finished-in-less-than (objective-round relative-folder-path)
   "Produce T if the game in RELATIVE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."
