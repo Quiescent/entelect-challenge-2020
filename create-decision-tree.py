@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from sklearn.model_selection import cross_val_score
-from sklearn import tree
+from sklearn.ensemble import RandomForestClassifier
 import pandas as pd
 
 
@@ -56,7 +56,7 @@ def create_tree(data_frame):
     """Create a decision tree from DATA_FRAME."""
     y = data_frame['Less_Than_Objective']
     X = data_frame[ALL_FEATURES]
-    decision_tree_classifier = tree.DecisionTreeClassifier()
+    decision_tree_classifier = RandomForestClassifier(n_estimators=10)
     return decision_tree_classifier.fit(X, y)
 
 
@@ -65,6 +65,6 @@ if __name__ == '__main__':
     # tree = create_tree(data)
     y = data['Less_Than_Objective']
     X = data[ALL_FEATURES]
-    decision_tree_classifier = tree.DecisionTreeClassifier()
+    decision_tree_classifier = RandomForestClassifier(n_estimators=10)
     scores = cross_val_score(decision_tree_classifier, X, y, cv=5)
     print(scores)
