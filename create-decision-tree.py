@@ -3,6 +3,9 @@
 import sys
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import export_text
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 import pandas as pd
 
 
@@ -115,3 +118,18 @@ if __name__ == '__main__':
     decision_tree_classifier = RandomForestClassifier(n_estimators=10)
     scores = cross_val_score(decision_tree_classifier, X, y, cv=5)
     print(scores)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    tree = decision_tree_classifier.fit(X_train, y_train)
+    predictions = tree.predict(X_test)
+    print(accuracy_score(y_test, predictions))
+    # export_graphviz(tree.estimators_[0],
+    #                 out_file='tree.dot',
+    #                 feature_names=ALL_FEATURES,
+    #                 rounded=True,
+    #                 proportion=False,
+    #                 precision=2,
+    #                 filled=True)
+    # call(['dot', '-Tpng', 'tree.dot', '-o', 'tree.png', '-Gdpi=600'])
+    print(export_text(tree.estimators_[0],
+                      feature_names=ALL_FEATURES,
+                      show_weights=True))
