@@ -105,3 +105,19 @@ is the binominal label."
 (defun is-round-folder-path (folder-path)
   "Produec T if FOLDER-PATH is a round folder from a run of the game."
   (cl-ppcre:scan "Round [0-9][0-9][0-9]/$" folder-path))
+
+(defun average-finishing-round (relative-folder-path)
+  "Produce the average game length of matches in RELATIVE-FOLDER-PATH."
+  (iter
+    (for round-folder in (directory (make-pathname :directory
+                                                   (list :relative relative-folder-path)
+                                                   :name :wild
+                                                   :type :wild)))
+    (for round-count = (count-rounds (namestring round-folder)))
+    (summing round-count into total-rounds)
+    (counting round-count into total-games)
+    (finally (return (float (/ total-rounds total-games))))))
+
+(defun count-rounds (absolute-folder-path)
+  "Produce a count of the rounds in ABSOLUTE-FOLDER-PATH."
+  (length (round-folders absolute-folder-path)))
