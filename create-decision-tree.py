@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import sys
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 import pandas as pd
 
 
 DATA_FILE_PATH = "data.csv"
+POST_PROCESSED_DATA_FILE_PATH = "data_post_processed.csv"
 MOVE_TRANSLATION = {
     'ACCELERATE': 0,
     'TURN_LEFT': 1,
@@ -27,10 +29,8 @@ ALL_ATTRIBUTES = ['X',
                   'Speed_Up',
                   'Speed_Down',
                   'Move',
-                  'Less_Than_Objective']
-ALL_FEATURES = ['X',
-                'Y',
-                'Speed',
+                  'Objective']
+ALL_FEATURES = ['Speed',
                 'Boosts',
                 'Mud_Ahead',
                 'Mud_Up',
@@ -39,31 +39,78 @@ ALL_FEATURES = ['X',
                 'Speed_Up',
                 'Speed_Down',
                 'Move']
-LABELS = ['Less_Than_Objective']
+LABELS = ['Objective']
+LOOK_AHEAD = 2
 
 
 def load_data(data_file_path):
+    """Load data from DATA_FILE_PATH without preprocessing."""
+    return pd.read_csv(data_file_path)
+
+
+def load_data_with_preprocessing(data_file_path):
     """Load data from DATA_FILE_PATH and apply preprocessing."""
-    data_frame = pd.read_csv(data_file_path).sample(frac=1)
+    data_frame = pd.read_csv(data_file_path)
     data_frame.columns = ALL_ATTRIBUTES
     data_frame['Move'] = data_frame['Move'].map(MOVE_TRANSLATION)
-    data_frame['Less_Than_Objective'] = (data_frame['Less_Than_Objective']
-                                         .map(TRANSLATE_OUTCOME))
+    data_frame['Objective'] = (data_frame['Objective']
+                               .map(TRANSLATE_OUTCOME))
     return data_frame
+
+
+def good_move_based_on_future_speed(data):
+    """Update objective in DATA to T if future moves have a better acceleration."""
+    for i in range(len(data) - 1):
+        current_speed = data['Speed'][i]
+        look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
+        average = average_speed_in_range(data, i + 1, look_ahead)
+        data['Objective'][i] = 1 if average >= current_speed else 0
+
+
+def average_speed_in_range(data, i, j):
+    """Produce the average speed in DATA from rows I through I + J."""
+    if j == 0:
+        return data['Speed'][i]
+    total = 0
+    for k in range(i, i + j):
+        total += data['Speed'][k]
+    return total / j
+
+
+def scan_for_start(data, i):
+    """Produce the index in DATA ahead of I where the round ends."""
+    for j in range(i, len(data)):
+        if j == len(data):
+            return j
+        if data['X'][j] == 0:
+            return j
+    return i
+
+
+def shuffle_data(data):
+    """Produce a shuffled version of DATA."""
+    return data.sample(frac=1)
 
 
 def create_tree(data_frame):
     """Create a decision tree from DATA_FRAME."""
-    y = data_frame['Less_Than_Objective']
+    y = data_frame['Objective']
     X = data_frame[ALL_FEATURES]
     decision_tree_classifier = RandomForestClassifier(n_estimators=10)
     return decision_tree_classifier.fit(X, y)
 
 
 if __name__ == '__main__':
-    data = load_data(DATA_FILE_PATH)
+    if len(sys.argv) > 1 and sys.argv[1] == 'post_process':
+        print('Post processing...')
+        data = load_data_with_preprocessing(DATA_FILE_PATH)
+        good_move_based_on_future_speed(data)
+        data.to_csv(POST_PROCESSED_DATA_FILE_PATH)
+        print('Done')
+        sys.exit(0)
+    data = load_data(POST_PROCESSED_DATA_FILE_PATH)
     # tree = create_tree(data)
-    y = data['Less_Than_Objective']
+    y = data['Objective']
     X = data[ALL_FEATURES]
     decision_tree_classifier = RandomForestClassifier(n_estimators=10)
     scores = cross_val_score(decision_tree_classifier, X, y, cv=5)
