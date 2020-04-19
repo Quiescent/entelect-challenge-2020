@@ -91,13 +91,16 @@ is the binominal label."
 
 (defun last-round-folder (absolute-folder-path)
   "Produce the folder for the last round for the log inside of ABSOLUTE-FOLDER-PATH."
-  (car (last (sort (remove-if-not #'is-round-folder-path
-                                  (mapcar #'namestring
-                                          (directory (make-pathname :directory
-                                                                    (list :absolute absolute-folder-path)
-                                                                    :name :wild
-                                                                    :type :wild))))
-                   #'string-lessp))))
+  (car (last (sort (round-folders absolute-folder-path) #'string-lessp))))
+
+(defun round-folders (absolute-folder-path)
+  "Produce the folders for rounds in ABSOLUTE-FOLDER-PATH."
+  (remove-if-not #'is-round-folder-path
+                 (mapcar #'namestring
+                         (directory (make-pathname :directory
+                                                   (list :absolute absolute-folder-path)
+                                                   :name :wild
+                                                   :type :wild)))))
 
 (defun is-round-folder-path (folder-path)
   "Produec T if FOLDER-PATH is a round folder from a run of the game."
