@@ -54,10 +54,10 @@ is the binominal label."
               results)))
     results))
 
-(defun finished-in-less-than (objective-round absolute-folder-path)
-  "Produce T if the game in ABSOLUTE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."
+(defun finished-in-less-than (objective-round relative-folder-path)
+  "Produce T if the game in RELATIVE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."
   (< (- (length (directory (make-pathname :directory
-                                          (list :absolute absolute-folder-path)
+                                          (list :relative relative-folder-path)
                                           :name :wild
                                           :type :wild))) 2)
      objective-round))
