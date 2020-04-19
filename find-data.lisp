@@ -5,7 +5,7 @@
 
 Produce T for the label if the game was won in less than the
 OBJECTIVE-ROUND."
-  (with-open-file (file "/.../filename.txt"
+  (with-open-file (file "data.csv"
                         :direction :output
                         :if-exists :supersede
                         :if-does-not-exist :create)
