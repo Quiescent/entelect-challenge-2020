@@ -44,7 +44,8 @@ is the binominal label."
              (speed-ahead (ahead-of speed ahead new-speed game-map my-pos))
              (speed-up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
              (speed-down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
-        (push (list my-abs-pos
+        (push (list (car my-abs-pos)
+                    (cdr my-abs-pos)
                     my-speed
                     my-boosts
                     mud-ahead
