@@ -10,7 +10,9 @@ OBJECTIVE-ROUND."
                         :if-exists :supersede
                         :if-does-not-exist :create)
     (iter
+      (for i from 0)
       (for match-path in (matches-where-i-won folder-path))
+      (format t "Working on game: ~a~%" i)
       (iter
         (for result in (gather-statistics (concatenate 'string
                                                        "../"
