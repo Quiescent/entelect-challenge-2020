@@ -5,14 +5,18 @@
 
 Produce T for the label if the game was won in less than the
 OBJECTIVE-ROUND."
-  (iter
-    (for match-path in (matches-where-i-won folder-path))
+  (with-open-file (file "/.../filename.txt"
+                        :direction :output
+                        :if-exists :supersede
+                        :if-does-not-exist :create)
     (iter
-      (for result in (gather-statistics (concatenate 'string
-                                                     "../"
-                                                     (subseq match-path 17))
-                                        objective-round))
-      (format t "~{~a~^, ~}~%" result))))
+      (for match-path in (matches-where-i-won folder-path))
+      (iter
+        (for result in (gather-statistics (concatenate 'string
+                                                       "../"
+                                                       (subseq match-path 17))
+                                          objective-round))
+        (format file "~{~a~^, ~}~%" result)))))
 
 (defun gather-statistics (folder-path objective-round)
   "Produce features for states in FOLDER-PATH.
