@@ -1,0 +1,23 @@
+digraph Tree {
+node [shape=box, style="filled, rounded", color="black", fontname=helvetica] ;
+edge [fontname=helvetica] ;
+0 [label="Speed <= 8.5\ngini = 0.5\nsamples = 99894\nvalue = [44960, 54934]\nclass = y[1]", fillcolor="#dbedfa"] ;
+1 [label="Mud_Ahead <= 1.5\ngini = 0.34\nsamples = 56585\nvalue = [12462, 44123]\nclass = y[1]", fillcolor="#71b9ec"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="Move <= 2.5\ngini = 0.26\nsamples = 44933\nvalue = [7002, 37931]\nclass = y[1]", fillcolor="#5eafea"] ;
+1 -> 2 ;
+3 [label="Move <= 0.5\ngini = 0.33\nsamples = 32125\nvalue = [6667, 25458]\nclass = y[1]", fillcolor="#6db7ec"] ;
+2 -> 3 ;
+4 [label="Mud_Ahead <= 0.5\ngini = 0.28\nsamples = 25497\nvalue = [4197, 21300]\nclass = y[1]", fillcolor="#60b0ea"] ;
+3 -> 4 ;
+5 [label="Speed <= 7.0\ngini = 0.2\nsamples = 12747\nvalue = [1407, 11340]\nclass = y[1]", fillcolor="#52a9e8"] ;
+4 -> 5 ;
+6 [label="Speed <= 5.5\ngini = 0.07\nsamples = 4859\nvalue = [165, 4694]\nclass = y[1]", fillcolor="#40a0e6"] ;
+5 -> 6 ;
+7 [label="Mud_Up <= 2.5\ngini = 0.01\nsamples = 1159\nvalue = [6, 1153]\nclass = y[1]", fillcolor="#3a9ee5"] ;
+6 -> 7 ;
+8 [label="Speed <= 4.0\ngini = 0.03\nsamples = 380\nvalue = [6, 374]\nclass = y[1]", fillcolor="#3c9fe5"] ;
+7 -> 8 ;
+9 [label="gini = 0.0\nsamples = 331\nvalue = [0, 331]\nclass = y[1]", fillcolor="#399de5"] ;
+8 -> 9 ;
+}
