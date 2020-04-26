@@ -94,6 +94,26 @@ NOTE: Implementation detail of `logging-cond."
  ((t 3))
  ((eq 3 5) 4))
 
+(defmacro decision-tree-classifier ()
+  "Prodcue a decision tree classifier by parsing the dot file in this repo.
+
+Assumes that the surrounding code binds the features:
+ - SPEED
+ - BOOSTS
+ - MUD_AHEAD
+ - MUD_UP
+ - MUD_DOWN
+ - SPEED_AHEAD
+ - SPEED_UP
+ - SPEED_DOWN
+ - MOVE
+ - OBJECTIVE
+
+Around the fom, but don't worry.  The compiler will prevent you from
+getting it horribly wrong :)"
+  (let ((tree (dot-file-to-list-tree "tree-2.dot")))
+    `(decision-tree ,tree)))
+
 (defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
 
@@ -200,6 +220,7 @@ Fourth is my boosts left."
           (iter
             (for move in all-moves)
             (when (or (not (move-can-be-made move current-boosts (cdr current-pos)))
+                      (not (move-should-be-made move game-map my-pos speed boosts))
                       (and (= 0 current-speed)
                            (or (eq move 'turn_right)
                                (eq move 'turn_left))))
@@ -210,6 +231,24 @@ Fourth is my boosts left."
                     paths-to-explore)))))
     (incf counter)
     (finally (return found-paths))))
+
+(defun move-should-be-made (move game-map my-pos speed boosts)
+  "Produce T if we pridect that MOVE should be made.
+
+MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
+with BOOSTS left."
+  (bind (((_ . y)     my-pos)
+         (new-speed   (case move
+                        (accelerate (increase-speed speed))
+                        (use_boost  15)
+                        (otherwise  speed)))
+         (mud_ahead   (ahead-of mud ahead new-speed game-map my-pos))
+         (mud_up      (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
+         (mud_down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
+         (speed_ahead (ahead-of speed ahead new-speed game-map my-pos))
+         (speed_up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
+         (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
+    (decision-tree-classifier)))
 
 (defmacro ahead-of (type direction speed game-map pos)
   "Produce the appropriate `ahead-of' form.
