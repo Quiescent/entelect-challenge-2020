@@ -1,5 +1,5 @@
 (defpackage :bot
-  (:use :cl :yason :iterate :metabang-bind)
+  (:use :cl :yason :iterate :metabang-bind :anaphora)
   (:export #:main
            #:define-poclo
            #:camel-case
