@@ -263,13 +263,14 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (ahead `(cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
-(defun move-should-be-made (move game-map my-pos speed boosts)
-  "Produce T if we pridect that MOVE should be made.
+(defun move-should-be-made (test-move game-map my-pos speed boosts)
+  "Produce T if we pridect that TEST-MOVE should be made.
 
 MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
 with BOOSTS left."
   (bind (((_ . y)     my-pos)
-         (new-speed   (case move
+         (move        (encode-move test-move))
+         (new-speed   (case test-move
                         (accelerate (increase-speed speed))
                         (use_boost  15)
                         (otherwise  speed)))
@@ -282,6 +283,14 @@ with BOOSTS left."
          (bad         nil)
          (good        t))
     (decision-tree-classifier)))
+
+(defun encode-move (move)
+  "Encode MOVE as a number the same way as our data generator does."
+  (case move
+    (accelerate 0)
+    (turn_left  1)
+    (turn_right 2)
+    (use_boost  3)))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
