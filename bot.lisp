@@ -219,9 +219,15 @@ Fourth is my boosts left."
           (push (list path current-pos current-speed current-boosts)
                 found-paths)
           (iter
-            (for move in all-moves)
+            (for move in (subseq (sort all-moves #'<
+                                       :key (lambda (move)
+                                              (move-score move
+                                                          game-map
+                                                          current-pos
+                                                          current-speed
+                                                          current-boosts)))
+                                 0 2))
             (when (or (not (move-can-be-made move current-boosts (cdr current-pos)))
-                      (not (move-should-be-made move game-map my-pos speed boosts))
                       (and (= 0 current-speed)
                            (or (eq move 'turn_right)
                                (eq move 'turn_left))))
@@ -262,8 +268,8 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (ahead `(cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
-(defun move-should-be-made (test-move game-map my-pos speed boosts)
-  "Produce T if we pridect that TEST-MOVE should be made.
+(defun move-score (test-move game-map my-pos speed boosts)
+  "Produce a score for TEST-MOVE, based on a trained decision tree.
 
 MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
 with BOOSTS left."
@@ -279,8 +285,11 @@ with BOOSTS left."
          (speed_ahead (ahead-of speed ahead new-speed game-map my-pos))
          (speed_up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
          (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum))
-         (bad         nil)
-         (good        t))
+         (great       2)
+         (good        1)
+         (ok          0)
+         (bad         -1)
+         (terrible    -2))
     (decision-tree-classifier)))
 
 (defun encode-move (move)

@@ -129,7 +129,10 @@ if __name__ == '__main__':
     data = load_data(POST_PROCESSED_DATA_FILE_PATH)
     y = data['Objective']
     X = data[ALL_FEATURES]
-    decision_tree_classifier = DecisionTreeClassifier()
+    decision_tree_classifier = DecisionTreeClassifier(min_impurity_decrease=0.005,
+                                                      min_samples_leaf=10,
+                                                      criterion='entropy',
+                                                      class_weight='balanced')
     scores = cross_val_score(decision_tree_classifier, X, y, cv=5)
     print(scores)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
