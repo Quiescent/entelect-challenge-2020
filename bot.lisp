@@ -41,23 +41,22 @@
             :load-toplevel
             :execute)
   (defun decision-tree-iter (forms)
-  "Implementation detail for the macro `decision-tree'."
-  (logging-cond-iter (mapcar (lambda (form)
-                               (progn
-                                 (when (equal 'quote (car form))
-                                   (error "Use unquoted symbol to terminate a tree!"))
-                                 (if (symbolp (cadr form))
-                                     (list (car form) (cadr form))
-                                     `(,(car form) ,(decision-tree-iter (cdr form))))))
-                             forms)))
+    "Implementation detail for the macro `decision-tree'."
+    (logging-cond-iter (mapcar (lambda (form)
+                                 (progn
+                                   (when (equal 'quote (car form))
+                                     (error "Use unquoted symbol to terminate a tree!"))
+                                   (if (symbolp (cadr form))
+                                       (list (car form) (cadr form))
+                                       `(,(car form) ,(decision-tree-iter (cdr form))))))
+                               forms)))
 
   (defun logging-cond-iter (forms)
     "Wrap forms in a `cond' and print the condition which succeeded.
 
 NOTE: Implementation detail of `logging-cond."
     `(,@(reduce #'first-success
-                (mapcar (lambda (form) `(,(car form) (progn (print (quote ,(car form)) *error-output*)
-                                                            ,(cadr form))))
+                (mapcar (lambda (form) `(,(car form) ,(cadr form)))
                         forms)
                 :initial-value nil)))
 
