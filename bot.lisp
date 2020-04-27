@@ -234,26 +234,6 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
-(defun move-should-be-made (move game-map my-pos speed boosts)
-  "Produce T if we pridect that MOVE should be made.
-
-MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
-with BOOSTS left."
-  (bind (((_ . y)     my-pos)
-         (new-speed   (case move
-                        (accelerate (increase-speed speed))
-                        (use_boost  15)
-                        (otherwise  speed)))
-         (mud_ahead   (ahead-of mud ahead new-speed game-map my-pos))
-         (mud_up      (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
-         (mud_down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
-         (speed_ahead (ahead-of speed ahead new-speed game-map my-pos))
-         (speed_up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
-         (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum))
-         (bad         nil)
-         (good        t))
-    (decision-tree-classifier)))
-
 (defmacro ahead-of (type direction speed game-map pos)
   "Produce the appropriate `ahead-of' form.
 
@@ -282,6 +262,26 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (down  `(1+ (cdr ,pos)))
                       (ahead `(cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
+
+(defun move-should-be-made (move game-map my-pos speed boosts)
+  "Produce T if we pridect that MOVE should be made.
+
+MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
+with BOOSTS left."
+  (bind (((_ . y)     my-pos)
+         (new-speed   (case move
+                        (accelerate (increase-speed speed))
+                        (use_boost  15)
+                        (otherwise  speed)))
+         (mud_ahead   (ahead-of mud ahead new-speed game-map my-pos))
+         (mud_up      (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
+         (mud_down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
+         (speed_ahead (ahead-of speed ahead new-speed game-map my-pos))
+         (speed_up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
+         (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum))
+         (bad         nil)
+         (good        t))
+    (decision-tree-classifier)))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
