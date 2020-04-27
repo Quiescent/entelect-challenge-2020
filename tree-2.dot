@@ -20,4 +20,14 @@ edge [fontname=helvetica] ;
 7 -> 8 ;
 9 [label="gini = 0.0\nsamples = 331\nvalue = [0, 331]\nclass = y[1]", fillcolor="#399de5"] ;
 8 -> 9 ;
+10 [label="Mud_Up <= 0.5\ngini = 0.21\nsamples = 49\nvalue = [6, 43]\nclass = y[1]", fillcolor="#55abe9"] ;
+8 -> 10 ;
+11 [label="Mud_Down <= 0.5\ngini = 0.41\nsamples = 7\nvalue = [2, 5]\nclass = y[1]", fillcolor="#88c4ef"] ;
+10 -> 11 ;
+12 [label="Speed_Ahead <= 0.5\ngini = 0.48\nsamples = 5\nvalue = [2, 3]\nclass = y[1]", fillcolor="#bddef6"] ;
+11 -> 12 ;
+13 [label="gini = 0.5\nsamples = 2\nvalue = [1, 1]\nclass = y[0]", fillcolor="#ffffff"] ;
+12 -> 13 ;
+14 [label="gini = 0.44\nsamples = 3\nvalue = [1, 2]\nclass = y[1]", fillcolor="#9ccef2"] ;
+12 -> 14 ;
 }

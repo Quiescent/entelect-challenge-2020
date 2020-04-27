@@ -37,35 +37,20 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
-(defmacro decision-tree (&rest forms)
-  "Create a series of nested conds from FORMS.
-
-To terminate the tree you must supply an unquoted symbol, otherwise
-it's assumed that you're supplying the next condition."
-  (labels ((decision-tree-iter (forms)
-             (logging-cond-iter (mapcar (lambda (form)
-                                          (progn
-                                            (when (equal 'quote (car form))
-                                              (error "Use unquoted symbol to terminate a tree!"))
-                                            (if (symbolp (cadr form))
-                                                (list (car form) (cadr form))
-                                                `(,(car form) ,(decision-tree-iter (cdr form))))))
-                                        forms))))
-    (decision-tree-iter forms)))
-
-#+nil
-(decision-tree
- ((< 2 3) ((eq 2 2) blah)
-          ((eq 3 4) haha)))
-
-;; Errors out deliberately...
-#+nil
-(decision-tree
- ((< 2 3) ((eq 2 2) 'blah)))
-
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
+  (defun decision-tree-iter (forms)
+  "Implementation detail for the macro `decision-tree'."
+  (logging-cond-iter (mapcar (lambda (form)
+                               (progn
+                                 (when (equal 'quote (car form))
+                                   (error "Use unquoted symbol to terminate a tree!"))
+                                 (if (symbolp (cadr form))
+                                     (list (car form) (cadr form))
+                                     `(,(car form) ,(decision-tree-iter (cdr form))))))
+                             forms)))
+
   (defun logging-cond-iter (forms)
     "Wrap forms in a `cond' and print the condition which succeeded.
 
@@ -84,6 +69,23 @@ NOTE: Implementation detail of `logging-cond."
 
   #+nil
   (first-success 't '((eq 2 3) blah)))
+
+(defmacro decision-tree (&rest forms)
+  "Create a series of nested conds from FORMS.
+
+To terminate the tree you must supply an unquoted symbol, otherwise
+it's assumed that you're supplying the next condition."
+  (decision-tree-iter forms))
+
+#+nil
+(decision-tree
+ ((< 2 3) ((eq 2 2) blah)
+          ((eq 3 4) haha)))
+
+;; Errors out deliberately...
+#+nil
+(decision-tree
+ ((< 2 3) ((eq 2 2) 'blah)))
 
 (defmacro logging-cond (&rest forms)
   "Wrap forms in a `cond' and print the condition which succeeded."
@@ -111,8 +113,8 @@ Assumes that the surrounding code binds the features:
 
 Around the fom, but don't worry.  The compiler will prevent you from
 getting it horribly wrong :)"
-  (let ((tree (dot-file-to-list-tree "tree-2.dot")))
-    `(decision-tree ,tree)))
+  (let ((tree (dot-file-to-list-tree "tree.dot")))
+    (decision-tree-iter (list tree))))
 
 (defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
@@ -247,7 +249,9 @@ with BOOSTS left."
          (mud_down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
          (speed_ahead (ahead-of speed ahead new-speed game-map my-pos))
          (speed_up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
-         (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
+         (speed_down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum))
+         (bad         nil)
+         (good        t))
     (decision-tree-classifier)))
 
 (defmacro ahead-of (type direction speed game-map pos)

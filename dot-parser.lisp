@@ -29,7 +29,7 @@ leaning edges."
         (if (string-equal "gini" feature)
           (ppcre:register-groups-bind (class) ("class = y\\[([01])\\]" line)
             (setf (gethash (read-from-string node) leaves)
-                  (string-equal class "1")))
+                  (if (string-equal class "1") 'good 'bad)))
           (setf (gethash (read-from-string node) weights)
                 `(,(intern operator) ,(intern (string-upcase feature)) ,(read-from-string value)))))
       (finally (return (edges-and-weights-to-tree edges weights leaves))))))
@@ -47,8 +47,31 @@ branch.
 LEAVES are the labels of a leaf node, if we hit one.  i.e. T if it was
 a good move."
   (labels ((to-tree (current-node)
-             (bind ((next-edges (gethash current-node edges)))
-               (aif (gethash current-node weights)
-                    (cons it (mapcar #'to-tree next-edges))
-                    (gethash current-node leaves)))))
-    (to-tree 0)))
+             (when current-node
+               (bind ((next-edges (gethash current-node edges))
+                      (weight     (gethash current-node weights))
+                      (true-edge  (car next-edges))
+                      (false-edge (cadr next-edges)))
+                 (aif (gethash true-edge leaves)
+                      (list (list weight it)
+                            (delete nil (to-tree false-edge)))
+                      (list weight
+                            (delete nil (to-tree true-edge))
+                            (delete nil (to-tree false-edge))))))))
+    (raise-tripple-lists (delete nil (to-tree 0)))))
+
+(defun raise-tripple-lists (xs)
+  "Turn (((stuff...))) nesting into ((stuff..)) nesting."
+  (if (and (consp xs)
+           (consp (car xs))
+           (consp (caar xs)))
+      (mapcar #'raise-tripple-lists (car xs))
+      (if (not (and (consp xs)
+                    (consp (cadr xs))))
+          xs
+          (bind ((ys (cadr xs)))
+            (if (and (consp (car ys))
+                     (consp (caar ys)))
+                (cons (car xs)
+                      (mapcar #'raise-tripple-lists ys))
+                (mapcar #'raise-tripple-lists xs))))))
