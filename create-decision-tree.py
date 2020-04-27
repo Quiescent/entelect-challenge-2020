@@ -43,6 +43,11 @@ ALL_FEATURES = ['Speed',
                 'Move']
 LABELS = ['Objective']
 LOOK_AHEAD = 2
+CLASSES = ['GREAT',
+           'GOOD',
+           'OK',
+           'BAD',
+           'TERRIBLE']
 
 
 def load_data(data_file_path):
@@ -66,7 +71,18 @@ def good_move_based_on_future_speed(data):
         current_speed = data['Speed'][i]
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
         average = average_speed_in_range(data, i + 1, look_ahead)
-        data['Objective'][i] = 1 if average >= current_speed else 0
+        delta = current_speed - average
+        if delta >= 6:
+            outcome = 0
+        elif delta >= 3:
+            outcome = 1
+        elif delta >= -1 and delta <= 1:
+            outcome = 2
+        elif delta > -3:
+            outcome = 3
+        else:
+            outcome = 4
+        data['Objective'][i] = outcome
 
 
 def average_speed_in_range(data, i, j):
@@ -123,7 +139,7 @@ if __name__ == '__main__':
     export_graphviz(tree,
                     out_file='tree.dot',
                     feature_names=ALL_FEATURES,
-                    class_names=True,
+                    class_names=CLASSES,
                     rounded=True,
                     proportion=False,
                     precision=2,
