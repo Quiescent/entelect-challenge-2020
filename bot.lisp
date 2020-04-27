@@ -146,6 +146,19 @@ board."
      (shifts  fast-move)
      (t       far-move))))
 
+;; (format t "~a~%" (mapcar (lambda (move) (move-score move
+;;                                                       game-map
+;;                                                       my-pos
+;;                                                       speed
+;;                                                       boosts)) (sort all-moves
+;;                                                                      #'>
+;;                                                                      :key (lambda (move)
+;;                                                                             (move-score move
+;;                                                                                         game-map
+;;                                                                                         my-pos
+;;                                                                                         speed
+;;                                                                                         boosts)))))
+
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
   (iter
@@ -228,7 +241,7 @@ Fourth is my boosts left."
                                                          (eq move 'turn_left)))))
                              all-moves))
             (for move in (subseq (sort possible-moves
-                                       #'<
+                                       #'>
                                        :key (lambda (move)
                                               (move-score move
                                                           game-map
