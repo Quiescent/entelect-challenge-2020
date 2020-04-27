@@ -219,19 +219,23 @@ Fourth is my boosts left."
           (push (list path current-pos current-speed current-boosts)
                 found-paths)
           (iter
-            (for move in (subseq (sort all-moves #'<
+            (with possible-moves =
+                  (remove-if (lambda (move) (or (not (move-can-be-made move
+                                                                       current-boosts
+                                                                       (cdr current-pos)))
+                                                (and (= 0 current-speed)
+                                                     (or (eq move 'turn_right)
+                                                         (eq move 'turn_left)))))
+                             all-moves))
+            (for move in (subseq (sort possible-moves
+                                       #'<
                                        :key (lambda (move)
                                               (move-score move
                                                           game-map
                                                           current-pos
                                                           current-speed
                                                           current-boosts)))
-                                 0 2))
-            (when (or (not (move-can-be-made move current-boosts (cdr current-pos)))
-                      (and (= 0 current-speed)
-                           (or (eq move 'turn_right)
-                               (eq move 'turn_left))))
-              (next-iteration))
+                                 0 (min (length possible-moves) 2)))
             (bind (((:values new-pos new-speed new-boosts)
                     (make-move move game-map current-pos current-speed current-boosts)))
               (push (list (cons move path) new-pos new-speed new-boosts)
@@ -290,7 +294,7 @@ with BOOSTS left."
          (ok          0)
          (bad         -1)
          (terrible    -2))
-    (decision-tree-classifier)))
+    (or (decision-tree-classifier) terrible)))
 
 (defun encode-move (move)
   "Encode MOVE as a number the same way as our data generator does."
