@@ -122,42 +122,14 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore my-abs-x))
-  (bind ((end-states                        (states-from game-map my-pos speed boosts))
-         (fewest-moves                      (only-shortest-path-length end-states))
-         ((fast-move fast-x fast-speed . _) (best-by-speed fewest-moves))
-         ((far-move  far-x  far-speed  . _) (best-by-dist  fewest-moves))
-         (shortest-allowable                (length (caar fewest-moves)))
-         (at-most-n-longer                  (remove-if (lambda (state)
-                                                         (> (length (car state)) shortest-allowable))
-                                                       end-states))
-         ((more-boosts _ _ new-boosts)      (best-by-boost-count at-most-n-longer))
-         (boost-move                        'use_boost)
-         (shifts                            (> (+ fast-speed fast-x)
-                                               (+ far-speed  far-x)))
-         (gathers                           (> new-boosts boosts))
-         (v-tech                            (> boosts 2)))
-    (decision-tree
-     (boosting
-      (gathers more-boosts)
-      (shifts  fast-move)
-      (t       far-move))
-     (v-tech  boost-move)
-     (gathers more-boosts)
-     (shifts  fast-move)
-     (t       far-move))))
-
-;; (format t "~a~%" (mapcar (lambda (move) (move-score move
-;;                                                       game-map
-;;                                                       my-pos
-;;                                                       speed
-;;                                                       boosts)) (sort all-moves
-;;                                                                      #'>
-;;                                                                      :key (lambda (move)
-;;                                                                             (move-score move
-;;                                                                                         game-map
-;;                                                                                         my-pos
-;;                                                                                         speed
-;;                                                                                         boosts)))))
+  (car (sort all-moves
+             #'>
+             :key (lambda (move)
+                    (move-score move
+                                game-map
+                                my-pos
+                                speed
+                                boosts)))))
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
