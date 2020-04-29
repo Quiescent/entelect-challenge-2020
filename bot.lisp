@@ -129,7 +129,24 @@ board."
                                 game-map
                                 my-pos
                                 speed
-                                boosts)))))
+                                boosts))))
+  ;; (sort all-moves
+  ;;            #'>
+  ;;            :key (lambda (move)
+  ;;                   (move-score move
+  ;;                               game-map
+  ;;                               my-pos
+  ;;                               speed
+  ;;                               boosts)))
+  ;; (car (sort all-moves
+  ;;            #'>
+  ;;            :key (lambda (move)
+  ;;                   (move-score move
+  ;;                               game-map
+  ;;                               my-pos
+  ;;                               speed
+  ;;                               boosts))))
+  )
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
@@ -279,11 +296,11 @@ with BOOSTS left."
          (ok          0)
          (bad         -1)
          (terrible    -2))
-    (or (decision-tree-classifier) terrible)))
+    (decision-tree-classifier)))
 
 (defun encode-move (move)
   "Encode MOVE as a number the same way as our data generator does."
-  (case move
+  (ecase move
     (accelerate 0)
     (turn_left  1)
     (turn_right 2)

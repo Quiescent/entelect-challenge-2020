@@ -51,27 +51,337 @@ a good move."
                (bind ((next-edges (gethash current-node edges))
                       (weight     (gethash current-node weights))
                       (true-edge  (car next-edges))
-                      (false-edge (cadr next-edges)))
-                 (aif (gethash true-edge leaves)
-                      (list (list weight it)
-                            (delete nil (to-tree false-edge)))
-                      (list weight
-                            (delete nil (to-tree true-edge))
-                            (delete nil (to-tree false-edge))))))))
-    (raise-tripple-lists (delete nil (to-tree 0)))))
+                      (true-leaf  (gethash true-edge leaves))
+                      (false-edge (cadr next-edges))
+                      (false-leaf (gethash false-edge leaves)))
+                 (list t
+                       (list weight (or true-leaf  (to-tree true-edge)))
+                       (if false-leaf
+                           (list t false-leaf)
+                           (to-tree false-edge)))))))
+    (to-tree 0)))
 
+;; this is the problem!!!
 (defun raise-tripple-lists (xs)
   "Turn (((stuff...))) nesting into ((stuff..)) nesting."
   (if (and (consp xs)
            (consp (car xs))
            (consp (caar xs)))
-      (mapcar #'raise-tripple-lists (car xs))
-      (if (not (and (consp xs)
-                    (consp (cadr xs))))
-          xs
-          (bind ((ys (cadr xs)))
-            (if (and (consp (car ys))
-                     (consp (caar ys)))
-                (cons (car xs)
-                      (mapcar #'raise-tripple-lists ys))
-                (mapcar #'raise-tripple-lists xs))))))
+      (cons (car xs)
+            (mapcar #'raise-tripple-lists (cdr xs)))
+      xs))
+
+#+nil
+'((<= SPEED 12.0)
+  ((<= MOVE 2.5)
+   ((<= MUD_AHEAD 1.5)
+    ((<= SPEED 7.0)
+     ((<= SPEED 4.0)
+      ((<= MUD_AHEAD 0.5)
+       ((<= MOVE 0.5)
+        (((<= BOOSTS 0.5) TERRIBLE))
+        (((<= BOOSTS 0.5) GREAT)))))))))
+
+;; Failing case
+#+nil
+'((<= SPEED 12.0)
+  ((<= MOVE 2.5)
+   ((<= MUD_AHEAD 1.5)
+    ((<= SPEED 7.0)
+     ((<= SPEED 4.0)
+      ((<= MUD_AHEAD 0.5)
+       ((<= MOVE 0.5)
+        (((<= BOOSTS 0.5) TERRIBLE))
+        (((<= BOOSTS 0.5) GREAT)))
+       ((<= SPEED_AHEAD 0.5)
+        (((<= MOVE 0.5) GREAT)
+         (((<= BOOSTS 0.5) GREAT)))))
+      ((<= MUD_AHEAD 0.5)
+       ((<= SPEED 5.5)
+        (((<= MUD_UP 2.5) BAD))
+        ((<= SPEED_AHEAD 0.5)
+         (((<= MOVE 0.5) GREAT))))
+       ((<= BOOSTS 0.5)
+        ((<= SPEED_AHEAD 0.5)
+         ((<= MOVE 0.5)
+          (((<= SPEED 5.5) GREAT))
+          ((<= MUD_DOWN 0.5)
+           ((<= SPEED_DOWN 0.5)
+            ((<= MOVE 1.5)
+             (((<= SPEED_UP 0.5) BAD))))
+           ((<= MUD_UP 0.5)
+            ((<= SPEED_UP 0.5)
+             (((<= MOVE 1.5) BAD)))))))
+        ((<= SPEED_AHEAD 0.5)
+         (((<= BOOSTS 1.5) TERRIBLE))))))))))
+
+
+#+nil
+'(T
+ ((<= SPEED 12.0)
+  (T
+   ((<= MOVE 2.5)
+    (T
+     ((<= MUD_AHEAD 1.5)
+      (T
+       ((<= SPEED 7.0)
+        (T
+         ((<= SPEED 4.0)
+          (T
+           ((<= MUD_AHEAD 0.5)
+            (T ((<= MOVE 0.5) (T ((<= BOOSTS 0.5) TERRIBLE) (T GREAT)))
+             (T ((<= BOOSTS 0.5) GREAT) (T TERRIBLE))))
+           (T
+            ((<= SPEED_AHEAD 0.5)
+             (T ((<= MOVE 0.5) GREAT)
+              (T ((<= BOOSTS 0.5) GREAT) (T TERRIBLE))))
+            (T TERRIBLE))))
+         (T
+          ((<= MUD_AHEAD 0.5)
+           (T ((<= SPEED 5.5) (T ((<= MUD_UP 2.5) BAD) (T BAD)))
+            (T ((<= SPEED_AHEAD 0.5) (T ((<= MOVE 0.5) GREAT) (T BAD)))
+             (T GREAT))))
+          (T
+           ((<= BOOSTS 0.5)
+            (T
+             ((<= SPEED_AHEAD 0.5)
+              (T ((<= MOVE 0.5) (T ((<= SPEED 5.5) GREAT) (T BAD)))
+               (T
+                ((<= MUD_DOWN 0.5)
+                 (T
+                  ((<= SPEED_DOWN 0.5)
+                   (T ((<= MOVE 1.5) (T ((<= SPEED_UP 0.5) BAD) (T BAD)))
+                    (T BAD)))
+                  (T GREAT)))
+                (T
+                 ((<= MUD_UP 0.5)
+                  (T ((<= SPEED_UP 0.5) (T ((<= MOVE 1.5) BAD) (T BAD)))
+                   (T GREAT)))
+                 (T BAD)))))
+             (T BAD)))
+           (T ((<= SPEED_AHEAD 0.5) (T ((<= BOOSTS 1.5) TERRIBLE) (T BAD)))
+            (T BAD))))))
+       (T
+        ((<= BOOSTS 0.5)
+         (T
+          ((<= MOVE 0.5)
+           (T
+            ((<= SPEED_AHEAD 0.5)
+             (T ((<= SPEED 8.5) (T ((<= MUD_AHEAD 0.5) BAD) (T BAD)))
+              (T ((<= MUD_AHEAD 0.5) BAD) (T BAD))))
+            (T ((<= SPEED 8.5) BAD) (T ((<= MUD_AHEAD 0.5) BAD) (T BAD)))))
+          (T
+           ((<= MUD_UP 0.5)
+            (T
+             ((<= MOVE 1.5)
+              (T ((<= SPEED_UP 0.5) (T ((<= SPEED 8.5) BAD) (T BAD)))
+               (T ((<= SPEED 8.5) BAD) (T BAD))))
+             (T
+              ((<= MUD_DOWN 0.5)
+               (T ((<= SPEED_DOWN 0.5) BAD) (T ((<= SPEED 8.5) BAD) (T BAD))))
+              (T ((<= MUD_DOWN 1.5) BAD)
+               (T ((<= SPEED_DOWN 0.5) GOOD) (T GREAT))))))
+           (T
+            ((<= MUD_DOWN 0.5)
+             (T
+              ((<= MOVE 1.5)
+               (T ((<= MUD_UP 1.5) BAD) (T ((<= SPEED 8.5) GREAT) (T GOOD))))
+              (T ((<= SPEED_DOWN 0.5) BAD) (T ((<= SPEED 8.5) BAD) (T BAD)))))
+            (T
+             ((<= MUD_UP 1.5)
+              (T
+               ((<= MOVE 1.5)
+                (T ((<= SPEED 8.5) BAD) (T ((<= SPEED_UP 0.5) BAD) (T BAD))))
+               (T ((<= MUD_DOWN 1.5) BAD) (T GREAT))))
+             (T
+              ((<= MUD_DOWN 1.5)
+               (T ((<= MOVE 1.5) (T ((<= SPEED_UP 0.5) GOOD) (T GREAT)))
+                (T ((<= SPEED 8.5) BAD) (T BAD))))
+              (T ((<= SPEED 8.5) GREAT) (T GOOD))))))))
+        (T
+         ((<= SPEED 8.5)
+          (T
+           ((<= MOVE 0.5)
+            (T ((<= MUD_AHEAD 0.5) (T ((<= SPEED_AHEAD 0.5) BAD) (T BAD)))
+             (T ((<= MUD_UP 1.5) BAD) (T BAD))))
+           (T
+            ((<= MUD_DOWN 0.5)
+             (T
+              ((<= MOVE 1.5)
+               (T ((<= MUD_UP 0.5) TERRIBLE)
+                (T ((<= MUD_UP 1.5) GREAT) (T BAD))))
+              (T TERRIBLE)))
+            (T
+             ((<= MUD_UP 0.5)
+              (T ((<= MOVE 1.5) (T ((<= BOOSTS 1.5) TERRIBLE) (T BAD)))
+               (T ((<= MUD_DOWN 1.5) GREAT) (T BAD))))
+             (T ((<= MUD_DOWN 1.5) GREAT)
+              (T ((<= MUD_UP 1.5) (T ((<= MOVE 1.5) GREAT) (T BAD)))
+               (T BAD)))))))
+         (T
+          ((<= MOVE 0.5)
+           (T ((<= MUD_AHEAD 0.5) (T ((<= SPEED_AHEAD 0.5) BAD) (T BAD)))
+            (T ((<= SPEED_AHEAD 0.5) GREAT) (T BAD))))
+          (T
+           ((<= MUD_DOWN 0.5)
+            (T
+             ((<= MOVE 1.5)
+              (T ((<= MUD_UP 0.5) TERRIBLE)
+               (T ((<= MUD_UP 2.5) (T ((<= MUD_UP 1.5) GREAT) (T GREAT)))
+                (T BAD))))
+             (T ((<= SPEED_DOWN 0.5) TERRIBLE) (T BAD))))
+           (T
+            ((<= MUD_UP 0.5)
+             (T ((<= MOVE 1.5) (T ((<= SPEED_UP 0.5) TERRIBLE) (T BAD)))
+              (T ((<= MUD_DOWN 2.5) (T ((<= MUD_DOWN 1.5) GREAT) (T GREAT)))
+               (T BAD))))
+            (T
+             ((<= MUD_DOWN 2.5)
+              (T
+               ((<= MUD_DOWN 1.5)
+                (T
+                 ((<= MOVE 1.5)
+                  (T ((<= MUD_UP 2.5) (T ((<= MUD_UP 1.5) GREAT) (T GREAT)))
+                   (T BAD)))
+                 (T GREAT)))
+               (T
+                ((<= MOVE 1.5)
+                 (T ((<= MUD_UP 2.5) (T ((<= MUD_UP 1.5) GREAT) (T GREAT)))
+                  (T BAD)))
+                (T GREAT))))
+             (T
+              ((<= MOVE 1.5)
+               (T ((<= MUD_UP 2.5) (T ((<= MUD_UP 1.5) GREAT) (T GREAT)))
+                (T BAD)))
+              (T BAD))))))))))
+     (T
+      ((<= MOVE 0.5)
+       (T
+        ((<= SPEED 8.5)
+         (T
+          ((<= SPEED 7.0)
+           (T
+            ((<= BOOSTS 0.5)
+             (T ((<= SPEED_AHEAD 0.5) GREAT)
+              (T ((<= SPEED 4.0) TERRIBLE) (T BAD))))
+            (T ((<= SPEED 4.5) GREAT) (T BAD))))
+          (T
+           ((<= MUD_AHEAD 2.5)
+            (T
+             ((<= SPEED_AHEAD 0.5)
+              (T ((<= MUD_DOWN 0.5) (T ((<= BOOSTS 0.5) BAD) (T GREAT)))
+               (T BAD)))
+             (T ((<= SPEED_AHEAD 1.5) GREAT) (T BAD))))
+           (T ((<= BOOSTS 0.5) (T ((<= SPEED_AHEAD 0.5) GOOD) (T GREAT)))
+            (T GREAT)))))
+        (T ((<= MUD_AHEAD 2.5) (T ((<= BOOSTS 0.5) GREAT) (T GREAT)))
+         (T ((<= BOOSTS 0.5) (T ((<= SPEED_AHEAD 0.5) GOOD) (T GOOD)))
+          (T GOOD)))))
+      (T
+       ((<= BOOSTS 0.5)
+        (T
+         ((<= MUD_DOWN 0.5)
+          (T
+           ((<= SPEED_DOWN 0.5)
+            (T
+             ((<= MOVE 1.5)
+              (T
+               ((<= MUD_UP 1.5)
+                (T ((<= MUD_UP 0.5) (T ((<= SPEED_UP 0.5) BAD) (T BAD)))
+                 (T BAD)))
+               (T ((<= SPEED 8.5) GOOD)
+                (T ((<= MUD_AHEAD 2.5) GOOD) (T GREAT)))))
+             (T ((<= SPEED 8.5) BAD) (T BAD))))
+           (T ((<= SPEED 7.0) GREAT) (T BAD))))
+         (T
+          ((<= MUD_UP 1.5)
+           (T
+            ((<= SPEED_UP 0.5)
+             (T
+              ((<= MOVE 1.5)
+               (T ((<= MUD_UP 0.5) (T ((<= SPEED 8.5) BAD) (T BAD)))
+                (T ((<= SPEED 8.5) (T ((<= SPEED 7.0) GREAT) (T BAD)))
+                 (T BAD))))
+              (T
+               ((<= MUD_DOWN 1.5)
+                (T ((<= SPEED 8.5) BAD) (T ((<= SPEED_DOWN 0.5) BAD) (T BAD))))
+               (T ((<= MUD_DOWN 2.5) GREAT) (T GOOD)))))
+            (T ((<= MUD_UP 0.5) BAD) (T BAD))))
+          (T
+           ((<= MUD_DOWN 1.5)
+            (T ((<= SPEED 8.5) GREAT)
+             (T ((<= MOVE 1.5) GREAT) (T ((<= SPEED_DOWN 0.5) BAD) (T BAD)))))
+           (T GOOD)))))
+       (T
+        ((<= MUD_DOWN 0.5)
+         (T ((<= MOVE 1.5) (T ((<= MUD_UP 0.5) TERRIBLE) (T GREAT)))
+          (T TERRIBLE)))
+        (T
+         ((<= MUD_UP 0.5)
+          (T ((<= MOVE 1.5) TERRIBLE) (T ((<= SPEED_DOWN 0.5) GREAT) (T BAD))))
+         (T GREAT)))))))
+   (T
+    ((<= MUD_AHEAD 0.5)
+     (T
+      ((<= SPEED 8.5)
+       (T ((<= SPEED 7.0) (T ((<= SPEED 5.5) TERRIBLE) (T TERRIBLE)))
+        (T ((<= SPEED_AHEAD 0.5) (T ((<= BOOSTS 1.5) TERRIBLE) (T TERRIBLE)))
+         (T TERRIBLE))))
+      (T
+       ((<= BOOSTS 1.5)
+        (T ((<= SPEED_AHEAD 0.5) (T ((<= MUD_UP 2.5) TERRIBLE) (T TERRIBLE)))
+         (T TERRIBLE)))
+       (T TERRIBLE))))
+    (T
+     ((<= SPEED 5.5)
+      (T ((<= MUD_AHEAD 2.5) (T ((<= MUD_AHEAD 1.5) TERRIBLE) (T TERRIBLE)))
+       (T ((<= MUD_AHEAD 3.5) (T ((<= SPEED 4.0) TERRIBLE) (T BAD)))
+        (T GREAT))))
+     (T
+      ((<= SPEED 7.0)
+       (T ((<= MUD_AHEAD 1.5) (T ((<= BOOSTS 1.5) GREAT) (T TERRIBLE)))
+        (T
+         ((<= MUD_AHEAD 2.5)
+          (T ((<= SPEED_AHEAD 0.5) (T ((<= BOOSTS 1.5) GREAT) (T GREAT)))
+           (T GREAT)))
+         (T ((<= MUD_AHEAD 3.5) BAD) (T ((<= MUD_UP 3.5) BAD) (T GREAT))))))
+      (T
+       ((<= MUD_AHEAD 2.5)
+        (T
+         ((<= SPEED 8.5)
+          (T ((<= MUD_AHEAD 1.5) BAD)
+           (T ((<= SPEED_AHEAD 0.5) (T ((<= BOOSTS 1.5) BAD) (T BAD)))
+            (T BAD))))
+         (T ((<= MUD_AHEAD 1.5) BAD) (T BAD))))
+       (T ((<= SPEED 8.5) (T ((<= MUD_AHEAD 3.5) BAD) (T GREAT)))
+        (T ((<= MUD_AHEAD 3.5) (T ((<= BOOSTS 2.5) GREAT) (T GREAT)))
+         (T GOOD)))))))))
+ (T
+  ((<= MUD_AHEAD 0.5)
+   (T
+    ((<= MOVE 0.5)
+     (T ((<= SPEED_AHEAD 0.5) (T ((<= BOOSTS 0.5) GOOD) (T GOOD))) (T GOOD)))
+    (T
+     ((<= MUD_DOWN 0.5)
+      (T ((<= MOVE 1.5) (T ((<= MUD_UP 0.5) GOOD) (T OK))) (T GOOD)))
+     (T ((<= MUD_UP 0.5) (T ((<= MOVE 1.5) GOOD) (T OK))) (T OK)))))
+  (T
+   ((<= MOVE 0.5)
+    (T
+     ((<= BOOSTS 0.5)
+      (T ((<= SPEED_AHEAD 0.5) (T ((<= MUD_DOWN 2.305843) OK) (T OK)))
+       (T ((<= MUD_AHEAD 3.5) OK) (T OK))))
+     (T ((<= MUD_AHEAD 3.5) OK) (T OK))))
+   (T
+    ((<= MUD_DOWN 0.5)
+     (T ((<= MOVE 1.5) (T ((<= MUD_UP 0.5) GOOD) (T OK)))
+      (T ((<= SPEED_DOWN 0.5) GOOD) (T GOOD))))
+    (T ((<= MUD_UP 0.5) (T ((<= MOVE 1.5) GOOD) (T OK)))
+     (T
+      ((<= BOOSTS 0.5)
+       (T ((<= MUD_AHEAD 2.5) OK)
+        (T
+         ((<= SPEED_UP 0.5)
+          (T ((<= SPEED_DOWN 0.5) OK) (T ((<= MUD_DOWN 3.5) OK) (T OK))))
+         (T ((<= MUD_UP 3.5) OK) (T ((<= SPEED_DOWN 0.5) OK) (T OK))))))
+      (T OK)))))))
