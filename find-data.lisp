@@ -20,6 +20,9 @@ OBJECTIVE-ROUND."
                                           objective-round))
         (format file "~{~a~^,~}~%" result)))))
 
+(defconstant blocks-to-end-of-map 20
+  "The count of blocks in front of the car.")
+
 (defun gather-statistics (folder-path objective-round)
   "Produce features for states in FOLDER-PATH.
 
@@ -35,17 +38,21 @@ is the binominal label."
              (my-boosts   (my-boosts current-state))
              (my-pos      (car (positions current-state)))
              ((_ . y)     my-pos)
-             (new-speed   (case current-move
-                            (accelerate (increase-speed my-speed))
-                            (use_boost  15)
-                            (otherwise  my-speed)))
              (game-map    (rows current-state))
-             (mud-ahead   (ahead-of mud ahead new-speed game-map my-pos))
-             (mud-up      (if (> y 0) (ahead-of mud up   new-speed game-map my-pos) most-positive-fixnum))
-             (mud-down    (if (< y 3) (ahead-of mud down new-speed game-map my-pos) most-positive-fixnum))
-             (speed-ahead (ahead-of speed ahead new-speed game-map my-pos))
-             (speed-up    (if (> y 0) (ahead-of speed up   new-speed game-map my-pos) most-positive-fixnum))
-             (speed-down  (if (< y 3) (ahead-of speed down new-speed game-map my-pos) most-positive-fixnum)))
+             (mud-ahead   (ahead-of mud ahead blocks-to-end-of-map game-map my-pos))
+             (mud-up      (if (> y 0)
+                              (ahead-of mud up   blocks-to-end-of-map game-map my-pos)
+                              most-positive-fixnum))
+             (mud-down    (if (< y 3)
+                              (ahead-of mud down blocks-to-end-of-map game-map my-pos)
+                              most-positive-fixnum))
+             (speed-ahead (ahead-of speed ahead blocks-to-end-of-map game-map my-pos))
+             (speed-up    (if (> y 0)
+                              (ahead-of speed up   blocks-to-end-of-map game-map my-pos)
+                              most-positive-fixnum))
+             (speed-down  (if (< y 3)
+                              (ahead-of speed down blocks-to-end-of-map game-map my-pos)
+                              most-positive-fixnum)))
         (push (list (car my-abs-pos)
                     (cdr my-abs-pos)
                     my-speed
