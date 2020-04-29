@@ -129,7 +129,10 @@ a good move."
          ((<= SPEED 4.0)
           (T
            ((<= MUD_AHEAD 0.5)
-            (T ((<= MOVE 0.5) (T ((<= BOOSTS 0.5) TERRIBLE) (T GREAT)))
+            (T
+             ((<= MOVE 0.5)
+              (T ((<= BOOSTS 0.5) TERRIBLE)
+                 (T GREAT)))
              (T ((<= BOOSTS 0.5) GREAT) (T TERRIBLE))))
            (T
             ((<= SPEED_AHEAD 0.5)
