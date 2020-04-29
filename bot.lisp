@@ -122,7 +122,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore my-abs-x))
-  (car (sort all-moves
+  (car (sort (copy-seq all-moves)
              #'>
              :key (lambda (move)
                     (move-score move
