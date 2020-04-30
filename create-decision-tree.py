@@ -77,13 +77,13 @@ def good_move_based_on_future_speed(data):
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
         average = average_speed_in_range(data, i + 1, look_ahead)
         delta = average - current_speed
-        if delta >= 6:
+        if delta > 2:
             outcome = 0
-        elif delta >= 3:
+        elif delta >= 1:
             outcome = 1
-        elif delta >= -1 and delta <= 1:
+        elif 1 > delta > -1:
             outcome = 2
-        elif delta > -3:
+        elif delta > -2:
             outcome = 3
         else:
             outcome = 4
