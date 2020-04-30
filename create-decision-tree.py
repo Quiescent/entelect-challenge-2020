@@ -85,9 +85,31 @@ def good_move_based_on_future_speed(data):
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
         average = average_speed_in_range(data, i + 1, look_ahead)
         future_boosts = boosts_after(data, i + 1, look_ahead)
+        muds_gone_through = muds_in_range(data, i + 1, look_ahead)
+        mud_mod = compute_mud_modifier(muds_gone_through, look_ahead)
         boost_mod = compute_modifier(future_boosts - data['Boosts'][i])
         speed_mod = compute_modifier(average - current_speed)
-        data['Objective'][i] = max(0, min(10, boost_mod + speed_mod))
+        data['Objective'][i] = max(0,
+                                   min(10,
+                                       5 + boost_mod + speed_mod + mud_mod))
+
+
+def compute_mud_modifier(muds_gone_through, rounds):
+    """Compute a suitable modifier for MUDS_GONE_THROUGH.
+
+Computed as though we spent ROUNDS rounds travelling.
+
+Per-round: if we went through 0 or one mud, that's good so we assign
+that a one.  If we went through 2 then that's a zero, because we don't
+mind too much.  Anything more than that isn't acceptable and is
+assigned -1.
+
+    """
+    if muds_gone_through <= (rounds * 1):
+        return 1
+    if muds_gone_through <= (rounds * 2):
+        return 0
+    return -1
 
 
 def compute_modifier(delta):
@@ -110,6 +132,16 @@ def speed_after(data, i, j):
 def boosts_after(data, i, j):
     """Produce the boosts which I'll have in J turns after turn I."""
     return data['Boosts'][i + j]
+
+
+def muds_in_range(data, i, j):
+    """Compute the muds which we go through in DATA from rows I through I + J."""
+    if j == 0:
+        return data['Mud_Through'][i]
+    total = 0
+    for k in range(i, i + j):
+        total += data['Mud_Through'][k]
+    return total
 
 
 def average_speed_in_range(data, i, j):
