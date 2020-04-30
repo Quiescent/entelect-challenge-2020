@@ -49,17 +49,12 @@ ALL_FEATURES = ['Y',
                 'Move']
 LABELS = ['Objective']
 LOOK_AHEAD = 2
-CLASSES = ["CLASS_5",
-           "CLASS_4",
-           "CLASS_3",
+CLASSES = ["CLASS_3",
            "CLASS_2",
            "CLASS_1",
            "CLASS_0",
            "CLASS_MINUS_1",
-           "CLASS_MINUS_2",
-           "CLASS_MINUS_3",
-           "CLASS_MINUS_4",
-           "CLASS_MINUS_5"]
+           "CLASS_MINUS_2"]
 
 
 def load_data(data_file_path):
@@ -82,33 +77,15 @@ def good_move_based_on_future_speed(data):
     for i in range(len(data) - 1):
         current_speed = data['Speed'][i]
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
-        future_speed = speed_after(data, i + 1, look_ahead)
+        average = average_speed_in_range(data, i + 1, look_ahead)
         future_boosts = boosts_after(data, i + 1, look_ahead)
-        extra_boosts = future_boosts - data['Boosts'][i]
-        delta = future_speed - current_speed
-        if delta > 5:
-            outcome = 0
-        elif delta > 4:
-            outcome = 1
-        elif delta > 3:
-            outcome = 2
-        elif delta > 2:
-            outcome = 3
-        elif delta >= 1:
-            outcome = 4
-        elif 1 > delta > -1:
-            outcome = 5
-        elif delta > -2:
-            outcome = 6
-        elif delta > -2:
-            outcome = 7
-        elif delta > -3:
-            outcome = 8
-        elif delta > -4:
-            outcome = 9
-        else:
-            outcome = 10
-        data['Objective'][i] = max(0, min(10, outcome - extra_boosts))
+        muds_gone_through = muds_in_range(data, i + 1, look_ahead)
+        mud_mod = compute_mud_modifier(muds_gone_through, look_ahead)
+        boost_mod = compute_modifier(future_boosts - data['Boosts'][i])
+        speed_mod = compute_modifier(average - current_speed)
+        data['Objective'][i] = max(0,
+                                   min(10,
+                                       5 + boost_mod + speed_mod + mud_mod))
 
 
 def compute_mud_modifier(muds_gone_through, rounds):
