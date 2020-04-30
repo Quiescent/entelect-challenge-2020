@@ -25,7 +25,7 @@ leaning edges."
                (existing (gethash beg edges)))
           (setf (gethash beg edges) (nconc existing (list end)))))
       (ppcre:register-groups-bind (node feature operator value)
-          ("^([0-9]+) \\[label=\"([_a-zA-Z]+) ([<>=][<>=]?) ([0-9.]+)" line)
+          ("^([0-9]+) \\[label=\"([_a-zA-Z0-9]+) ([<>=][<>=]?) ([0-9.]+)" line)
         (if (string-equal "entropy" feature)
           (ppcre:register-groups-bind (class) ("class = ([A-Z]+)" line)
             (setf (gethash (read-from-string node) leaves)
