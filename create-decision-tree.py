@@ -96,17 +96,17 @@ def compute_mud_modifier(muds_gone_through, rounds):
 
 Computed as though we spent ROUNDS rounds travelling.
 
-Per-round: if we went through 0 or one mud, that's good so we assign
-that a one.  If we went through 2 then that's a zero, because we don't
+Per-round: if we went through 0 to two muds, that's good so we assign
+that a -1.  If we went through 3 then that's a zero, because we don't
 mind too much.  Anything more than that isn't acceptable and is
-assigned -1.
+assigned 1.
 
     """
-    if muds_gone_through <= (rounds * 1):
-        return 1
     if muds_gone_through <= (rounds * 2):
+        return -1
+    if muds_gone_through <= (rounds * 3):
         return 0
-    return -1
+    return +1
 
 
 def compute_modifier(delta):
@@ -115,10 +115,10 @@ def compute_modifier(delta):
 1 if the mod is sufficiently high, zero if it's close to zero and -1
 if it's low."""
     if delta >= 0.5:
-        return 1
+        return -1
     if -0.5 < delta < 0.5:
         return 0
-    return -1
+    return 1
 
 
 def speed_after(data, i, j):
