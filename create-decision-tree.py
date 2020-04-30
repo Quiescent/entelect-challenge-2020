@@ -36,8 +36,6 @@ ALL_ATTRIBUTES = ['X',
                   'Mud_Through',
                   'Objective']
 ALL_FEATURES = ['Y',
-                'Speed',
-                'Boosts',
                 'Mud_0',
                 'Mud_1',
                 'Mud_2',
@@ -46,8 +44,7 @@ ALL_FEATURES = ['Y',
                 'Speed_1',
                 'Speed_2',
                 'Speed_3',
-                'Move',
-                'Mud_Through']
+                'Move']
 LABELS = ['Objective']
 LOOK_AHEAD = 2
 CLASSES = ["CLASS_5",
