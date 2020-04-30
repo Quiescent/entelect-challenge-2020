@@ -80,10 +80,10 @@ def good_move_based_on_future_speed(data):
     for i in range(len(data) - 1):
         current_speed = data['Speed'][i]
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
-        average = average_speed_in_range(data, i + 1, look_ahead)
+        future_speed = speed_after(data, i + 1, look_ahead)
         future_boosts = boosts_after(data, i + 1, look_ahead)
         extra_boosts = future_boosts - data['Boosts'][i]
-        delta = average - current_speed
+        delta = future_speed - current_speed
         if delta > 5:
             outcome = 0
         elif delta > 4:
@@ -107,6 +107,11 @@ def good_move_based_on_future_speed(data):
         else:
             outcome = 10
         data['Objective'][i] = max(0, min(10, outcome + extra_boosts))
+
+
+def speed_after(data, i, j):
+    """Produce the speed which I'll be going in J turns after turn I."""
+    return data['Speed'][i + j]
 
 
 def boosts_after(data, i, j):
