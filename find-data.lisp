@@ -31,7 +31,7 @@ Whether they resulted in a finishing round less than OBJECTIVE-ROUND
 is the binominal label."
   (bind ((less-than-objective (finished-in-less-than objective-round folder-path))
          results)
-    (with-consecutive-states folder-path "Quantum" 'A
+    (with-consecutive-states folder-path "random" 'A
       (declare (ignore next-state))
       (bind ((my-abs-pos  (my-abs-pos current-state))
              (my-speed    (my-speed current-state))
@@ -93,7 +93,7 @@ is the binominal label."
              (with line)
              (setf line (read-line file nil))
              (while line)
-             (finding t such-that (equal line "The winner is: A - Quantum")))))))
+             (finding t such-that (equal line "The winner is: A - random")))))))
 
 (defun last-round-folder (absolute-folder-path)
   "Produce the folder for the last round for the log inside of ABSOLUTE-FOLDER-PATH."
