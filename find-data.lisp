@@ -38,6 +38,7 @@ is the binominal label."
              (my-boosts   (my-boosts current-state))
              (my-pos      (car (positions current-state)))
              (game-map    (rows current-state))
+             (mud_through (muds-hit current-move game-map my-pos my-speed))
              (mud-0       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
              (mud-1       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
              (mud-2       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
@@ -59,6 +60,7 @@ is the binominal label."
                     speed-2
                     speed-3
                     current-move
+                    mud_through
                     less-than-objective)
               results)))
     (reverse results)))
