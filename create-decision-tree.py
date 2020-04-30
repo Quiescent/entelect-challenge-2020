@@ -48,12 +48,17 @@ ALL_FEATURES = ['Y',
                 'Move']
 LABELS = ['Objective']
 LOOK_AHEAD = 2
-CLASSES = ['GREAT',
-           'GOOD',
-           'OK',
-           'BAD',
-           'TERRIBLE']
-
+CLASSES = ["CLASS_5",
+           "CLASS_4",
+           "CLASS_3",
+           "CLASS_2",
+           "CLASS_1",
+           "CLASS_0",
+           "CLASS_MINUS_1",
+           "CLASS_MINUS_2",
+           "CLASS_MINUS_3",
+           "CLASS_MINUS_4",
+           "CLASS_MINUS_5"]
 
 def load_data(data_file_path):
     """Load data from DATA_FILE_PATH without preprocessing."""
@@ -77,16 +82,28 @@ def good_move_based_on_future_speed(data):
         look_ahead = min(LOOK_AHEAD, scan_for_start(data, i) - i)
         average = average_speed_in_range(data, i + 1, look_ahead)
         delta = average - current_speed
-        if delta > 2:
+        if delta > 5:
             outcome = 0
-        elif delta >= 1:
+        elif delta > 4:
             outcome = 1
-        elif 1 > delta > -1:
+        elif delta > 3:
             outcome = 2
-        elif delta > -2:
+        elif delta > 2:
             outcome = 3
-        else:
+        elif delta >= 1:
             outcome = 4
+        elif 1 > delta > -1:
+            outcome = 5
+        elif delta > -2:
+            outcome = 6
+        elif delta > -2:
+            outcome = 7
+        elif delta > -3:
+            outcome = 8
+        elif delta > -4:
+            outcome = 9
+        else:
+            outcome = 10
         data['Objective'][i] = outcome
 
 

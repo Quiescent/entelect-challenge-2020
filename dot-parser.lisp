@@ -27,7 +27,7 @@ leaning edges."
       (ppcre:register-groups-bind (node feature operator value)
           ("^([0-9]+) \\[label=\"([_a-zA-Z0-9]+) ([<>=][<>=]?) ([0-9.]+)" line)
         (if (string-equal "entropy" feature)
-          (ppcre:register-groups-bind (class) ("class = ([A-Z]+)" line)
+          (ppcre:register-groups-bind (class) ("class = ([_A-Za-z0-9]+)" line)
             (setf (gethash (read-from-string node) leaves)
                   (intern class)))
           (setf (gethash (read-from-string node) weights)
