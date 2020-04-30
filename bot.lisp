@@ -122,14 +122,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore my-abs-x))
-  (bind ((possible-moves (remove-if (lambda (move) (or (not (move-can-be-made move
-                                                                              boosts
-                                                                              (cdr my-pos)))
-                                                       (and (= 0 speed)
-                                                            (or (eq move 'turn_right)
-                                                                (eq move 'turn_left)))))
-                                    all-moves)))
-   (nth (random (length possible-moves)) possible-moves))
+  'turn_right
   ;; (sort all-moves
   ;;            #'>
   ;;            :key (lambda (move)
