@@ -36,6 +36,8 @@ ALL_ATTRIBUTES = ['X',
                   'Mud_Through',
                   'Objective']
 ALL_FEATURES = ['Y',
+                'Speed',
+                'Boosts',
                 'Mud_0',
                 'Mud_1',
                 'Mud_2',
