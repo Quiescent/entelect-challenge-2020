@@ -150,7 +150,7 @@ board."
                               (= ,boosts boosts))
                          ,(apply #'max scores)))))))
 
-(defconstant map-length 20
+(defconstant map-length 25
   "The length of the map from the bot onwards.")
 
 (defun average-speed-score (state)
