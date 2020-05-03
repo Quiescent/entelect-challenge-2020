@@ -124,8 +124,7 @@ board."
   (declare (ignore my-abs-x))
   (bind ((end-states                        (states-from game-map my-pos speed boosts))
          (fewest-moves                      (only-shortest-path-length end-states))
-         (best-by-prediction                (car (sort (mapcar #'average-speed-score (copy-seq fewest-moves)) #'>)))
-         ((fast-move . _) (best-by-speed fewest-moves))
+         (best-by-prediction                (caaar (sort (copy-seq fewest-moves) #'> :key #'average-speed-score)))
          (shortest-allowable                (length (caar fewest-moves)))
          (at-most-n-longer                  (remove-if (lambda (state)
                                                          (> (length (car state)) shortest-allowable))
@@ -137,14 +136,35 @@ board."
     (decision-tree
      (boosting
       (gathers more-boosts)
-      (t       fast-move))
+      (t       best-by-prediction))
      (v-tech  boost-move)
      (gathers more-boosts)
-     (t       fast-move))))
+     (t       best-by-prediction))))
+
+(defmacro speed-score ()
+  (with-open-file (file "model.csv")
+    `(cond
+       ,@(iter
+           (with line)
+           (for (speed x y boosts . scores) = (setq line (mapcar #'read-from-string
+                                                                 (ppcre:split ","
+                                                                              (read-line file nil)))))
+           (while line)
+           (collecting `((and (= ,speed  speed)
+                              (= ,x      x)
+                              (= ,y      y)
+                              (= ,boosts boosts))
+                         ,(/ (apply #'+ scores)
+                             (length scores))))))))
+
+(defconstant map-length 25
+  "The length of the map")
 
 (defun average-speed-score (state)
   "Produce the score of STATE according to the model in model.csv."
-  1)
+  (bind (((_ (x-prelim . y) speed boosts) state)
+         (x (- x-prelim map-length)))
+    (speed-score)))
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
