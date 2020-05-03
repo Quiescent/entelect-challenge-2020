@@ -364,7 +364,7 @@ Produce the new new position, etc. as values."
 
 (defun end-state (position game-map)
   "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
-  (> (car position) (array-dimension game-map 1)))
+  (>= (car position) (array-dimension game-map 1)))
 
 (defun move-can-be-made (move boosts y)
   "Produce T if the MOVE can be made from Y coordinate."
