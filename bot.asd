@@ -19,4 +19,5 @@
                (:file "parsing" :depends-on ("package"))
                (:file "package")
                (:file "find-data" :depends-on ("bot"))
+               (:file "determine-model" :depends-on ("find-data" "bot"))
                (:file "dot-parser")))
