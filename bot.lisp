@@ -16,7 +16,7 @@
          (boosting      (im-boosting state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosting boosts speed my-abs-x (= round-number 0))))
+    (determine-move map my-pos boosting boosts speed my-abs-x (string-equal round-number "1"))))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
