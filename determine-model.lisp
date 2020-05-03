@@ -28,9 +28,19 @@ distribution of likely states that the bot could end up in."
        (iter
          (for (entry-state-key . distribution) in
               (mapcar (lambda (cell) (cons (car cell)
-                                           (/ (cadr cell) (cddr cell))))
+                                      (mapcar (lambda (ratio) (eliminating-divide (car ratio) (cdr ratio)))
+                                              (cdr cell))))
                       model))
-         (format file "~a,~{~a~^,~}~%" entry-state-key distribution))))))
+         (format file "~{~a~^,~},~{~a~^,~}~%"
+                 (decode-entry-state-key entry-state-key)
+                 distribution))))))
+
+(defun eliminating-divide (x y)
+  "Divide X by Y and if it would have been 0 / 0 then make it -1."
+  (if (and (= x 0)
+           (= y 0))
+      -1
+      (/ (float x) (float y))))
 
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
@@ -78,3 +88,22 @@ distribution of likely states that the bot could end up in."
         (iter
           (for boosts in '(0 1))
           (in outer (collecting (list speed x y boosts))))))))
+
+(defun fix-entry-key-csv ()
+  "Fix the entry-keys in the model csv file."
+  (bind ((result
+          (with-open-file (file "model.csv")
+            (iter
+              (with line)
+              (while (setq line (mapcar #'read-from-string
+                                        (ppcre:split ","
+                                                     (read-line file nil)))))
+              (for (key . rest) = line)
+              (collecting (append (decode-entry-state-key key) rest))))))
+    (with-open-file (file "model.csv"
+                          :direction :output
+                          :if-exists :supersede
+                          :if-does-not-exist :create)
+      (iter
+        (for model in result)
+        (format file "~{~a~^,~}~%" model)))))
