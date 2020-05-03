@@ -125,6 +125,7 @@ board."
   (bind ((end-states                        (states-from game-map my-pos speed boosts))
          (fewest-moves                      (only-shortest-path-length end-states))
          (best-by-prediction                (car (sort (mapcar #'average-speed-score (copy-seq fewest-moves)) #'>)))
+         ((fast-move . _) (best-by-speed fewest-moves))
          (shortest-allowable                (length (caar fewest-moves)))
          (at-most-n-longer                  (remove-if (lambda (state)
                                                          (> (length (car state)) shortest-allowable))
@@ -136,10 +137,10 @@ board."
     (decision-tree
      (boosting
       (gathers more-boosts)
-      (t       best-by-prediction))
+      (t       fast-move))
      (v-tech  boost-move)
      (gathers more-boosts)
-     (t       best-by-prediction))))
+     (t       fast-move))))
 
 (defun average-speed-score (state)
   "Produce the score of STATE according to the model in model.csv."
