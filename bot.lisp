@@ -150,8 +150,8 @@ board."
                               (= ,boosts boosts))
                          ,(apply #'max scores)))))))
 
-(defconstant map-length 25
-  "The length of the map")
+(defconstant map-length 20
+  "The length of the map from the bot onwards.")
 
 (defun average-speed-score (state)
   "Produce the score of STATE according to the model in model.csv."
