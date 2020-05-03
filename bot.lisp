@@ -158,7 +158,9 @@ board."
   (bind (((_ (x-prelim . y) speed prelim-boosts) state)
          (x                                      (- x-prelim map-length))
          (boosts                                 (if (> prelim-boosts 0) 1 0)))
-    (speed-score)))
+    (if (= 0 speed)
+        -1
+        (speed-score))))
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
