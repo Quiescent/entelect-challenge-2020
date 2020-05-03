@@ -38,7 +38,24 @@ is the binominal label."
              (my-boosts   (my-boosts current-state))
              (my-pos      (car (positions current-state)))
              (game-map    (rows current-state))
-             (mud_through (muds-hit current-move game-map my-pos my-speed))
+             ((x . y)     my-pos)
+             (new-speed   (case current-move
+                            (accelerate (increase-speed my-speed))
+                            (use_boost  15)
+                            (otherwise  my-speed)))
+             (new-x       (case current-move
+                            (turn_left  (move-car up    new-speed x))
+                            (turn_right (move-car down  new-speed x))
+                            (otherwise  (move-car ahead new-speed x))))
+             (new-y       (case current-move
+                            (turn_left  (move-lat up    y))
+                            (turn_right (move-lat down  y))
+                            (otherwise  (move-lat ahead y))))
+             (new-pos     (cons new-x new-y))
+             (muds-hit    (muds-hit current-move game-map my-pos  my-speed))
+             (final-speed (decrease-speed-by muds-hit new-speed))
+             (mud_through (+ muds-hit
+                             (muds-hit current-move game-map new-pos final-speed)))
              (mud-0       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
              (mud-1       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
              (mud-2       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
@@ -64,6 +81,17 @@ is the binominal label."
                     less-than-objective)
               results)))
     (reverse results)))
+
+(defun muds-hit (move game-map position speed)
+  "Produce muds hit when making MOVE across GAME-MAP from POSITION at SPEED."
+  (bind ((new-speed   (case move
+                        (accelerate (increase-speed speed))
+                        (use_boost  15)
+                        (otherwise  speed))))
+    (case move
+      (turn_left  (ahead-of mud up    new-speed game-map position))
+      (turn_right (ahead-of mud down  new-speed game-map position))
+      (otherwise  (ahead-of mud ahead new-speed game-map position)))))
 
 (defun finished-in-less-than (objective-round relative-folder-path)
   "Produce T if the game in RELATIVE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."

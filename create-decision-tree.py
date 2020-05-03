@@ -54,7 +54,8 @@ CLASSES = ["CLASS_3",
            "CLASS_1",
            "CLASS_0",
            "CLASS_MINUS_1",
-           "CLASS_MINUS_2"]
+           "CLASS_MINUS_2",
+           "CLASS_MINUS_3"]
 
 
 def load_data(data_file_path):
@@ -85,7 +86,7 @@ def good_move_based_on_future_speed(data):
         speed_mod = compute_modifier(average - current_speed)
         data['Objective'][i] = max(0,
                                    min(10,
-                                       5 + boost_mod + speed_mod + mud_mod))
+                                       3 + boost_mod + speed_mod + mud_mod))
 
 
 def compute_mud_modifier(muds_gone_through, rounds):
@@ -96,12 +97,10 @@ Computed as though we spent ROUNDS rounds travelling.
 Per-round: if we went through 0 to two muds, that's good so we assign
 that a -1.  If we went through 3 then that's a zero, because we don't
 mind too much.  Anything more than that isn't acceptable and is
-assigned 1.
-
-    """
-    if muds_gone_through <= (rounds * 2):
+assigned 1."""
+    if muds_gone_through <= (rounds * 1):
         return -1
-    if muds_gone_through <= (rounds * 3):
+    if muds_gone_through <= (rounds * 2):
         return 0
     return +1
 

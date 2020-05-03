@@ -313,17 +313,6 @@ with BOOSTS left."
     (down  `(1+ ,y))
     (ahead y)))
 
-(defun muds-hit (move game-map position speed)
-  "Produce muds hit when making MOVE across GAME-MAP from POSITION at SPEED."
-  (bind ((new-speed   (case move
-                        (accelerate (increase-speed speed))
-                        (use_boost  15)
-                        (otherwise  speed))))
-    (case move
-      (turn_left  (ahead-of mud up    new-speed game-map position))
-      (turn_right (ahead-of mud down  new-speed game-map position))
-      (otherwise  (ahead-of mud ahead new-speed game-map position)))))
-
 ;; Known short cuts:
 ;;  - I don't take collisions with the other player into account;
 ;;  - I don't take boost length into account;
