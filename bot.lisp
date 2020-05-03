@@ -122,20 +122,28 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore my-abs-x))
-  (car (sort (remove-if (lambda (move) (or (not (move-can-be-made move
-                                                                  boosts
-                                                                  (cdr my-pos)))
-                                           (and (= 0 speed)
-                                                (or (eq move 'turn_right)
-                                                    (eq move 'turn_left)))))
-                        all-moves)
-             #'>
-             :key (lambda (move)
-                    (move-score move
-                                game-map
-                                my-pos
-                                speed
-                                boosts)))))
+  (bind ((end-states                        (states-from game-map my-pos speed boosts))
+         (fewest-moves                      (only-shortest-path-length end-states))
+         (best-by-prediction                (car (sort (mapcar #'average-speed-score (copy-seq fewest-moves)) #'>)))
+         (shortest-allowable                (length (caar fewest-moves)))
+         (at-most-n-longer                  (remove-if (lambda (state)
+                                                         (> (length (car state)) shortest-allowable))
+                                                       end-states))
+         ((more-boosts _ _ new-boosts)      (best-by-boost-count at-most-n-longer))
+         (boost-move                        'use_boost)
+         (gathers                           (> new-boosts boosts))
+         (v-tech                            (> boosts 2)))
+    (decision-tree
+     (boosting
+      (gathers more-boosts)
+      (t       best-by-prediction))
+     (v-tech  boost-move)
+     (gathers more-boosts)
+     (t       best-by-prediction))))
+
+(defun average-speed-score (state)
+  "Produce the score of STATE according to the model in model.csv."
+  1)
 
 (defun best-by-boost-count (end-states)
   "Produce the best of END-STATES by the final speed."
@@ -218,15 +226,7 @@ Fourth is my boosts left."
                                                      (or (eq move 'turn_right)
                                                          (eq move 'turn_left)))))
                              all-moves))
-            (for move in (subseq (sort possible-moves
-                                       #'>
-                                       :key (lambda (move)
-                                              (move-score move
-                                                          game-map
-                                                          current-pos
-                                                          current-speed
-                                                          current-boosts)))
-                                 0 (min (length possible-moves) 2)))
+            (for move in possible-moves)
             (bind (((:values new-pos new-speed new-boosts)
                     (make-move move game-map current-pos current-speed current-boosts)))
               (push (list (cons move path) new-pos new-speed new-boosts)
@@ -262,34 +262,6 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (down  `(1+ (cdr ,pos)))
                       (ahead `(cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
-
-(defun move-score (test-move game-map my-pos speed boosts)
-  "Produce a score for TEST-MOVE, based on a trained decision tree.
-
-MOVE is made on GAME-MAP where the car is at MY-POS going at SPEED
-with BOOSTS left."
-  (bind (((_ . y)     my-pos)
-         (move        (encode-move test-move))
-         (mud_0       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
-         (mud_1       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
-         (mud_2       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
-         (mud_3       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 3)))
-         (speed_0     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
-         (speed_1     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
-         (speed_2     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
-         (speed_3     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 3)))
-         (class_minus_5 -5)
-         (class_minus_4 -4)
-         (class_minus_3 -3)
-         (class_minus_2 -2)
-         (class_minus_1 -1)
-         (class_0  0)
-         (class_1  1)
-         (class_2  2)
-         (class_3  3)
-         (class_4  4)
-         (class_5  5))
-    (decision-tree-classifier)))
 
 (defun encode-move (move)
   "Encode MOVE as a number the same way as our data generator does."
