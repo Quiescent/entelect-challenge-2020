@@ -154,16 +154,16 @@ board."
                               (= ,x      x)
                               (= ,y      y)
                               (= ,boosts boosts))
-                         ,(/ (apply #'+ scores)
-                             (length scores))))))))
+                         ,(apply #'max scores)))))))
 
 (defconstant map-length 25
   "The length of the map")
 
 (defun average-speed-score (state)
   "Produce the score of STATE according to the model in model.csv."
-  (bind (((_ (x-prelim . y) speed boosts) state)
-         (x (- x-prelim map-length)))
+  (bind (((_ (x-prelim . y) speed prelim-boosts) state)
+         (x                                      (- x-prelim map-length))
+         (boosts                                 (if (> prelim-boosts 0) 1 0)))
     (speed-score)))
 
 (defun best-by-boost-count (end-states)
