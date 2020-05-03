@@ -16,7 +16,7 @@
          (boosting      (im-boosting state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosting boosts speed my-abs-x)))
+    (determine-move map my-pos boosting boosts speed my-abs-x (= round-number 0))))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -115,16 +115,21 @@ getting it horribly wrong :)"
   (let ((tree (dot-file-to-list-tree "tree.dot")))
     (decision-tree-iter (list tree))))
 
-(defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
+(defun determine-move (game-map my-pos boosting boosts speed my-abs-x turn-0)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
-board."
+board.
+
+Take into account the smaller map for TURN-0."
   (declare (ignore my-abs-x))
   (bind ((end-states                        (states-from game-map my-pos speed boosts))
          (fewest-moves                      (only-shortest-path-length end-states))
-         (best-by-prediction                (car (last (caar (sort (copy-seq fewest-moves) #'> :key #'average-speed-score)))))
+         (best-by-prediction                (car (last (caar (sort (copy-seq fewest-moves)
+                                                                   #'>
+                                                                   :key (lambda (state)
+                                                                          (average-speed-score state turn-0)))))))
          (shortest-allowable                (length (caar fewest-moves)))
          (at-most-n-longer                  (remove-if (lambda (state)
                                                          (> (length (car state)) shortest-allowable))
@@ -153,10 +158,15 @@ board."
 (defconstant map-length 25
   "The length of the map from the bot onwards.")
 
-(defun average-speed-score (state)
-  "Produce the score of STATE according to the model in model.csv."
+(defconstant map-length-turn-0 20
+  "The length of the map on turn 0.")
+
+(defun average-speed-score (state turn-0)
+  "Produce the score of STATE according to the model in model.csv.
+
+If TURN-0 is set then use the shorter turn length."
   (bind (((_ (x-prelim . y) speed prelim-boosts) state)
-         (x                                      (- x-prelim map-length))
+         (x                                      (- x-prelim (if turn-0 map-length-turn-0 map-length)))
          (boosts                                 (if (> prelim-boosts 0) 1 0)))
     (if (= 0 speed)
         -1
