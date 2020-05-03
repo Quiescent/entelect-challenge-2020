@@ -138,7 +138,13 @@ board."
          (boost-move                        'use_boost)
          (gathers                           (> new-boosts boosts))
          (v-tech                            (> boosts 2)))
-    best-by-prediction))
+    (decision-tree
+     (boosting
+      (gathers more-boosts)
+      (t       best-by-prediction))
+     (v-tech  boost-move)
+     (gathers more-boosts)
+     (t       best-by-prediction))))
 
 (defmacro speed-score ()
   (with-open-file (file "model.csv")
