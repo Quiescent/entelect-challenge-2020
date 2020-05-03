@@ -124,7 +124,7 @@ board."
   (declare (ignore my-abs-x))
   (bind ((end-states                        (states-from game-map my-pos speed boosts))
          (fewest-moves                      (only-shortest-path-length end-states))
-         (best-by-prediction                (caaar (sort (copy-seq fewest-moves) #'> :key #'average-speed-score)))
+         (best-by-prediction                (car (last (caar (sort (copy-seq fewest-moves) #'> :key #'average-speed-score)))))
          (shortest-allowable                (length (caar fewest-moves)))
          (at-most-n-longer                  (remove-if (lambda (state)
                                                          (> (length (car state)) shortest-allowable))
@@ -133,13 +133,7 @@ board."
          (boost-move                        'use_boost)
          (gathers                           (> new-boosts boosts))
          (v-tech                            (> boosts 2)))
-    (decision-tree
-     (boosting
-      (gathers more-boosts)
-      (t       best-by-prediction))
-     (v-tech  boost-move)
-     (gathers more-boosts)
-     (t       best-by-prediction))))
+    best-by-prediction))
 
 (defmacro speed-score ()
   (with-open-file (file "model.csv")
