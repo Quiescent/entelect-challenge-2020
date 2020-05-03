@@ -16,7 +16,7 @@
          (boosting      (im-boosting state))
          (boosts        (my-boosts state))
          (speed         (my-speed state)))
-    (determine-move map my-pos boosting boosts speed my-abs-x (string-equal round-number "1"))))
+    (determine-move map my-pos boosting boosts speed my-abs-x)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -115,21 +115,21 @@ getting it horribly wrong :)"
   (let ((tree (dot-file-to-list-tree "tree.dot")))
     (decision-tree-iter (list tree))))
 
-(defun determine-move (game-map my-pos boosting boosts speed my-abs-x turn-0)
+(defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
-board.
-
-Take into account the smaller map for TURN-0."
+board."
   (declare (ignore my-abs-x))
   (bind ((end-states                        (states-from game-map my-pos speed boosts))
          (fewest-moves                      (only-shortest-path-length end-states))
          (best-by-prediction                (car (last (caar (sort (copy-seq fewest-moves)
                                                                    #'>
                                                                    :key (lambda (state)
-                                                                          (average-speed-score state turn-0)))))))
+                                                                          (average-speed-score
+                                                                           state
+                                                                           (array-dimension game-map 1))))))))
          (shortest-allowable                (length (caar fewest-moves)))
          (at-most-n-longer                  (remove-if (lambda (state)
                                                          (> (length (car state)) shortest-allowable))
@@ -155,18 +155,12 @@ Take into account the smaller map for TURN-0."
                               (= ,boosts boosts))
                          ,(apply #'max scores)))))))
 
-(defconstant map-length 25
-  "The length of the map from the bot onwards.")
-
-(defconstant map-length-turn-0 20
-  "The length of the map on turn 0.")
-
-(defun average-speed-score (state turn-0)
+(defun average-speed-score (state map-length)
   "Produce the score of STATE according to the model in model.csv.
 
-If TURN-0 is set then use the shorter turn length."
+Use MAP-LENGTH to compute the actual X value."
   (bind (((_ (x-prelim . y) speed prelim-boosts) state)
-         (x                                      (- x-prelim (if turn-0 map-length-turn-0 map-length)))
+         (x                                      (- x-prelim map-length))
          (boosts                                 (if (> prelim-boosts 0) 1 0)))
     (if (= 0 speed)
         -1
