@@ -53,15 +53,22 @@ distribution of likely states that the bot could end up in."
         (for cell in distribution)
         (for move in all-moves)
         (when (move-can-be-made move boosts y)
-         (bind (((:values new-pos new-speed new-boosts)
-                 (make-move move
-                            (rows current-state)
-                            (cons (+ x 4) y)
-                            (my-speed current-state)
-                            (my-boosts current-state))))
-           (declare (ignore new-pos new-boosts))
-           (incf (car cell) new-speed)
-           (incf (cdr cell))))))))
+          (bind ((game-map (rows current-state))
+                 (position (cons 4 y))
+                 ;; use of x for speed is deliberate.  We're computing
+                 ;; how much mud you went through getting into this
+                 ;; map
+                 (muds-hit (ahead-of mud ahead x game-map position))
+                 (entry-speed (decrease-speed-by muds-hit speed))
+                 ((:values new-pos new-speed new-boosts)
+                  (make-move move
+                             (rows current-state)
+                             (cons (+ x 4) y)
+                             entry-speed
+                             boosts)))
+            (declare (ignore new-pos new-boosts))
+            (incf (car cell) new-speed)
+            (incf (cdr cell))))))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
