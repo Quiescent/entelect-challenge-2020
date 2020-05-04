@@ -15,7 +15,7 @@ distribution of likely states that the bot could end up in."
                     (for (speed x y boosts) in (all-possible-entry-states))
                     (collecting (cons (encode-entry-state-key speed x y boosts)
                                       (iter (for _ in all-moves)
-                                        (collecting '()))))))
+                                        (collecting (make-hash-table :test #'eq)))))))
     (for match-path in (matches-where-i-won folder-path))
     (for i from 0)
     (format t "Working on game: ~a~%" i)
@@ -37,17 +37,10 @@ distribution of likely states that the bot could end up in."
 
 (defun median (xs)
   "Produce the median value in XS."
-  (if (null xs)
-      -1
-      (iter
-        (with counts = (make-hash-table :test #'eq))
-        (for x in xs)
-        (incf (gethash x counts 0))
-        (finally
-         (return
-           (iter
-             (for (key value) in-hashtable counts)
-             (finding key maximizing value)))))))
+  (or (iter
+        (for (key value) in-hashtable xs)
+        (finding key maximizing value))
+      -1))
 
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
@@ -74,7 +67,7 @@ distribution of likely states that the bot could end up in."
                              entry-speed
                              boosts)))
             (declare (ignore new-pos new-boosts))
-            (push new-speed (nth i distribution))))))))
+            (incf (gethash new-speed (nth i distribution) 0))))))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
