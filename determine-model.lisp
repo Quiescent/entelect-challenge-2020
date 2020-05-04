@@ -15,7 +15,7 @@ distribution of likely states that the bot could end up in."
                     (for (speed x y boosts) in (all-possible-entry-states))
                     (collecting (cons (encode-entry-state-key speed x y boosts)
                                       (iter (for _ in all-moves)
-                                        (collecting (cons 0 0)))))))
+                                        (collecting '()))))))
     (for match-path in (matches-where-i-won folder-path))
     (for i from 0)
     (format t "Working on game: ~a~%" i)
@@ -28,19 +28,26 @@ distribution of likely states that the bot could end up in."
        (iter
          (for (entry-state-key . distribution) in
               (mapcar (lambda (cell) (cons (car cell)
-                                      (mapcar (lambda (ratio) (eliminating-divide (car ratio) (cdr ratio)))
+                                      (mapcar #'median
                                               (cdr cell))))
                       model))
          (format file "~{~a~^,~},~{~a~^,~}~%"
                  (decode-entry-state-key entry-state-key)
                  distribution))))))
 
-(defun eliminating-divide (x y)
-  "Divide X by Y and if it would have been 0 / 0 then make it -1."
-  (if (and (= x 0)
-           (= y 0))
+(defun median (xs)
+  "Produce the median value in XS."
+  (if (null xs)
       -1
-      (/ (float x) (float y))))
+      (iter
+        (with counts = (make-hash-table :test #'eq))
+        (for x in xs)
+        (incf (gethash x counts 0))
+        (finally
+         (return
+           (iter
+             (for (key value) in-hashtable counts)
+             (finding key maximizing value)))))))
 
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
@@ -50,7 +57,7 @@ distribution of likely states that the bot could end up in."
       (for (entry-key . distribution) in model)
       (for (speed x y boosts) = (decode-entry-state-key entry-key))
       (iter
-        (for cell in distribution)
+        (for i from 0)
         (for move in all-moves)
         (when (move-can-be-made move boosts y)
           (bind ((game-map (rows current-state))
@@ -67,8 +74,7 @@ distribution of likely states that the bot could end up in."
                              entry-speed
                              boosts)))
             (declare (ignore new-pos new-boosts))
-            (incf (car cell) new-speed)
-            (incf (cdr cell))))))))
+            (push new-speed (nth i distribution))))))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
