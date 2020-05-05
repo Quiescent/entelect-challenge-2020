@@ -72,9 +72,9 @@ function main() {
     if [ ! -z "$(git status --porcelain)" ]; then
         echo "Error: Will only run on a clean repo."
         echo "Please commit your changes!"
-    elif [[ "$(pwd)" != "$GIT_ROOT"* ]]; then
-        echo "Error: Not in the project repo."
-        echo "Please run this script from there."
+    # elif [[ "$(pwd)" != "$GIT_ROOT" ]]; then
+    #     echo "Error: Not in the project repo."
+    #     echo "Please run this script from there."
     elif [ -z "$1" ]; then
         echo "========================================"
         echo "====Welcome to Run Against Previous====="
