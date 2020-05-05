@@ -65,9 +65,10 @@ distribution of likely states that the bot could end up in."
                              (rows current-state)
                              (cons (+ x 4) y)
                              entry-speed
-                             boosts)))
-            (declare (ignore new-pos new-boosts))
-            (incf (gethash new-speed (nth i distribution) 0))))))))
+                             boosts))
+                 ((x . _) new-pos))
+            (declare (ignore new-speed new-boosts))
+            (incf (gethash x (nth i distribution) 0))))))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
