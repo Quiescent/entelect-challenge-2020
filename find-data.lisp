@@ -31,7 +31,7 @@ Whether they resulted in a finishing round less than OBJECTIVE-ROUND
 is the binominal label."
   (bind ((less-than-objective (finished-in-less-than objective-round folder-path))
          results)
-    (with-consecutive-states folder-path "random" 'A
+    (with-consecutive-states folder-path "Quantum" 'A
       (declare (ignore next-state))
       (bind ((my-abs-pos  (my-abs-pos current-state))
              (my-speed    (my-speed current-state))
@@ -103,12 +103,15 @@ is the binominal label."
 
 (defun matches-where-i-won (relative-folder-path)
   "Produce all match folders in RELATIVE-FOLDER-PATH where `Quantum' won."
-  (remove-if-not #'i-won-match
-                 (mapcar #'namestring
-                         (directory (make-pathname :directory
-                                                   (list :relative relative-folder-path)
-                                                   :name :wild
-                                                   :type :wild)))))
+  (remove-if-not #'i-won-match (all-matches relative-folder-path)))
+
+(defun all-matches (relative-folder-path)
+  "Produce all match folders in RELATIVE-FOLDER-PATH."
+  (mapcar #'namestring
+          (directory (make-pathname :directory
+                                    (list :relative relative-folder-path)
+                                    :name :wild
+                                    :type :wild))))
 
 (defun i-won-match (folder-path)
   "Produce T if I won the match in FOLDER-PATH."
@@ -121,7 +124,7 @@ is the binominal label."
              (with line)
              (setf line (read-line file nil))
              (while line)
-             (finding t such-that (equal line "The winner is: A - random")))))))
+             (finding t such-that (equal line "The winner is: A - Quantum")))))))
 
 (defun last-round-folder (absolute-folder-path)
   "Produce the folder for the last round for the log inside of ABSOLUTE-FOLDER-PATH."

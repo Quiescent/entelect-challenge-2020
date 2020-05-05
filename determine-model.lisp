@@ -16,10 +16,10 @@ distribution of likely states that the bot could end up in."
                     (collecting (cons (encode-entry-state-key speed x y boosts)
                                       (iter (for _ in all-moves)
                                         (collecting (make-hash-table :test #'eq)))))))
-    (for match-path in (matches-where-i-won folder-path))
+    (for match-path in (all-matches folder-path))
     (for i from 0)
     (format t "Working on game: ~a~%" i)
-    (add-to-model (concatenate 'string "../" (subseq match-path 17)) model)
+    (add-to-model (concatenate 'string "../" (subseq match-path 24)) model)
     (finally
      (with-open-file (file "model.csv"
                            :direction :output
@@ -44,7 +44,7 @@ distribution of likely states that the bot could end up in."
 
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
-  (with-consecutive-states relative-path "random" 'A
+  (with-consecutive-states relative-path "Quantum" 'A
     (declare (ignore next-state current-move))
     (iter
       (for (entry-key . distribution) in model)
