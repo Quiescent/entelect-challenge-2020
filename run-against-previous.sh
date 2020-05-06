@@ -14,10 +14,6 @@ SCRIPT_BACKUP_DIRECTORY=script_bin
 GIT_ROOT=$(git rev-parse --show-toplevel)
 CURRENT_VERSION=$(git rev-parse HEAD)
 
-function list_tags() {
-    git tags -v
-}
-
 function backup_scripts() {
     echo "> Creating backup directory..."
     mkdir -p $SCRIPT_BACKUP_DIRECTORY
