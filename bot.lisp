@@ -34,8 +34,12 @@
             (deep-accessor this 'player 'powerups)))
 
 (defmethod my-speed ((this state))
-  "Produce the which I'm going in THIS state."
+  "Produce the speed which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
+
+(defmethod opponent-speed ((this state))
+  "Produce the speed which the opponent is going in THIS state."
+  (deep-accessor this 'opponent 'player-speed))
 
 (defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
@@ -243,11 +247,7 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
     (ahead y)))
 
 ;; Known short cuts:
-;;  - I don't take collisions with the other player into account;
 ;;  - I don't take boost length into account;
-;;
-;; TODO: If the other players move is supplied then check for
-;;       collisions.
 (defun make-move (move game-map position speed boosts)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
@@ -424,8 +424,16 @@ Prepend 'WHICH-PLAYER - ' to the path for the players move and state."
                                    round
                                    ,which-player
                                    ,player))
+            (op-path       (->> (directory (format nil "~a/Round ~3,'0d/*" ,path round))
+                             (mapcar #'namestring)
+                             (remove-if (lambda (path) (ppcre:all-matches ,player path)))
+                             car))
+            (op-move-path  (format nil
+                                   "~a/PlayerCommand.txt"
+                                   op-path))
             (current-state (load-state-from-file current-path))
             (current-move  (load-command-from-file move-path))
+            (opponent-move (load-command-from-file op-move-path))
             (next-path     (format nil
                                    "~a/Round ~3,'0d/~s - ~a/JsonMap.json"
                                    ,path
@@ -479,6 +487,13 @@ If they're not equal then pretty print both forms."
     (finally (return game-map)))
   "An empty game map for testing purposes.")
 
+(defun resolve-collisions (state my-pos opponent-pos)
+  "Resolve collisions and produce the new position of my car.
+
+Given the STATE which we were in, MY-POS after my move and the
+OPPONENT-POS after his/her move."
+  my-pos)
+
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
@@ -488,17 +503,29 @@ If they're not equal then pretty print both forms."
                        (car (positions current-state))
                        (my-speed current-state)
                        (my-boosts current-state)))
+           ((:values opponent-pos opponent-speed opponent-boosts)
+            (make-move opponent-move
+                       (rows current-state)
+                       (cdr (positions current-state))
+                       (opponent-speed current-state)
+                       ;; I don't know how many boosts my opponent has(!?)
+                       0))
+           (resolved-relative-pos
+            (resolve-collisions current-state
+                                new-relative-pos
+                                opponent-pos))
            (my-abs-pos (my-abs-pos current-state))
-           (new-pos    (cons (- (+ (car my-abs-pos) (car new-relative-pos))
-                                (if (eq round 1) 0 5))
-                             (cdr new-relative-pos)))
+           (resolved-pos   (cons (- (+ (car my-abs-pos) (car resolved-relative-pos))
+                                    (if (eq round 1) 0 5))
+                                 (cdr resolved-relative-pos)))
            (initial    (list (my-abs-pos current-state)
                              (my-speed current-state)
                              (my-boosts current-state)))
-           (computed   (list new-pos new-speed new-boosts))
+           (computed   (list resolved-pos new-speed new-boosts))
            (actual     (list (my-abs-pos next-state)
                              (my-speed next-state)
                              (my-boosts next-state))))
+      (declare (ignore opponent-speed opponent-boosts))
       (when (not (equal computed actual))
         (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
                 round
