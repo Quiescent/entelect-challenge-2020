@@ -9,14 +9,26 @@
 
 (defun move-for-round (round-number)
   "Produce a move which is appropriate for ROUND-NUMBER."
-  (bind ((state         (load-state-file round-number))
-         (map           (rows state))
-         ((my-pos . _)  (positions state))
-         (my-abs-x      (my-abs-x state))
-         (boosting      (im-boosting state))
-         (boosts        (my-boosts state))
-         (speed         (my-speed state)))
-    (determine-move map my-pos boosting boosts speed my-abs-x)))
+  (bind ((state             (load-state-file round-number))
+         (map               (rows state))
+         ((my-pos . op-pos) (positions state))
+         (my-abs-x          (my-abs-x state))
+         (opponent-abs-x    (opponent-abs-x state))
+         (boosting          (im-boosting state))
+         (boosts            (my-boosts state))
+         (speed             (my-speed state))
+         (op-boosts         1)
+         (op-speed          (opponent-speed state)))
+    (determine-move map
+                    my-pos
+                    boosting
+                    boosts
+                    speed
+                    my-abs-x
+                    opponent-abs-x
+                    op-pos
+                    op-boosts
+                    op-speed)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -41,13 +53,38 @@
   "Produce the speed which the opponent is going in THIS state."
   (deep-accessor this 'opponent 'player-speed))
 
-(defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
+(defun determine-move (game-map my-pos boosting boosts
+                       speed my-abs-x opponent-abs-x
+                       opponent-pos opponent-boosts
+                       opponent-speed)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (declare (ignore my-abs-x boosting))
+  (declare (ignore boosting))
+  (if (opponent-is-on-same-map my-abs-x opponent-abs-x)
+      (make-opposed-move game-map
+                         my-pos
+                         boosts
+                         speed
+                         opponent-pos
+                         opponent-boosts
+                         opponent-speed)
+      (make-speed-move game-map my-pos boosts speed)))
+
+(defun make-opposed-move (game-map my-pos boosts speed
+                          opponent-pos opponent-boosts
+                          opponent-speed)
+  "Find a good move against the opponent which gets me out ahead of him."
+  nil)
+
+(defun make-speed-move (game-map my-pos boosts speed)
+  "Produce the best SPEED map for GAME-MAP.
+
+Given that I'm at MY-POS, ow many BOOSTS I have
+left, the SPEED at which I'm going and MY-ABS-X position on the
+board."
   (bind ((end-states         (states-from game-map my-pos speed boosts))
          (fewest-moves       (only-shortest-path-length end-states))
          (best-by-prediction (-> (copy-seq fewest-moves)
@@ -66,6 +103,11 @@ board."
                                last
                                car)))
     best-by-prediction))
+
+(defun opponent-is-on-same-map (my-abs-x opponent-abs-x)
+  "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
+  (and (>= opponent-abs-x (- my-abs-x 5))
+       (<= opponent-abs-x (+ my-abs-x 20))))
 
 (defmacro distance-score ()
   "Produce an expression modelling the best distance into random maps."
@@ -373,6 +415,10 @@ Produce the new new position, etc. as values."
     (cons (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'player   'map-position))))
           (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'opponent 'map-position)))))))
 
+(defmethod opponent-abs-x ((this state))
+  "Produce opponents absolute x position in THIS state."
+  (car (position-to-cons (deep-accessor this 'opponent 'map-position))))
+
 (defmethod my-abs-x ((this state))
   "Produce my absolute x position in THIS state."
   (car (position-to-cons (deep-accessor this 'player 'map-position))))
@@ -497,10 +543,12 @@ OPPONENT-POS after his/her move."
          (i-got-ahead     (and (>= (car my-pos) (car opponent-pos))
                                (< my-orig-x op-orig-x)))
          (start-lane-same (= my-orig-y op-orig-y))
-         (end-lane-same   (= (cdr my-pos) (cdr opponent-pos))))
+         (end-lane-same   (= (cdr my-pos) (cdr opponent-pos)))
+         (side-collision   (equal my-pos opponent-pos)))
     (cond
       ((and i-got-ahead start-lane-same end-lane-same)
        (cons (1- (car opponent-pos)) (cdr my-pos)))
+      (side-collision (cons (1- (car my-pos)) my-orig-y))
       (t my-pos))))
 
 (defun replay-from-folder (folder-path)
