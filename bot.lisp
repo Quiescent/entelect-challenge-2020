@@ -492,7 +492,16 @@ If they're not equal then pretty print both forms."
 
 Given the STATE which we were in, MY-POS after my move and the
 OPPONENT-POS after his/her move."
-  my-pos)
+  my-pos
+  (bind ((((my-orig-x . my-orig-y) . (op-orig-x . op-orig-y)) (positions state))
+         (i-got-ahead     (and (>= (car my-pos) (car opponent-pos))
+                               (< my-orig-x op-orig-x)))
+         (start-lane-same (= my-orig-y op-orig-y))
+         (end-lane-same   (= (cdr my-pos) (cdr opponent-pos))))
+    (cond
+      ((and i-got-ahead start-lane-same end-lane-same)
+       (cons (1- (car opponent-pos)) (cdr my-pos)))
+      (t my-pos))))
 
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
