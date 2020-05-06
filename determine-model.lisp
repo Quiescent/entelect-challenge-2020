@@ -14,8 +14,8 @@ distribution of likely states that the bot could end up in."
     (with model = (iter
                     (for (speed x y boosts) in (all-possible-entry-states))
                     (collecting (cons (encode-entry-state-key speed x y boosts)
-                                      (iter (for _ in (* (length all-moves)
-                                                         (length all-moves)))
+                                      (iter (repeat (* (length all-moves)
+                                                       (length all-moves)))
                                         (collecting (make-hash-table :test #'eq)))))))
     (for match-path in (all-matches folder-path))
     (for i from 0)
@@ -29,8 +29,8 @@ distribution of likely states that the bot could end up in."
        (iter
          (for (entry-state-key . distribution) in
               (mapcar (lambda (cell) (cons (car cell)
-                                      (mapcar #'median
-                                              (cdr cell))))
+                                           (mapcar #'median
+                                                   (cdr cell))))
                       model))
          (format file "~{~a~^,~},~{~a~^,~}~%"
                  (decode-entry-state-key entry-state-key)
@@ -48,7 +48,6 @@ distribution of likely states that the bot could end up in."
   (with-consecutive-states relative-path "Quantum" 'A
     (declare (ignore next-state current-move))
     (iter
-      (with i = 0)
       (for (entry-key . distribution) in model)
       (for (speed x y boosts) = (decode-entry-state-key entry-key))
       ;; use of x for speed is deliberate.  We're computing
@@ -59,12 +58,16 @@ distribution of likely states that the bot could end up in."
       (for entry-speed      = (decrease-speed-by muds-hit speed))
       (for initial-position = (cons (+ x 4) y))
       (iter
+        (with i = 0)
         (for move-1 in all-moves)
         (iter
           (for move-2 in all-moves)
-          (incf i)
+          (for new-y = (case move-1
+                         (turn_left  (move-lat up    y))
+                         (turn_right (move-lat down  y))
+                         (otherwise  (move-lat ahead y))))
           (when (and (move-can-be-made move-1 boosts y)
-                     (move-can-be-made move-2 boosts y))
+                     (move-can-be-made move-2 boosts new-y))
             (bind (((:values pos-1 speed-1 boosts-1)
                     (make-move move-1
                                game-map
@@ -79,7 +82,8 @@ distribution of likely states that the bot could end up in."
                                boosts-1))
                    ((x . _) pos-2))
               (declare (ignore speed-2 boosts-2))
-              (incf (gethash x (nth i distribution) 0)))))))))
+              (incf (gethash x (nth i distribution) 0))))
+          (incf i))))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
