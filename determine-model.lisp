@@ -49,18 +49,18 @@ distribution of likely states that the bot could end up in."
     (iter
       (for (entry-key . distribution) in model)
       (for (speed x y boosts) = (decode-entry-state-key entry-key))
+      ;; use of x for speed is deliberate.  We're computing
+      ;; how much mud you went through getting into this
+      ;; map
+      (for position    = (cons 4 y))
+      (for game-map    = (rows current-state))
+      (for muds-hit    = (ahead-of mud ahead x game-map position))
+      (for entry-speed = (decrease-speed-by muds-hit speed))
       (iter
         (for i from 0)
         (for move in all-moves)
         (when (move-can-be-made move boosts y)
-          (bind ((game-map (rows current-state))
-                 (position (cons 4 y))
-                 ;; use of x for speed is deliberate.  We're computing
-                 ;; how much mud you went through getting into this
-                 ;; map
-                 (muds-hit (ahead-of mud ahead x game-map position))
-                 (entry-speed (decrease-speed-by muds-hit speed))
-                 ((:values new-pos new-speed new-boosts)
+          (bind (((:values new-pos new-speed new-boosts)
                   (make-move move
                              (rows current-state)
                              (cons (+ x 4) y)
