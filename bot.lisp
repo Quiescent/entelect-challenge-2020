@@ -48,9 +48,14 @@ board."
          (fewest-moves       (only-shortest-path-length end-states))
          (best-by-prediction (-> (copy-seq fewest-moves)
                                (sort #'> :key (lambda (state) (nth 3 state)))
+                               (stable-sort #'<
+                                            :key (lambda (state)
+                                                   (variance-score
+                                                    state
+                                                    (array-dimension game-map 1))))
                                (stable-sort #'>
                                             :key (lambda (state)
-                                                   (average-speed-score
+                                                   (best-median-distance-score
                                                     state
                                                     (array-dimension game-map 1))))
                                caar
@@ -58,29 +63,24 @@ board."
                                car)))
     best-by-prediction))
 
-(defmacro speed-score ()
-  (labels ((average-excluding-minus-one (xs)
-             "Produce the average of xs excluding minus one."
-             (bind ((without-minus-one (remove -1 xs)))
-               (-<> without-minus-one
-                 (apply #'+ <>)
-                 (/ <> (length without-minus-one))
-                 (float <>)))))
-    (with-open-file (file "model.csv")
-      `(cond
-         ,@(iter
-             (with line)
-             (for (speed x y boosts . scores) = (setq line (mapcar #'read-from-string
-                                                                   (ppcre:split ","
-                                                                                (read-line file nil)))))
-             (while line)
-             (collecting `((and (= ,speed  speed)
-                                (= ,x      x)
-                                (= ,y      y)
-                                (= ,boosts boosts))
-                           ,(average-excluding-minus-one scores))))))))
+(defmacro distance-score ()
+  "Produce an expression modelling the best distance into random maps."
+  (with-open-file (file "model.csv")
+    `(cond
+       ,@(iter
+           (with line)
+           (for (speed x y boosts . scores) = (->> (read-line file nil)
+                                                (ppcre:split ",")
+                                                (mapcar #'read-from-string)
+                                                (setq line)))
+           (while line)
+           (collecting `((and (= ,speed  speed)
+                              (= ,x      x)
+                              (= ,y      y)
+                              (= ,boosts boosts))
+                         ,(apply #'max scores)))))))
 
-(defun average-speed-score (state map-length)
+(defun best-median-distance-score (state map-length)
   "Produce the score of STATE according to the model in model.csv.
 
 Use MAP-LENGTH to compute the actual X value."
@@ -89,7 +89,51 @@ Use MAP-LENGTH to compute the actual X value."
          (boosts                                 (if (> prelim-boosts 0) 1 0)))
     (if (= 0 speed)
         -1
-        (speed-score))))
+        (distance-score))))
+
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defun standard-deviation-ignoring-minus-ones (xs)
+    "Compute the standard deviation of XS ignoring -1 values."
+    (bind ((without-minus-one (remove -1 xs))
+           (average           (-<> without-minus-one
+                                (apply #'+ <>)
+                                (/ <> (length without-minus-one))
+                                (float <>))))
+      (-<> without-minus-one
+        (mapcar (lambda (x) (bind ((diff (- x average))) (* diff diff))) <>)
+        (apply #'+ <>)
+        (/ <> (1- (length without-minus-one)))
+        sqrt))))
+
+(defmacro variance-model ()
+  "Produce an expression modelling the best distance into random maps."
+  (with-open-file (file "model.csv")
+    `(cond
+       ,@(iter
+           (with line)
+           (for (speed x y boosts . scores) = (->> (read-line file nil)
+                                                (ppcre:split ",")
+                                                (mapcar #'read-from-string)
+                                                (setq line)))
+           (while line)
+           (collecting `((and (= ,speed  speed)
+                              (= ,x      x)
+                              (= ,y      y)
+                              (= ,boosts boosts))
+                         ,(standard-deviation-ignoring-minus-ones scores)))))))
+
+(defun variance-score (state map-length)
+  "Produce the score of STATE according to the model in model.csv.
+
+Use MAP-LENGTH to compute the actual X value."
+  (bind (((_ (x-prelim . y) speed prelim-boosts) state)
+         (x                                      (- x-prelim map-length))
+         (boosts                                 (if (> prelim-boosts 0) 1 0)))
+    (if (= 0 speed)
+        -1
+        (variance-model))))
 
 (defun only-shortest-path-length (end-states)
   "Produce only those END-STATES which took the shortest number of steps."
