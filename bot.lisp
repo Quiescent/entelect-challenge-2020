@@ -121,23 +121,19 @@ getting it horribly wrong :)"
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (declare (ignore my-abs-x))
-  (bind ((end-states                        (states-from game-map my-pos speed boosts))
-         (fewest-moves                      (only-shortest-path-length end-states))
-         (best-by-prediction                (car (last (caar (sort (copy-seq fewest-moves)
-                                                                   #'>
-                                                                   :key (lambda (state)
-                                                                          (average-speed-score
-                                                                           state
-                                                                           (array-dimension game-map 1))))))))
-         (shortest-allowable                (length (caar fewest-moves)))
-         (at-most-n-longer                  (remove-if (lambda (state)
-                                                         (> (length (car state)) shortest-allowable))
-                                                       end-states))
-         ((more-boosts _ _ new-boosts)      (best-by-boost-count at-most-n-longer))
-         (boost-move                        'use_boost)
-         (gathers                           (> new-boosts boosts))
-         (v-tech                            (> boosts 2)))
+  (declare (ignore my-abs-x boosting))
+  (bind ((end-states         (states-from game-map my-pos speed boosts))
+         (fewest-moves       (only-shortest-path-length end-states))
+         (best-by-prediction (-> (copy-seq fewest-moves)
+                               (sort #'> :key (lambda (state) (nth 3 state)))
+                               (stable-sort #'>
+                                            :key (lambda (state)
+                                                   (average-speed-score
+                                                    state
+                                                    (array-dimension game-map 1))))
+                               caar
+                               last
+                               car)))
     best-by-prediction))
 
 (defmacro speed-score ()
