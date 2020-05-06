@@ -245,6 +245,9 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
 ;; Known short cuts:
 ;;  - I don't take collisions with the other player into account;
 ;;  - I don't take boost length into account;
+;;
+;; TODO: If the other players move is supplied then check for
+;;       collisions.
 (defun make-move (move game-map position speed boosts)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
