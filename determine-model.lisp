@@ -47,18 +47,19 @@ distribution of likely states that the bot could end up in."
   (with-consecutive-states relative-path "Quantum" 'A
     (declare (ignore next-state current-move))
     (iter
+      (with i = 0)
       (for (entry-key . distribution) in model)
       (for (speed x y boosts) = (decode-entry-state-key entry-key))
       ;; use of x for speed is deliberate.  We're computing
       ;; how much mud you went through getting into this
       ;; map
-      (for position    = (cons 4 y))
-      (for game-map    = (rows current-state))
-      (for muds-hit    = (ahead-of mud ahead x game-map position))
-      (for entry-speed = (decrease-speed-by muds-hit speed))
+      (for initial-position = (cons 4 y))
+      (for game-map         = (rows current-state))
+      (for muds-hit         = (ahead-of mud ahead x game-map initial-position))
+      (for entry-speed      = (decrease-speed-by muds-hit speed))
       (iter
-        (for i from 0)
         (for move in all-moves)
+        (incf i)
         (when (move-can-be-made move boosts y)
           (bind (((:values new-pos new-speed new-boosts)
                   (make-move move
