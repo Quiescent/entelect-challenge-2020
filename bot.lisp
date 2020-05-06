@@ -59,19 +59,26 @@ board."
     best-by-prediction))
 
 (defmacro speed-score ()
-  (with-open-file (file "model.csv")
-    `(cond
-       ,@(iter
-           (with line)
-           (for (speed x y boosts . scores) = (setq line (mapcar #'read-from-string
-                                                                 (ppcre:split ","
-                                                                              (read-line file nil)))))
-           (while line)
-           (collecting `((and (= ,speed  speed)
-                              (= ,x      x)
-                              (= ,y      y)
-                              (= ,boosts boosts))
-                         ,(apply #'max scores)))))))
+  (labels ((average-excluding-minus-one (xs)
+             "Produce the average of xs excluding minus one."
+             (bind ((without-minus-one (remove -1 xs)))
+               (-<> without-minus-one
+                 (apply #'+ <>)
+                 (/ <> (length without-minus-one))
+                 (float <>)))))
+    (with-open-file (file "model.csv")
+      `(cond
+         ,@(iter
+             (with line)
+             (for (speed x y boosts . scores) = (setq line (mapcar #'read-from-string
+                                                                   (ppcre:split ","
+                                                                                (read-line file nil)))))
+             (while line)
+             (collecting `((and (= ,speed  speed)
+                                (= ,x      x)
+                                (= ,y      y)
+                                (= ,boosts boosts))
+                           ,(average-excluding-minus-one scores))))))))
 
 (defun average-speed-score (state map-length)
   "Produce the score of STATE according to the model in model.csv.
