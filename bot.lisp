@@ -37,84 +37,6 @@
   "Produce the which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
 
-(eval-when (:compile-toplevel
-            :load-toplevel
-            :execute)
-  (defun decision-tree-iter (forms)
-    "Implementation detail for the macro `decision-tree'."
-    (logging-cond-iter (mapcar (lambda (form)
-                                 (progn
-                                   (when (equal 'quote (car form))
-                                     (error "Use unquoted symbol to terminate a tree!"))
-                                   (if (symbolp (cadr form))
-                                       (list (car form) (cadr form))
-                                       `(,(car form) ,(decision-tree-iter (cdr form))))))
-                               forms)))
-
-  (defun logging-cond-iter (forms)
-    "Wrap forms in a `cond' and print the condition which succeeded.
-
-NOTE: Implementation detail of `logging-cond."
-    `(,@(reduce #'first-success
-                (mapcar (lambda (form) `(,(car form) ,(cadr form)))
-                        forms)
-                :initial-value nil)))
-
-  (defun first-success (result form)
-    "Produce either RESULT if it's non nill, or cadr of FORM if car of FORM."
-    `(or ,result
-         (if ,(car form)
-             ,(cadr form))))
-
-  #+nil
-  (first-success 't '((eq 2 3) blah)))
-
-(defmacro decision-tree (&rest forms)
-  "Create a series of nested conds from FORMS.
-
-To terminate the tree you must supply an unquoted symbol, otherwise
-it's assumed that you're supplying the next condition."
-  (decision-tree-iter forms))
-
-#+nil
-(decision-tree
- ((< 2 3) ((eq 2 2) blah)
-          ((eq 3 4) haha)))
-
-;; Errors out deliberately...
-#+nil
-(decision-tree
- ((< 2 3) ((eq 2 2) 'blah)))
-
-(defmacro logging-cond (&rest forms)
-  "Wrap forms in a `cond' and print the condition which succeeded."
-  (logging-cond-iter forms))
-
-#+nil
-(logging-cond
- ((t 3))
- ((eq 3 5) 4))
-
-(defmacro decision-tree-classifier ()
-  "Prodcue a decision tree classifier by parsing the dot file in this repo.
-
-Assumes that the surrounding code binds the features:
- - SPEED
- - BOOSTS
- - MUD_AHEAD
- - MUD_UP
- - MUD_DOWN
- - SPEED_AHEAD
- - SPEED_UP
- - SPEED_DOWN
- - MOVE
- - OBJECTIVE
-
-Around the fom, but don't worry.  The compiler will prevent you from
-getting it horribly wrong :)"
-  (let ((tree (dot-file-to-list-tree "tree.dot")))
-    (decision-tree-iter (list tree))))
-
 (defun determine-move (game-map my-pos boosting boosts speed my-abs-x)
   "Produce the best move for GAME-MAP.
 
@@ -162,35 +84,10 @@ Use MAP-LENGTH to compute the actual X value."
         -1
         (speed-score))))
 
-(defun best-by-boost-count (end-states)
-  "Produce the best of END-STATES by the final speed."
-  (iter
-    (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing boosts)))
-
-(defun only-boosting-at-end (end-states)
-  "Produce only those END-STATES in which the car was boosting at the end."
-  (iter
-    (for (path  pos speed boosts) in end-states)
-    (when (eq speed 15)
-      (collecting (list path pos speed boosts)))))
-
 (defun only-shortest-path-length (end-states)
   "Produce only those END-STATES which took the shortest number of steps."
   (bind ((shortest-length (iter (for (path . _) in end-states) (minimize (length path)))))
     (remove-if (lambda (end-state) (> (length (car end-state)) shortest-length)) end-states)))
-
-(defun best-by-speed (end-states)
-  "Produce the best of END-STATES by the final speed."
-  (iter
-    (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing speed)))
-
-(defun best-by-dist (end-states)
-  "Produce the best of END-STATES by the final distance."
-  (iter
-    (for (path (x . y) speed boosts) in end-states)
-    (finding (list (car (last path)) x speed boosts) maximizing x)))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
@@ -280,14 +177,6 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (ahead `(cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
-(defun encode-move (move)
-  "Encode MOVE as a number the same way as our data generator does."
-  (ecase move
-    (accelerate 0)
-    (turn_left  1)
-    (turn_right 2)
-    (use_boost  3)))
-
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
   `(+ ,x ,(ecase direction
@@ -375,15 +264,6 @@ Produce the new new position, etc. as values."
     (turn_left  (> y 0))
     (use_boost  (> boosts 0))
     (t          t)))
-
-(defun gap-ahead-of (speed game-map x y)
-  "Produce T if there are SPEED clear blocks in GAME-MAP ahead of (X, Y)."
-  (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (array-dimension game-map 1)))
-    (counting (not (eq 'mud (aref game-map y i))))))
-
-(defconstant row-length 26
-  "The number of squares visible in a row.")
 
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
