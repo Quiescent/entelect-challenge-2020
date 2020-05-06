@@ -52,7 +52,9 @@ function change_bot_name() {
 }
 
 function run_matches() {
-    VERSIONS_TO_RUN=$(git tag)
+    # Remove random and nothing from the list of bots and run against
+    # the last five bots.
+    VERSIONS_TO_RUN=$(git tag | tail -7 | head -5)
     pushd $GIT_ROOT
     build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
     for BOT_VERSION in $VERSIONS_TO_RUN; do
