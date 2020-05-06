@@ -296,7 +296,7 @@ Produce the new new position, etc. as values."
 (defun decrease-speed (speed)
   "Produce the speed which is one slower than SPEED."
   (case speed
-    (3  0)
+    (3  3)
     (5  3)
     (6  3)
     (8  6)
