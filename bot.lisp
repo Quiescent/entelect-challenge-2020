@@ -223,18 +223,42 @@ Fourth is my boosts left.
 In order to model the opponent when we're finding paths we treat it as
 a dumb, moving obstacle by making the Accelerate move from
 OPPONENT-POSITION going at speed OPPONENT-SPEED."
+  ;; The most moves we can take to get to the edge is if we're going
+  ;; at 3 and keep turning.  NOTE: we can't decelerate to 0!  So the
+  ;; least you can go forward is 2, 2 into 20 is 10.
   (bind (((:values opponent-position-2 opponent-speed-2 _)
           (make-move 'accelerate game-map opponent-position opponent-speed 0))
          ((:values opponent-position-3 opponent-speed-3 _)
           (make-move 'accelerate game-map opponent-position-2 opponent-speed-2 0))
          ((:values opponent-position-4 opponent-speed-4 _)
           (make-move 'accelerate game-map opponent-position-3 opponent-speed-3 0))
-         ((:values opponent-position-5 _ _)
+         ((:values opponent-position-5 opponent-speed-5 _)
           (make-move 'accelerate game-map opponent-position-4 opponent-speed-4 0))
+         ((:values opponent-position-6 opponent-speed-6 _)
+          (make-move 'accelerate game-map opponent-position-5 opponent-speed-5 0))
+         ((:values opponent-position-7 opponent-speed-7 _)
+          (make-move 'accelerate game-map opponent-position-6 opponent-speed-6 0))
+         ((:values opponent-position-8 opponent-speed-8 _)
+          (make-move 'accelerate game-map opponent-position-7 opponent-speed-7 0))
+         ((:values opponent-position-9 opponent-speed-9 _)
+          (make-move 'accelerate game-map opponent-position-8 opponent-speed-8 0))
+         ((:values opponent-position-10 opponent-speed-10 _)
+          (make-move 'accelerate game-map opponent-position-9 opponent-speed-9 0))
+         ((:values opponent-position-11 opponent-speed-11 _)
+          (make-move 'accelerate game-map opponent-position-10 opponent-speed-10 0))
+         ((:values opponent-position-12 opponent-speed-12 _)
+          (make-move 'accelerate game-map opponent-position-11 opponent-speed-11 0))
          (opponent-states (vector opponent-position-2
                                   opponent-position-3
                                   opponent-position-4
-                                  opponent-position-5)))
+                                  opponent-position-5
+                                  opponent-position-6
+                                  opponent-position-7
+                                  opponent-position-8
+                                  opponent-position-9
+                                  opponent-position-10
+                                  opponent-position-11
+                                  opponent-position-12)))
     (iter
       (with counter = 0)
       (with paths-to-explore = (list (list nil my-pos speed boosts)))
