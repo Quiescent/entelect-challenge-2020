@@ -248,7 +248,8 @@ OPPONENT-POSITION going at speed OPPONENT-SPEED."
           (make-move 'accelerate game-map opponent-position-10 opponent-speed-10 0))
          ((:values opponent-position-12 opponent-speed-12 _)
           (make-move 'accelerate game-map opponent-position-11 opponent-speed-11 0))
-         (opponent-states (vector opponent-position-2
+         (opponent-states (vector opponent-position
+                                  opponent-position-2
                                   opponent-position-3
                                   opponent-position-4
                                   opponent-position-5
@@ -285,9 +286,9 @@ OPPONENT-POSITION going at speed OPPONENT-SPEED."
               (bind (((:values new-pos new-speed new-boosts)
                       (make-move move game-map current-pos current-speed current-boosts)))
                 (bind ((my-new-pos (resolve-collisions current-pos
-                                                       opponent-position
+                                                       (aref opponent-states (length path))
                                                        new-pos
-                                                       (aref opponent-states (length path)))))
+                                                       (aref opponent-states (1+ (length path))))))
                  (push (list (cons move path) my-new-pos new-speed new-boosts)
                        paths-to-explore))))))
       (incf counter)
