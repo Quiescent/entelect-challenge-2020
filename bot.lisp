@@ -63,7 +63,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore boosting))
-  (if nil ;(opponent-is-on-same-map my-abs-x opponent-abs-x)
+  (if (opponent-is-on-same-map my-abs-x opponent-abs-x)
       (make-opposed-move game-map
                          my-pos
                          boosts
@@ -74,10 +74,36 @@ board."
       (make-speed-move game-map my-pos boosts speed)))
 
 (defun make-opposed-move (game-map my-pos boosts speed
-                          opponent-pos opponent-boosts
-                          opponent-speed)
-  "Find a good move against the opponent which gets me out ahead of him."
-  nil)
+                          op-pos op-boosts op-speed)
+  "Find a good move against the opponent which gets me out ahead of him.
+
+Assume that the opponent always starts with one boost."
+  (iter outer
+    (for my-move-1 in (remove-if (lambda (move) (not (move-can-be-made move
+                                                                       boosts
+                                                                       (cdr my-pos))))
+                                 all-moves))
+    (for subsequent-scores =
+         (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
+                 (make-move my-move-1 game-map my-pos speed boosts)))
+           (iter
+             (for op-move-1 in (remove-if (lambda (move) (not (move-can-be-made move
+                                                                                boosts
+                                                                                (cdr op-pos))))
+                                          all-moves))
+             (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
+                     (make-move op-move-1 game-map op-pos op-speed 1))
+                    (my-resolved-pos-2 (resolve-collisions my-pos op-pos my-pos-2 op-pos-2)))
+               (minimizing (score-position game-map my-resolved-pos-2 my-boosts-2 my-speed-2))))))
+    (finding my-move-1 maximizing subsequent-scores)))
+
+(defun score-position (game-map my-pos boosts speed)
+  "Produce a score for MY-POS on GAME-MAP.
+
+Given that I've got BOOSTS left and am going at SPEED."
+  (iter
+    (for state in (states-with-fewest-moves game-map my-pos boosts speed))
+    (maximizing (best-median-distance-score state (array-dimension game-map 1)))))
 
 (defun make-speed-move (game-map my-pos boosts speed)
   "Produce the best SPEED map for GAME-MAP.
@@ -85,8 +111,7 @@ board."
 Given that I'm at MY-POS, ow many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (bind ((end-states         (states-from game-map my-pos speed boosts))
-         (fewest-moves       (only-shortest-path-length end-states))
+  (bind ((fewest-moves       (states-with-fewest-moves game-map my-pos boosts speed))
          (best-by-prediction (-> (copy-seq fewest-moves)
                                (sort #'> :key (lambda (state) (nth 3 state)))
                                (stable-sort #'<
@@ -103,6 +128,12 @@ board."
                                last
                                car)))
     best-by-prediction))
+
+(defun states-with-fewest-moves (game-map my-pos boosts speed)
+  "Produce the states with the shortest paths to the end of the GAME-MAP."
+  (bind ((end-states         (states-from game-map my-pos speed boosts))
+         (fewest-moves       (only-shortest-path-length end-states)))
+    fewest-moves))
 
 (defun opponent-is-on-same-map (my-abs-x opponent-abs-x)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
@@ -230,6 +261,7 @@ Fourth is my boosts left."
                 found-paths)
           (iter
             (with possible-moves =
+                  ;; Get rid of the second clause.  I'll never be at 0.
                   (remove-if (lambda (move) (or (not (move-can-be-made move
                                                                        current-boosts
                                                                        (cdr current-pos)))
