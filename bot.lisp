@@ -63,7 +63,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore boosting))
-  (if (opponent-is-on-same-map my-abs-x opponent-abs-x)
+  (if nil ;(opponent-is-on-same-map my-abs-x opponent-abs-x)
       (make-opposed-move game-map
                          my-pos
                          boosts
@@ -71,7 +71,7 @@ board."
                          opponent-pos
                          opponent-boosts
                          opponent-speed)
-      (make-speed-move game-map my-pos boosts speed)))
+      (make-speed-move game-map my-pos boosts speed opponent-pos opponent-speed)))
 
 (defun make-opposed-move (game-map my-pos boosts speed
                           opponent-pos opponent-boosts
@@ -79,13 +79,17 @@ board."
   "Find a good move against the opponent which gets me out ahead of him."
   nil)
 
-(defun make-speed-move (game-map my-pos boosts speed)
+(defun make-speed-move (game-map my-pos boosts speed opponent-pos opponent-speed)
   "Produce the best SPEED map for GAME-MAP.
 
 Given that I'm at MY-POS, ow many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
-board."
-  (bind ((end-states         (states-from game-map my-pos speed boosts))
+board.
+
+Treat the opponent like it'll be an unintelligant, moving obstacle by
+making the accelerate move from OPPONENT-POS with a speed of
+OPPONENT-SPEED."
+  (bind ((end-states         (states-from game-map my-pos speed boosts opponent-pos opponent-speed))
          (fewest-moves       (only-shortest-path-length end-states))
          (best-by-prediction (-> (copy-seq fewest-moves)
                                (sort #'> :key (lambda (state) (nth 3 state)))
@@ -205,7 +209,7 @@ Use MAP-LENGTH to compute the actual X value."
 (defvar all-moves '(accelerate use_boost turn_right turn_left)
   "All the moves which I can make.")
 
-(defun states-from (game-map my-pos speed boosts)
+(defun states-from (game-map my-pos speed boosts opponent-position opponent-speed)
   "Produce all possible states using GAME-MAP.
 
 Where my car is at MY-POS and is going at SPEED and I have BOOSTS
@@ -214,36 +218,56 @@ boosts left.
 First element of a path is the path taken.
 Second is my current position.
 Third is my speed.
-Fourth is my boosts left."
-  (iter
-    (with counter = 0)
-    (with paths-to-explore = (list (list nil my-pos speed boosts)))
-    (with explored = (make-hash-table :test #'equal))
-    (with found-paths)
-    (while (and (not (null paths-to-explore))
-                (< counter 100000)))
-    (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
-      (when (gethash path explored)
-        (next-iteration))
-      (if (end-state current-pos game-map)
-          (push (list path current-pos current-speed current-boosts)
-                found-paths)
-          (iter
-            (with possible-moves =
-                  (remove-if (lambda (move) (or (not (move-can-be-made move
-                                                                       current-boosts
-                                                                       (cdr current-pos)))
-                                                (and (= 0 current-speed)
-                                                     (or (eq move 'turn_right)
-                                                         (eq move 'turn_left)))))
-                             all-moves))
-            (for move in possible-moves)
-            (bind (((:values new-pos new-speed new-boosts)
-                    (make-move move game-map current-pos current-speed current-boosts)))
-              (push (list (cons move path) new-pos new-speed new-boosts)
-                    paths-to-explore)))))
-    (incf counter)
-    (finally (return found-paths))))
+Fourth is my boosts left.
+
+In order to model the opponent when we're finding paths we treat it as
+a dumb, moving obstacle by making the Accelerate move from
+OPPONENT-POSITION going at speed OPPONENT-SPEED."
+  (bind (((:values opponent-position-2 opponent-speed-2 _)
+          (make-move 'accelerate game-map opponent-position opponent-speed 0))
+         ((:values opponent-position-3 opponent-speed-3 _)
+          (make-move 'accelerate game-map opponent-position-2 opponent-speed-2 0))
+         ((:values opponent-position-4 opponent-speed-4 _)
+          (make-move 'accelerate game-map opponent-position-3 opponent-speed-3 0))
+         ((:values opponent-position-5 _ _)
+          (make-move 'accelerate game-map opponent-position-4 opponent-speed-4 0))
+         (opponent-states (vector opponent-position-2
+                                  opponent-position-3
+                                  opponent-position-4
+                                  opponent-position-5)))
+    (iter
+      (with counter = 0)
+      (with paths-to-explore = (list (list nil my-pos speed boosts)))
+      (with explored = (make-hash-table :test #'equal))
+      (with found-paths)
+      (while (and (not (null paths-to-explore))
+                  (< counter 100000)))
+      (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
+        (when (gethash path explored)
+          (next-iteration))
+        (if (end-state current-pos game-map)
+            (push (list path current-pos current-speed current-boosts)
+                  found-paths)
+            (iter
+              (with possible-moves =
+                    (remove-if (lambda (move) (or (not (move-can-be-made move
+                                                                         current-boosts
+                                                                         (cdr current-pos)))
+                                                  (and (= 0 current-speed)
+                                                       (or (eq move 'turn_right)
+                                                           (eq move 'turn_left)))))
+                               all-moves))
+              (for move in possible-moves)
+              (bind (((:values new-pos new-speed new-boosts)
+                      (make-move move game-map current-pos current-speed current-boosts)))
+                (bind ((my-new-pos (resolve-collisions current-pos
+                                                       opponent-position
+                                                       new-pos
+                                                       (aref opponent-states (length path)))))
+                 (push (list (cons move path) my-new-pos new-speed new-boosts)
+                       paths-to-explore))))))
+      (incf counter)
+      (finally (return found-paths)))))
 
 (defmacro ahead-of (type direction speed game-map pos)
   "Produce the appropriate `ahead-of' form.
@@ -533,13 +557,13 @@ If they're not equal then pretty print both forms."
     (finally (return game-map)))
   "An empty game map for testing purposes.")
 
-(defun resolve-collisions (state my-pos opponent-pos)
+(defun resolve-collisions (my-orig-pos opponent-orig-pos my-pos opponent-pos)
   "Resolve collisions and produce the new position of my car.
 
-Given the STATE which we were in, MY-POS after my move and the
-OPPONENT-POS after his/her move."
-  my-pos
-  (bind ((((my-orig-x . my-orig-y) . (op-orig-x . op-orig-y)) (positions state))
+Given MY-ORIG-POS and the OPPONENT-ORIG-POS which we were in, MY-POS
+after my move and the OPPONENT-POS after his/her move."
+  (bind (((my-orig-x . my-orig-y) my-orig-pos)
+         ((op-orig-x . op-orig-y) opponent-orig-pos)
          (i-got-ahead     (and (>= (car my-pos) (car opponent-pos))
                                (< my-orig-x op-orig-x)))
          (start-lane-same (= my-orig-y op-orig-y))
@@ -567,8 +591,10 @@ OPPONENT-POS after his/her move."
                        (opponent-speed current-state)
                        ;; I don't know how many boosts my opponent has(!?)
                        0))
+           ((my-orig-pos . opponent-orig-pos) (positions current-state))
            (resolved-relative-pos
-            (resolve-collisions current-state
+            (resolve-collisions my-orig-pos
+                                opponent-orig-pos
                                 new-relative-pos
                                 opponent-pos))
            (my-abs-pos (my-abs-pos current-state))
