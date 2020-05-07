@@ -71,7 +71,7 @@ board."
                          opponent-pos
                          opponent-boosts
                          opponent-speed)
-      (make-speed-move game-map my-pos boosts speed opponent-pos opponent-speed)))
+      (make-speed-move game-map my-pos boosts speed)))
 
 (defun make-opposed-move (game-map my-pos boosts speed
                           opponent-pos opponent-boosts
@@ -79,17 +79,13 @@ board."
   "Find a good move against the opponent which gets me out ahead of him."
   nil)
 
-(defun make-speed-move (game-map my-pos boosts speed opponent-pos opponent-speed)
+(defun make-speed-move (game-map my-pos boosts speed)
   "Produce the best SPEED map for GAME-MAP.
 
 Given that I'm at MY-POS, ow many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
-board.
-
-Treat the opponent like it'll be an unintelligant, moving obstacle by
-making the accelerate move from OPPONENT-POS with a speed of
-OPPONENT-SPEED."
-  (bind ((end-states         (states-from game-map my-pos speed boosts opponent-pos opponent-speed))
+board."
+  (bind ((end-states         (states-from game-map my-pos speed boosts))
          (fewest-moves       (only-shortest-path-length end-states))
          (best-by-prediction (-> (copy-seq fewest-moves)
                                (sort #'> :key (lambda (state) (nth 3 state)))
@@ -209,7 +205,7 @@ Use MAP-LENGTH to compute the actual X value."
 (defvar all-moves '(accelerate use_boost turn_right turn_left)
   "All the moves which I can make.")
 
-(defun states-from (game-map my-pos speed boosts opponent-position opponent-speed)
+(defun states-from (game-map my-pos speed boosts)
   "Produce all possible states using GAME-MAP.
 
 Where my car is at MY-POS and is going at SPEED and I have BOOSTS
@@ -218,81 +214,36 @@ boosts left.
 First element of a path is the path taken.
 Second is my current position.
 Third is my speed.
-Fourth is my boosts left.
-
-In order to model the opponent when we're finding paths we treat it as
-a dumb, moving obstacle by making the Accelerate move from
-OPPONENT-POSITION going at speed OPPONENT-SPEED."
-  ;; The most moves we can take to get to the edge is if we're going
-  ;; at 3 and keep turning.  NOTE: we can't decelerate to 0!  So the
-  ;; least you can go forward is 2, 2 into 20 is 10.
-  (bind (((:values opponent-position-2 opponent-speed-2 _)
-          (make-move 'accelerate game-map opponent-position opponent-speed 0))
-         ((:values opponent-position-3 opponent-speed-3 _)
-          (make-move 'accelerate game-map opponent-position-2 opponent-speed-2 0))
-         ((:values opponent-position-4 opponent-speed-4 _)
-          (make-move 'accelerate game-map opponent-position-3 opponent-speed-3 0))
-         ((:values opponent-position-5 opponent-speed-5 _)
-          (make-move 'accelerate game-map opponent-position-4 opponent-speed-4 0))
-         ((:values opponent-position-6 opponent-speed-6 _)
-          (make-move 'accelerate game-map opponent-position-5 opponent-speed-5 0))
-         ((:values opponent-position-7 opponent-speed-7 _)
-          (make-move 'accelerate game-map opponent-position-6 opponent-speed-6 0))
-         ((:values opponent-position-8 opponent-speed-8 _)
-          (make-move 'accelerate game-map opponent-position-7 opponent-speed-7 0))
-         ((:values opponent-position-9 opponent-speed-9 _)
-          (make-move 'accelerate game-map opponent-position-8 opponent-speed-8 0))
-         ((:values opponent-position-10 opponent-speed-10 _)
-          (make-move 'accelerate game-map opponent-position-9 opponent-speed-9 0))
-         ((:values opponent-position-11 opponent-speed-11 _)
-          (make-move 'accelerate game-map opponent-position-10 opponent-speed-10 0))
-         ((:values opponent-position-12 opponent-speed-12 _)
-          (make-move 'accelerate game-map opponent-position-11 opponent-speed-11 0))
-         (opponent-states (vector opponent-position
-                                  opponent-position-2
-                                  opponent-position-3
-                                  opponent-position-4
-                                  opponent-position-5
-                                  opponent-position-6
-                                  opponent-position-7
-                                  opponent-position-8
-                                  opponent-position-9
-                                  opponent-position-10
-                                  opponent-position-11
-                                  opponent-position-12)))
-    (iter
-      (with counter = 0)
-      (with paths-to-explore = (list (list nil my-pos speed boosts)))
-      (with explored = (make-hash-table :test #'equal))
-      (with found-paths)
-      (while (and (not (null paths-to-explore))
-                  (< counter 100000)))
-      (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
-        (when (gethash path explored)
-          (next-iteration))
-        (if (end-state current-pos game-map)
-            (push (list path current-pos current-speed current-boosts)
-                  found-paths)
-            (iter
-              (with possible-moves =
-                    (remove-if (lambda (move) (or (not (move-can-be-made move
-                                                                         current-boosts
-                                                                         (cdr current-pos)))
-                                                  (and (= 0 current-speed)
-                                                       (or (eq move 'turn_right)
-                                                           (eq move 'turn_left)))))
-                               all-moves))
-              (for move in possible-moves)
-              (bind (((:values new-pos new-speed new-boosts)
-                      (make-move move game-map current-pos current-speed current-boosts)))
-                (bind ((my-new-pos (resolve-collisions current-pos
-                                                       (aref opponent-states (length path))
-                                                       new-pos
-                                                       (aref opponent-states (1+ (length path))))))
-                 (push (list (cons move path) my-new-pos new-speed new-boosts)
-                       paths-to-explore))))))
-      (incf counter)
-      (finally (return found-paths)))))
+Fourth is my boosts left."
+  (iter
+    (with counter = 0)
+    (with paths-to-explore = (list (list nil my-pos speed boosts)))
+    (with explored = (make-hash-table :test #'equal))
+    (with found-paths)
+    (while (and (not (null paths-to-explore))
+                (< counter 100000)))
+    (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
+      (when (gethash path explored)
+        (next-iteration))
+      (if (end-state current-pos game-map)
+          (push (list path current-pos current-speed current-boosts)
+                found-paths)
+          (iter
+            (with possible-moves =
+                  (remove-if (lambda (move) (or (not (move-can-be-made move
+                                                                       current-boosts
+                                                                       (cdr current-pos)))
+                                                (and (= 0 current-speed)
+                                                     (or (eq move 'turn_right)
+                                                         (eq move 'turn_left)))))
+                             all-moves))
+            (for move in possible-moves)
+            (bind (((:values new-pos new-speed new-boosts)
+                    (make-move move game-map current-pos current-speed current-boosts)))
+              (push (list (cons move path) new-pos new-speed new-boosts)
+                    paths-to-explore)))))
+    (incf counter)
+    (finally (return found-paths))))
 
 (defmacro ahead-of (type direction speed game-map pos)
   "Produce the appropriate `ahead-of' form.
