@@ -112,7 +112,7 @@ Given that the player has BOOSTS and is at POS."
                                                                     op-pos-3)))
                         (declare (ignore op-speed-3 op-boost-3))
                         (minimizing
-                         (score-position game-map my-resolved-pos-3 my-boosts-3 my-speed-3))))))))))))
+                         (car my-resolved-pos-3))))))))))))
     (finding my-move-1 maximizing subsequent-scores)))
 
 (defun score-position (game-map my-pos boosts speed)
