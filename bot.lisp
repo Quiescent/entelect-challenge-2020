@@ -435,11 +435,18 @@ Produce the new new position, etc. as values."
   (cons (slot-value this 'x)
         (slot-value this 'y)))
 
+(defun to-relative-position (pos min-x)
+  "Convert POS to a relative position, given that MIN-X is the smallest x on the map."
+  (->> pos
+    position-to-cons
+    (subtract-x min-x)
+    to-zero-indexed))
+
 (defmethod positions ((this state))
   "Produce the player positions in THIS state."
   (bind ((min-x (minimum-x this)))
-    (cons (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'player   'map-position))))
-          (to-zero-indexed (subtract-x min-x (position-to-cons (deep-accessor this 'opponent 'map-position)))))))
+    (cons (to-relative-position (deep-accessor this 'player   'map-position) min-x)
+          (to-relative-position (deep-accessor this 'opponent 'map-position) min-x))))
 
 (defmethod opponent-abs-x ((this state))
   "Produce opponents absolute x position in THIS state."
