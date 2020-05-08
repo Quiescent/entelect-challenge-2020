@@ -95,17 +95,27 @@ Given that the player has BOOSTS and is at POS."
              (for op-move-1 in (remove-impossible-moves boosts op-pos all-moves))
              (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
                      (make-move op-move-1 game-map op-pos op-speed op-boosts))
-                    (my-resolved-pos-2 (resolve-collisions my-pos op-pos my-pos-2 op-pos-2)))
+                    (my-resolved-pos-2 (resolve-collisions my-pos op-pos my-pos-2 op-pos-2))
+                    (op-resolved-pos-2 (resolve-collisions op-pos
+                                                                my-pos
+                                                                op-pos-2
+                                                                my-pos-2)))
                (minimizing
                 (iter
-                  (for my-move-2 in (remove-impossible-moves my-boosts-2 my-pos-2 all-moves))
+                  (for my-move-2 in (remove-impossible-moves my-boosts-2
+                                                             my-resolved-pos-2
+                                                             all-moves))
                   (bind (((:values my-pos-3 my-speed-3 my-boosts-3)
                           (make-move my-move-2 game-map my-resolved-pos-2 my-speed-2 my-boosts-2)))
                    (maximizing
                     (iter
                       (for op-move-2 in (remove-impossible-moves op-boosts-2 op-pos-2 all-moves))
                       (bind (((:values op-pos-3 op-speed-3 op-boost-3)
-                              (make-move op-move-2 game-map op-pos-2 op-speed-2 op-boosts-2))
+                              (make-move op-move-2
+                                         game-map
+                                         op-resolved-pos-2
+                                         op-speed-2
+                                         op-boosts-2))
                              (my-resolved-pos-3 (resolve-collisions my-resolved-pos-2
                                                                     op-pos-2
                                                                     my-pos-3
