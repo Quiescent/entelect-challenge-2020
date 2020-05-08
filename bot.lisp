@@ -73,26 +73,28 @@ board."
                          opponent-speed)
       (make-speed-move game-map my-pos boosts speed)))
 
+(defmacro cannot-make-move (boosts pos)
+  "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
+  `(lambda (move) (not (move-can-be-made move ,boosts (cdr ,pos)))))
+
+(defun remove-impossible-moves (boosts pos all-moves)
+  "Remove impossible moves from ALL-MOVES.
+
+Given that the player has BOOSTS and is at POS."
+  (remove-if (cannot-make-move boosts pos) all-moves))
+
 (defun make-opposed-move (game-map my-pos boosts speed
                           op-pos op-boosts op-speed)
-  "Find a good move against the opponent which gets me out ahead of him.
-
-Assume that the opponent always starts with one boost."
+  "Find a good move against the opponent which gets me out ahead of him."
   (iter outer
-    (for my-move-1 in (remove-if (lambda (move) (not (move-can-be-made move
-                                                                       boosts
-                                                                       (cdr my-pos))))
-                                 all-moves))
+    (for my-move-1 in (remove-impossible-moves boosts my-pos all-moves))
     (for subsequent-scores =
          (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
                  (make-move my-move-1 game-map my-pos speed boosts)))
            (iter
-             (for op-move-1 in (remove-if (lambda (move) (not (move-can-be-made move
-                                                                                boosts
-                                                                                (cdr op-pos))))
-                                          all-moves))
+             (for op-move-1 in (remove-impossible-moves boosts op-pos all-moves))
              (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
-                     (make-move op-move-1 game-map op-pos op-speed 1))
+                     (make-move op-move-1 game-map op-pos op-speed op-boosts))
                     (my-resolved-pos-2 (resolve-collisions my-pos op-pos my-pos-2 op-pos-2)))
                (minimizing (score-position game-map my-resolved-pos-2 my-boosts-2 my-speed-2))))))
     (finding my-move-1 maximizing subsequent-scores)))
@@ -260,15 +262,7 @@ Fourth is my boosts left."
           (push (list path current-pos current-speed current-boosts)
                 found-paths)
           (iter
-            (with possible-moves =
-                  ;; Get rid of the second clause.  I'll never be at 0.
-                  (remove-if (lambda (move) (or (not (move-can-be-made move
-                                                                       current-boosts
-                                                                       (cdr current-pos)))
-                                                (and (= 0 current-speed)
-                                                     (or (eq move 'turn_right)
-                                                         (eq move 'turn_left)))))
-                             all-moves))
+            (with possible-moves = (remove-impossible-moves current-boosts current-pos all-moves))
             (for move in possible-moves)
             (bind (((:values new-pos new-speed new-boosts)
                     (make-move move game-map current-pos current-speed current-boosts)))
