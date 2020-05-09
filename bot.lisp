@@ -159,8 +159,8 @@ breaks ties on the X-POS and then finally on the SPEED."
                                                                            op-speed-2
                                                                            (1- count))))
                           (resolved-turns-to-end  (if (/= finishing -1)
-                                                      turns-to-end
-                                                      finishing)))
+                                                      finishing
+                                                      turns-to-end)))
                      (finding (list my-score resolved-turns-to-end my-move)
                               minimizing score)))))))
     (finding cell maximizing (car cell))))
