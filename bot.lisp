@@ -83,47 +83,64 @@ board."
 Given that the player has BOOSTS and is at POS."
   (remove-if (cannot-make-move boosts pos) all-moves))
 
+(defconstant minimax-depth 3
+  "The depth that we should search the game tree.")
+
 (defun make-opposed-move (game-map my-pos boosts speed
                           op-pos op-boosts op-speed)
+  "Produce the best move on GAME-MAP as determined by a few rounds of minimax.
+
+The optimiser is run with my bot at MY-POS, with BOOSTS running at
+SPEED and the opponent running from OP-POS with OP-BOOSTS at
+OP-SPEED."
+  (cdr (make-opposed-move-iter game-map
+                               my-pos
+                               boosts
+                               speed
+                               op-pos
+                               op-boosts
+                               op-speed
+                               minimax-depth)))
+
+(defun make-opposed-move-iter (game-map my-pos boosts speed
+                               op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
-  (iter outer
-    (for my-move-1 in (remove-impossible-moves boosts my-pos all-moves))
-    (for subsequent-scores =
-         (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
-                 (make-move my-move-1 game-map my-pos speed boosts)))
-           (iter
-             (for op-move-1 in (remove-impossible-moves boosts op-pos all-moves))
-             (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
-                     (make-move op-move-1 game-map op-pos op-speed op-boosts))
-                    (my-resolved-pos-2 (resolve-collisions my-pos op-pos my-pos-2 op-pos-2))
-                    (op-resolved-pos-2 (resolve-collisions op-pos
-                                                                my-pos
-                                                                op-pos-2
-                                                                my-pos-2)))
-               (minimizing
-                (iter
-                  (for my-move-2 in (remove-impossible-moves my-boosts-2
-                                                             my-resolved-pos-2
-                                                             all-moves))
-                  (bind (((:values my-pos-3 my-speed-3 my-boosts-3)
-                          (make-move my-move-2 game-map my-resolved-pos-2 my-speed-2 my-boosts-2)))
-                   (maximizing
-                    (iter
-                      (for op-move-2 in (remove-impossible-moves op-boosts-2 op-pos-2 all-moves))
-                      (bind (((:values op-pos-3 op-speed-3 op-boost-3)
-                              (make-move op-move-2
-                                         game-map
-                                         op-resolved-pos-2
-                                         op-speed-2
-                                         op-boosts-2))
-                             (my-resolved-pos-3 (resolve-collisions my-resolved-pos-2
-                                                                    op-pos-2
-                                                                    my-pos-3
-                                                                    op-pos-3)))
-                        (declare (ignore op-speed-3 op-boost-3))
-                        (minimizing
-                         (car my-resolved-pos-3))))))))))))
-    (finding my-move-1 maximizing subsequent-scores)))
+  (iter
+    (for cell
+         in (iter
+              (for my-move in (remove-impossible-moves boosts my-pos all-moves))
+              (with sub-scores)
+              (collecting
+               (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
+                       (make-move my-move game-map my-pos speed boosts)))
+                 (iter inner
+                   (for op-move in (remove-impossible-moves boosts op-pos all-moves))
+                   (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
+                           (make-move op-move
+                                      game-map
+                                      op-pos
+                                      op-speed
+                                      op-boosts))
+                          (my-resolved-pos-2 (resolve-collisions my-pos
+                                                                 op-pos
+                                                                 my-pos-2
+                                                                 op-pos-2))
+                          (op-resolved-pos-2 (resolve-collisions op-pos
+                                                                 my-pos
+                                                                 op-pos-2
+                                                                 my-pos-2)))
+                     (finding (cons (car my-resolved-pos-2) my-move)
+                              minimizing (if (= count 1)
+                                             (car my-resolved-pos-2)
+                                             (car (make-opposed-move-iter game-map
+                                                                          my-resolved-pos-2
+                                                                          my-speed-2
+                                                                          my-boosts-2
+                                                                          op-resolved-pos-2
+                                                                          op-boosts-2
+                                                                          op-speed-2
+                                                                          (1- count)))))))))))
+    (finding cell maximizing (car cell))))
 
 (defun score-position (game-map my-pos boosts speed)
   "Produce a score for MY-POS on GAME-MAP.
