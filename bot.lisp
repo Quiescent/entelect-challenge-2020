@@ -93,22 +93,24 @@ Given that the player has BOOSTS and is at POS."
 The optimiser is run with my bot at MY-POS, with BOOSTS running at
 SPEED and the opponent running from OP-POS with OP-BOOSTS at
 OP-SPEED."
-  (cdr (make-opposed-move-iter game-map
-                               my-pos
-                               boosts
-                               speed
-                               op-pos
-                               op-boosts
-                               op-speed
-                               minimax-depth)))
+  (caddr (make-opposed-move-iter game-map
+                                 my-pos
+                                 boosts
+                                 speed
+                                 op-pos
+                                 op-boosts
+                                 op-speed
+                                 minimax-depth)))
 
-;; Improve by
-;;
-;; 1. first scoring by number of moves to the end of the map, asigning
-;;    a number based on how long it took to get there where lower is
-;;    better;
-;; 2. breaking ties by distance;
-;; 3. breaking ties by speed;
+(defun minimax-score (turns-to-end x-pos speed)
+  "Produce a score for a state in minimax.
+
+Score weights the TURNS-TO-END of the current map most highly and then
+breaks ties on the X-POS and then finally on the SPEED."
+  (+ (if (/= turns-to-end -1) (* 10000 turns-to-end) 0)
+     (* 100 x-pos)
+     speed))
+
 (defun make-opposed-move-iter (game-map my-pos boosts speed
                                op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
@@ -127,25 +129,40 @@ OP-SPEED."
                                       op-pos
                                       op-speed
                                       op-boosts))
-                          (my-resolved-pos-2 (resolve-collisions my-pos
-                                                                 op-pos
-                                                                 my-pos-2
-                                                                 op-pos-2))
-                          (op-resolved-pos-2 (resolve-collisions op-pos
-                                                                 my-pos
-                                                                 op-pos-2
-                                                                 my-pos-2)))
-                     (finding (cons (car my-resolved-pos-2) my-move)
-                              minimizing (if (= count 1)
-                                             (car my-resolved-pos-2)
-                                             (car (make-opposed-move-iter game-map
-                                                                          my-resolved-pos-2
-                                                                          my-speed-2
-                                                                          my-boosts-2
-                                                                          op-resolved-pos-2
-                                                                          op-boosts-2
-                                                                          op-speed-2
-                                                                          (1- count)))))))))))
+                          (my-resolved-pos-2   (resolve-collisions my-pos
+                                                                   op-pos
+                                                                   my-pos-2
+                                                                   op-pos-2))
+                          (op-resolved-pos-2   (resolve-collisions op-pos
+                                                                   my-pos
+                                                                   op-pos-2
+                                                                   my-pos-2))
+                          (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
+                                                   (- minimax-depth count)
+                                                   -1))
+                          (my-score            (minimax-score turns-to-end
+                                                              (car my-resolved-pos-2)
+                                                              my-speed-2))
+                          ((score finishing _) (if (or (/= turns-to-end -1)
+                                                       (= count 1))
+                                                   (list (minimax-score turns-to-end
+                                                                        (car my-resolved-pos-2)
+                                                                        my-speed-2)
+                                                         turns-to-end
+                                                         nil)
+                                                   (make-opposed-move-iter game-map
+                                                                           my-resolved-pos-2
+                                                                           my-speed-2
+                                                                           my-boosts-2
+                                                                           op-resolved-pos-2
+                                                                           op-boosts-2
+                                                                           op-speed-2
+                                                                           (1- count))))
+                          (resolved-turns-to-end  (if (/= finishing -1)
+                                                      turns-to-end
+                                                      finishing)))
+                     (finding (list my-score resolved-turns-to-end my-move)
+                              minimizing score)))))))
     (finding cell maximizing (car cell))))
 
 (defun score-position (game-map my-pos boosts speed)
