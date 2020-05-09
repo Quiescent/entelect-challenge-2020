@@ -93,14 +93,14 @@ Given that the player has BOOSTS and is at POS."
 The optimiser is run with my bot at MY-POS, with BOOSTS running at
 SPEED and the opponent running from OP-POS with OP-BOOSTS at
 OP-SPEED."
-  (caddr (make-opposed-move-iter game-map
-                                 my-pos
-                                 boosts
-                                 speed
-                                 op-pos
-                                 op-boosts
-                                 op-speed
-                                 minimax-depth)))
+  (cadr (make-opposed-move-iter game-map
+                                my-pos
+                                boosts
+                                speed
+                                op-pos
+                                op-boosts
+                                op-speed
+                                minimax-depth)))
 
 (defun minimax-score (turns-to-end x-pos speed)
   "Produce a score for a state in minimax.
@@ -140,15 +140,11 @@ breaks ties on the X-POS and then finally on the SPEED."
                           (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
                                                    count
                                                    -1))
-                          (my-score            (minimax-score turns-to-end
-                                                              (car my-resolved-pos-2)
-                                                              my-speed-2))
-                          ((score finishing _) (if (or (/= turns-to-end -1)
+                          ((score _)           (if (or (/= turns-to-end -1)
                                                        (= count 1))
                                                    (list (minimax-score turns-to-end
                                                                         (car my-resolved-pos-2)
                                                                         my-speed-2)
-                                                         turns-to-end
                                                          nil)
                                                    (make-opposed-move-iter game-map
                                                                            my-resolved-pos-2
@@ -157,11 +153,8 @@ breaks ties on the X-POS and then finally on the SPEED."
                                                                            op-resolved-pos-2
                                                                            op-boosts-2
                                                                            op-speed-2
-                                                                           (1- count))))
-                          (resolved-turns-to-end  (if (/= finishing -1)
-                                                      finishing
-                                                      turns-to-end)))
-                     (finding (list my-score resolved-turns-to-end my-move)
+                                                                           (1- count)))))
+                     (finding (list score my-move)
                               minimizing score)))))))
     (finding cell maximizing (car cell))))
 
