@@ -102,6 +102,13 @@ OP-SPEED."
                                op-speed
                                minimax-depth)))
 
+;; Improve by
+;;
+;; 1. first scoring by number of moves to the end of the map, asigning
+;;    a number based on how long it took to get there where lower is
+;;    better;
+;; 2. breaking ties by distance;
+;; 3. breaking ties by speed;
 (defun make-opposed-move-iter (game-map my-pos boosts speed
                                op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
@@ -109,7 +116,6 @@ OP-SPEED."
     (for cell
          in (iter
               (for my-move in (remove-impossible-moves boosts my-pos all-moves))
-              (with sub-scores)
               (collecting
                (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
                        (make-move my-move game-map my-pos speed boosts)))
