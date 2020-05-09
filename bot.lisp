@@ -138,7 +138,7 @@ breaks ties on the X-POS and then finally on the SPEED."
                                                                    op-pos-2
                                                                    my-pos-2))
                           (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
-                                                   (- minimax-depth count)
+                                                   count
                                                    -1))
                           (my-score            (minimax-score turns-to-end
                                                               (car my-resolved-pos-2)
