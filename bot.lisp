@@ -83,7 +83,7 @@ board."
 Given that the player has BOOSTS and is at POS."
   (remove-if (cannot-make-move boosts pos) all-moves))
 
-(defconstant minimax-depth 4
+(defconstant minimax-depth 6
   "The depth that we should search the game tree.")
 
 (defun make-opposed-move (game-map my-pos boosts speed
