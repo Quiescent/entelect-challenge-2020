@@ -307,7 +307,7 @@ Use MAP-LENGTH to compute the actual X value."
 ;; Hitting Mud:
 ;;  - decelerates the car;
 
-(defvar all-moves '(accelerate use_boost turn_right turn_left)
+(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
   "All the moves which I can make.")
 
 (defun states-from (game-map my-pos speed boosts)
@@ -386,6 +386,12 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
     (down  `(1+ ,y))
     (ahead y)))
 
+(defun manual-decelerate (speed)
+  "Decelerate from SPEED as an action."
+  (if (= speed 3)
+      0
+      (decrease-speed speed)))
+
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
 (defun make-move (move game-map position speed boosts)
@@ -394,6 +400,7 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
 Produce the new new position, etc. as values."
   (bind ((new-speed   (case move
                         (accelerate (increase-speed speed))
+                        (decelerate (decrease-speed speed))
                         (use_boost  15)
                         (otherwise  speed)))
          ((x . y)     position)
