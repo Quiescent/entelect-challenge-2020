@@ -83,27 +83,27 @@ board."
 Given that the player has BOOSTS and is at POS."
   (remove-if (cannot-make-move boosts pos) all-moves))
 
-(defconstant minimax-depth 6
+(defconstant maximax-depth 6
   "The depth that we should search the game tree.")
 
 (defun make-opposed-move (game-map my-pos boosts speed
                           op-pos op-boosts op-speed)
-  "Produce the best move on GAME-MAP as determined by a few rounds of minimax.
+  "Produce the best move on GAME-MAP as determined by a few rounds of maximax.
 
 The optimiser is run with my bot at MY-POS, with BOOSTS running at
 SPEED and the opponent running from OP-POS with OP-BOOSTS at
 OP-SPEED."
-  (cadr (make-opposed-move-iter game-map
-                                my-pos
-                                boosts
-                                speed
-                                op-pos
-                                op-boosts
-                                op-speed
-                                minimax-depth)))
+  (caddr (make-opposed-move-iter game-map
+                                 my-pos
+                                 boosts
+                                 speed
+                                 op-pos
+                                 op-boosts
+                                 op-speed
+                                 maximax-depth)))
 
-(defun minimax-score (turns-to-end x-pos speed)
-  "Produce a score for a state in minimax.
+(defun maximax-score (turns-to-end x-pos speed)
+  "Produce a score for a state in maximax.
 
 Score weights the TURNS-TO-END of the current map most highly and then
 breaks ties on the X-POS and then finally on the SPEED."
@@ -140,11 +140,19 @@ breaks ties on the X-POS and then finally on the SPEED."
                           (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
                                                    count
                                                    -1))
-                          ((score _)           (if (or (/= turns-to-end -1)
+                          (op-turns-to-end     (if (end-state my-resolved-pos-2 game-map)
+                                                   count
+                                                   -1))
+                          ((my-score
+                            op-score
+                            _)                 (if (or (/= turns-to-end -1)
                                                        (= count 1))
-                                                   (list (minimax-score turns-to-end
+                                                   (list (maximax-score turns-to-end
                                                                         (car my-resolved-pos-2)
                                                                         my-speed-2)
+                                                         (maximax-score op-turns-to-end
+                                                                        (car op-resolved-pos-2)
+                                                                        op-speed-2)
                                                          nil)
                                                    (make-opposed-move-iter game-map
                                                                            my-resolved-pos-2
@@ -154,8 +162,8 @@ breaks ties on the X-POS and then finally on the SPEED."
                                                                            op-boosts-2
                                                                            op-speed-2
                                                                            (1- count)))))
-                     (finding (list score my-move)
-                              minimizing score)))))))
+                     (finding (list my-score op-score my-move)
+                              maximizing op-score)))))))
     (finding cell maximizing (car cell))))
 
 (defun score-position (game-map my-pos boosts speed)
@@ -196,13 +204,13 @@ board."
          (fewest-moves       (only-shortest-path-length end-states)))
     fewest-moves))
 
-(defconstant window-to-consider-minimax 3
-  "The window around me that I should use to consider using minimax.")
+(defconstant window-to-consider-maximax 3
+  "The window around me that I should use to consider using maximax.")
 
 (defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
-  (and (>= opponent-abs-x (- my-abs-x window-to-consider-minimax))
-       (<= opponent-abs-x (+ my-abs-x window-to-consider-minimax))
+  (and (>= opponent-abs-x (- my-abs-x window-to-consider-maximax))
+       (<= opponent-abs-x (+ my-abs-x window-to-consider-maximax))
        (>= opponent-y     (- my-y     1))
        (<= opponent-y     (+ my-y     1))))
 
