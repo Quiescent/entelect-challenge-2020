@@ -63,7 +63,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (declare (ignore boosting))
-  (if (opponent-is-close-by my-abs-x opponent-abs-x)
+  (if (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
       (make-opposed-move game-map
                          my-pos
                          boosts
@@ -199,10 +199,12 @@ board."
 (defconstant window-to-consider-minimax 3
   "The window around me that I should use to consider using minimax.")
 
-(defun opponent-is-close-by (my-abs-x opponent-abs-x)
+(defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
   (and (>= opponent-abs-x (- my-abs-x window-to-consider-minimax))
-       (<= opponent-abs-x (+ my-abs-x window-to-consider-minimax))))
+       (<= opponent-abs-x (+ my-abs-x window-to-consider-minimax))
+       (>= opponent-y     (- my-y     1))
+       (<= opponent-y     (+ my-y     1))))
 
 (defmacro distance-score ()
   "Produce an expression modelling the best distance into random maps."
