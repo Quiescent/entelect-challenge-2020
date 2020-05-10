@@ -46,7 +46,7 @@ distribution of likely states that the bot could end up in."
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
   (with-consecutive-states relative-path "Quantum" 'A
-    (declare (ignore next-state current-move))
+    (declare (ignore next-state opponent-move current-move))
     (iter
       (for (entry-key . distribution) in model)
       (for (speed x y boosts) = (decode-entry-state-key entry-key))
