@@ -310,6 +310,7 @@ Use MAP-LENGTH to compute the actual X value."
 (defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
   "All the moves which I can make.")
 
+;; TODO: Check.  There's something wrong here...
 (defun states-from (game-map my-pos speed boosts)
   "Produce all possible states using GAME-MAP.
 
@@ -321,6 +322,7 @@ Second is my current position.
 Third is my speed.
 Fourth is my boosts left."
   (iter
+    (with shortest-path = most-positive-fixnum)
     (with counter = 0)
     (with paths-to-explore = (list (list nil my-pos speed boosts)))
     (with explored = (make-hash-table :test #'equal))
@@ -328,14 +330,16 @@ Fourth is my boosts left."
     (while (and (not (null paths-to-explore))
                 (< counter 100000)))
     (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
-      (when (gethash path explored)
+      (when (or (gethash path explored)
+                (> (length path) shortest-path))
         (next-iteration))
       (if (end-state current-pos game-map)
-          (push (list path current-pos current-speed current-boosts)
-                found-paths)
+          (progn
+            (setf shortest-path (min shortest-path (length path)))
+            (push (list path current-pos current-speed current-boosts)
+                 found-paths))
           (iter
-            (with possible-moves = (remove-impossible-moves current-boosts current-pos all-moves))
-            (for move in possible-moves)
+            (for move in (remove-impossible-moves current-boosts current-pos all-moves))
             (bind (((:values new-pos new-speed new-boosts)
                     (make-move move game-map current-pos current-speed current-boosts)))
               (push (list (cons move path) new-pos new-speed new-boosts)
