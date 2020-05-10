@@ -20,7 +20,7 @@ distribution of likely states that the bot could end up in."
     (for match-path in (all-matches folder-path))
     (for i from 0)
     (format t "Working on game: ~a~%" i)
-    (add-to-model (concatenate 'string "../" (print (subseq match-path (+ 4 (search "wip/" match-path))))) model)
+    (add-to-model (concatenate 'string "../" (subseq match-path (+ 4 (search "wip/" match-path)))) model)
     (finally
      (with-open-file (file "model.csv"
                            :direction :output
