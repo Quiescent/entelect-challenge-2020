@@ -118,13 +118,11 @@ breaks ties on the X-POS and then finally on the SPEED."
     (for cell
          in (iter
               (for my-move in (remove-impossible-moves boosts my-pos all-moves))
-              (format t "==========~%My Move: ~a~%From: ~a~%" my-move my-pos)
               (collecting
                (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
                        (make-move my-move game-map my-pos speed boosts)))
                  (iter inner
                    (for op-move in (remove-impossible-moves boosts op-pos all-moves))
-                   (format t "Op Move: ~a~%From: ~a~%" op-move op-pos)
                    (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
                            (make-move op-move
                                       game-map
@@ -142,26 +140,20 @@ breaks ties on the X-POS and then finally on the SPEED."
                           (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
                                                    count
                                                    -1))
-                          ((score _)           (progn
-                                                 (format t "My pos: ~a (~a)~%Op pos: ~a~%" my-resolved-pos-2 my-pos-2 op-resolved-pos-2)
-                                                 (if (or (/= turns-to-end -1)
-                                                        (= count 1))
-                                                    (progn
-                                                      (format t "Score: ~a~%" (minimax-score turns-to-end
-                                                                                             (car my-resolved-pos-2)
-                                                                                             my-speed-2))
-                                                      (list (minimax-score turns-to-end
-                                                                           (car my-resolved-pos-2)
-                                                                           my-speed-2)
-                                                            nil))
-                                                    (make-opposed-move-iter game-map
-                                                                            my-resolved-pos-2
-                                                                            my-boosts-2
-                                                                            my-speed-2
-                                                                            op-resolved-pos-2
-                                                                            op-boosts-2
-                                                                            op-speed-2
-                                                                            (1- count))))))
+                          ((score _)           (if (or (/= turns-to-end -1)
+                                                       (= count 1))
+                                                   (list (minimax-score turns-to-end
+                                                                        (car my-resolved-pos-2)
+                                                                        my-speed-2)
+                                                         nil)
+                                                   (make-opposed-move-iter game-map
+                                                                           my-resolved-pos-2
+                                                                           my-boosts-2
+                                                                           my-speed-2
+                                                                           op-resolved-pos-2
+                                                                           op-boosts-2
+                                                                           op-speed-2
+                                                                           (1- count)))))
                      (finding (list score my-move)
                               minimizing score)))))))
     (finding cell maximizing (car cell))))
