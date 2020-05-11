@@ -206,10 +206,9 @@ board."
 
 Given that the car was going at INITIAL-SPEED originally."
   (bind ((fastest
-          (min initial-speed
-               (iter
-                 (for state in end-states)
-                 (maximizing (nth 2 state))))))
+          (iter
+            (for state in end-states)
+            (maximizing (nth 2 state)))))
     (iter
       (for state in end-states)
       (when (>= (nth 2 state) fastest)
