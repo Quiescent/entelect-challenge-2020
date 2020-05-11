@@ -111,6 +111,9 @@ breaks ties on the X-POS and then finally on the SPEED."
      (* 100 x-pos)
      speed))
 
+(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
+  "All the moves which I can make.")
+
 (defun make-opposed-move-iter (game-map my-pos boosts speed
                                op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
@@ -320,9 +323,6 @@ Use MAP-LENGTH to compute the actual X value."
 ;;
 ;; Hitting Mud:
 ;;  - decelerates the car;
-
-(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
-  "All the moves which I can make.")
 
 ;; TODO: Check.  There's something wrong here...
 (defun states-from (game-map my-pos speed boosts)
