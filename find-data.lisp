@@ -32,7 +32,7 @@ is the binominal label."
   (bind ((less-than-objective (finished-in-less-than objective-round folder-path))
          results)
     (with-consecutive-states folder-path "Quantum" 'A
-      (declare (ignore next-state))
+      (declare (ignore next-state opponent-move))
       (bind ((my-abs-pos  (my-abs-pos current-state))
              (my-speed    (my-speed current-state))
              (my-boosts   (my-boosts current-state))
