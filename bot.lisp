@@ -180,23 +180,37 @@ Given that I've got BOOSTS left and am going at SPEED."
 Given that I'm at MY-POS, ow many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (bind ((fewest-moves       (states-with-fewest-moves game-map my-pos boosts speed))
-         (best-by-prediction (-> (copy-seq fewest-moves)
-                               (sort #'> :key (lambda (state) (nth 3 state)))
-                               (stable-sort #'<
-                                            :key (lambda (state)
-                                                   (variance-score
-                                                    state
-                                                    (array-dimension game-map 1))))
-                               (stable-sort #'>
-                                            :key (lambda (state)
-                                                   (best-median-distance-score
-                                                    state
-                                                    (array-dimension game-map 1))))
-                               caar
-                               last
-                               car)))
-    best-by-prediction))
+  (-> (states-with-fewest-moves game-map my-pos boosts speed)
+    (only-those-which-dont-slow speed)
+    copy-seq
+    (sort #'> :key (lambda (state) (nth 3 state)))
+    (stable-sort #'<
+                 :key (lambda (state)
+                        (variance-score
+                         state
+                         (array-dimension game-map 1))))
+    (stable-sort #'>
+                 :key (lambda (state)
+                        (best-median-distance-score
+                         state
+                         (array-dimension game-map 1))))
+    caar
+    last
+    car))
+
+(defun only-those-which-dont-slow (end-states initial-speed)
+  "Filter END-STATES to those which don't lose speed or lose least.
+
+Given that the car was going at INITIAL-SPEED originally."
+  (bind ((fastest
+          (min initial-speed
+               (iter
+                 (for state in end-states)
+                 (maximizing (nth 2 state))))))
+    (iter
+      (for state in end-states)
+      (when (>= (nth 2 state) fastest)
+        (collecting state)))))
 
 (defun states-with-fewest-moves (game-map my-pos boosts speed)
   "Produce the states with the shortest paths to the end of the GAME-MAP."
