@@ -184,7 +184,7 @@ Given that I'm at MY-POS, ow many BOOSTS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (-> (states-with-fewest-moves game-map my-pos boosts speed)
-    (only-those-which-dont-slow speed)
+    only-those-which-dont-slow
     copy-seq
     (sort #'> :key (lambda (state) (nth 3 state)))
     (stable-sort #'<
@@ -201,7 +201,7 @@ board."
     last
     car))
 
-(defun only-those-which-dont-slow (end-states initial-speed)
+(defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least.
 
 Given that the car was going at INITIAL-SPEED originally."

@@ -17,7 +17,7 @@ distribution of likely states that the bot could end up in."
                                       (iter (repeat (* (length all-moves)
                                                        (length all-moves)))
                                         (collecting (make-hash-table :test #'eq)))))))
-    (for match-path in (all-matches folder-path))
+    (for match-path in (subseq (all-matches folder-path) 0 5))
     (for i from 0)
     (format t "Working on game: ~a~%" i)
     (add-to-model (concatenate 'string "../" (subseq match-path (+ 4 (search "wip/" match-path)))) model)
@@ -29,7 +29,7 @@ distribution of likely states that the bot could end up in."
        (iter
          (for (entry-state-key . distribution) in
               (mapcar (lambda (cell) (cons (car cell)
-                                           (mapcar #'median
+                                           (mapcar #'median-scaled-by-variance
                                                    (cdr cell))))
                       model))
          (format file "~{~a~^,~},~{~a~^,~}~%"
@@ -42,6 +42,27 @@ distribution of likely states that the bot could end up in."
         (for (key value) in-hashtable xs)
         (finding key maximizing value))
       -1))
+
+(defun median-scaled-by-variance (xs)
+  "Produce the median value of XS scaled by the variance in XS."
+  (bind ((median-value (median xs)))
+    (if (= median-value -1)
+        median-value
+        (* median-value (- 1 (/ (standard-deviation xs) 20))))))
+
+(defun standard-deviation (xs)
+  "Produce the standard deviation of the value counts in XS."
+  (bind (((mean . count)
+          (iter
+            (for (key value) in-hashtable xs)
+            (summing (* value key) into total)
+            (summing value into count)
+            (finally (return (cons (/ total count) count))))))
+    (-<> (iter
+           (for (key value) in-hashtable xs)
+           (summing (* value (bind ((diff (- key mean))) (* diff diff)))))
+      (/ <> count)
+      sqrt)))
 
 (defun add-to-model (relative-path model)
   "Add all next states from maps in RELATIVE-PATH to MODEL."
