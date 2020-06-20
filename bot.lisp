@@ -174,23 +174,23 @@ breaks ties on the X-POS and then finally on the SPEED."
                             op-score
                             _)                 (if (or (/= turns-to-end -1)
                                                        (= count 1))
-                                                   (list (maximax-score turns-to-end
-                                                                        (car my-resolved-pos-2)
-                                                                        my-speed-2)
-                                                         (maximax-score op-turns-to-end
-                                                                        (car op-resolved-pos-2)
-                                                                        op-speed-2)
-                                                         nil)
-                                                   (make-opposed-move-iter game-map
-                                                                           my-resolved-pos-2
-                                                                           my-boosts-2
-                                                                           my-lizards-2
-                                                                           my-trucks-2
-                                                                           my-speed-2
-                                                                           op-resolved-pos-2
-                                                                           op-boosts-2
-                                                                           op-speed-2
-                                                                           (1- count)))))
+                            (list (maximax-score turns-to-end
+                                                 (car my-resolved-pos-2)
+                                                 my-speed-2)
+                                  (maximax-score op-turns-to-end
+                                                 (car op-resolved-pos-2)
+                                                 op-speed-2)
+                                  nil)
+                            (make-opposed-move-iter game-map
+                                                    my-resolved-pos-2
+                                                    my-boosts-2
+                                                    my-lizards-2
+                                                    my-trucks-2
+                                                    my-speed-2
+                                                    op-resolved-pos-2
+                                                    op-boosts-2
+                                                    op-speed-2
+                                                    (1- count)))))
                      (finding (list my-score op-score my-move)
                               maximizing op-score)))))))
     (finding cell maximizing (car cell))))
