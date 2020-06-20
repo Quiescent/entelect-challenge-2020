@@ -15,7 +15,9 @@
 (define-poclo map-position (x y) camel-case)
 
 (define-poclo map-tile ((map-position "position" map-position)
-                        surface-object occupied-by-player-id)
+                        surface-object
+                        occupied-by-player-id
+                        isOccupied-by-cyber-truck)
   camel-case)
 
 (define-poclo opponent (id (map-position "position" map-position) 
