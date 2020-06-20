@@ -523,7 +523,10 @@ Produce the new new position, etc. as values."
               (2 'oil-spill)
               (3 'oil-item)
               (4 'finish-line)
-              (5 'boost))))
+              (5 'boost)
+              (6 'wall)
+              (7 'lizzard)
+              (8 'tweet))))
     (finally (return result))))
 
 (defmethod position-to-cons ((this map-position))
