@@ -16,6 +16,8 @@
          (opponent-abs-x    (opponent-abs-x state))
          (boosting          (im-boosting state))
          (boosts            (my-boosts state))
+         (lizards           (my-lizards state))
+         (trucks            (my-trucks state))
          (speed             (my-speed state))
          (op-boosts         1)
          (op-speed          (opponent-speed state)))
@@ -23,6 +25,8 @@
                     my-pos
                     boosting
                     boosts
+                    lizards
+                    trucks
                     speed
                     my-abs-x
                     opponent-abs-x
@@ -45,6 +49,16 @@
   (count-if (lambda (x) (string-equal x "BOOST"))
             (deep-accessor this 'player 'powerups)))
 
+(defmethod my-lizards ((this state))
+  "Produce the number of boosts which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "LIZARD"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-trucks ((this state))
+  "Produce the number of boosts which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "TWEET"))
+            (deep-accessor this 'player 'powerups)))
+
 (defmethod my-speed ((this state))
   "Produce the speed which I'm going in THIS state."
   (deep-accessor this 'player 'player-speed))
@@ -54,48 +68,55 @@
   (deep-accessor this 'opponent 'player-speed))
 
 (defun determine-move (game-map my-pos boosting boosts
-                       speed my-abs-x opponent-abs-x
+                       lizards trucks speed
+                       my-abs-x opponent-abs-x
                        opponent-pos opponent-boosts
                        opponent-speed)
   "Produce the best move for GAME-MAP.
 
-Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS I have
-left, the SPEED at which I'm going and MY-ABS-X position on the
-board."
+Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
+LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
+MY-ABS-X position on the board."
   (declare (ignore boosting))
   (if (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
       (make-opposed-move game-map
                          my-pos
                          boosts
+                         lizards
+                         trucks
                          speed
                          opponent-pos
                          opponent-boosts
                          opponent-speed)
-      (make-speed-move game-map my-pos boosts speed)))
+      (make-speed-move game-map my-pos boosts lizards trucks speed)))
 
-(defmacro cannot-make-move (boosts pos)
+(defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
-  `(lambda (move) (not (move-can-be-made move ,boosts (cdr ,pos)))))
+  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos)))))
 
-(defun remove-impossible-moves (boosts pos all-moves)
+(defun remove-impossible-moves (boosts lizards trucks pos all-moves)
   "Remove impossible moves from ALL-MOVES.
 
-Given that the player has BOOSTS and is at POS."
-  (remove-if (cannot-make-move boosts pos) all-moves))
+Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
+POS."
+  (remove-if (cannot-make-move boosts lizards trucks pos) all-moves))
 
 (defconstant maximax-depth 4
   "The depth that we should search the game tree.")
 
-(defun make-opposed-move (game-map my-pos boosts speed
+(defun make-opposed-move (game-map my-pos boosts
+                          lizards trucks speed
                           op-pos op-boosts op-speed)
   "Produce the best move on GAME-MAP as determined by a few rounds of maximax.
 
-The optimiser is run with my bot at MY-POS, with BOOSTS running at
-SPEED and the opponent running from OP-POS with OP-BOOSTS at
-OP-SPEED."
+The optimiser is run with my bot at MY-POS, with BOOSTS, LIZARDS and
+TRUCKS remaining running at SPEED and the opponent running from OP-POS
+with OP-BOOSTS at OP-SPEED."
   (caddr (make-opposed-move-iter game-map
                                  my-pos
                                  boosts
+                                 lizards
+                                 trucks
                                  speed
                                  op-pos
                                  op-boosts
@@ -114,24 +135,27 @@ breaks ties on the X-POS and then finally on the SPEED."
 (defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
   "All the moves which I can make.")
 
-(defun make-opposed-move-iter (game-map my-pos boosts speed
+(defun make-opposed-move-iter (game-map my-pos boosts lizards trucks speed
                                op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
   (iter
     (for cell
          in (iter
-              (for my-move in (remove-impossible-moves boosts my-pos all-moves))
+              (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-moves))
               (collecting
-               (bind (((:values my-pos-2 my-speed-2 my-boosts-2)
-                       (make-move my-move game-map my-pos speed boosts)))
+               (bind (((:values my-pos-2 my-speed-2 my-boosts-2 my-lizards-2 my-trucks-2)
+                       (make-move my-move game-map my-pos speed boosts trucks speed)))
                  (iter inner
-                   (for op-move in (remove-impossible-moves boosts op-pos all-moves))
+                   ;; Assume that the opponent always has powerups
+                   (for op-move in (remove-impossible-moves 1 1 1 op-pos all-moves))
                    (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
                            (make-move op-move
                                       game-map
                                       op-pos
                                       op-speed
-                                      op-boosts))
+                                      op-boosts
+                                      1
+                                      1))
                           (my-resolved-pos-2   (resolve-collisions my-pos
                                                                    op-pos
                                                                    my-pos-2
@@ -160,6 +184,8 @@ breaks ties on the X-POS and then finally on the SPEED."
                                                    (make-opposed-move-iter game-map
                                                                            my-resolved-pos-2
                                                                            my-boosts-2
+                                                                           my-lizards-2
+                                                                           my-trucks-2
                                                                            my-speed-2
                                                                            op-resolved-pos-2
                                                                            op-boosts-2
@@ -169,25 +195,17 @@ breaks ties on the X-POS and then finally on the SPEED."
                               maximizing op-score)))))))
     (finding cell maximizing (car cell))))
 
-(defun score-position (game-map my-pos boosts speed)
-  "Produce a score for MY-POS on GAME-MAP.
-
-Given that I've got BOOSTS left and am going at SPEED."
-  (iter
-    (for state in (states-with-fewest-moves game-map my-pos boosts speed))
-    (maximizing (best-median-distance-score state (game-map-x-dim game-map)))))
-
 (defun game-map-x-dim (game-map)
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
 
-(defun make-speed-move (game-map my-pos boosts speed)
+(defun make-speed-move (game-map my-pos boosts lizards trucks speed)
   "Produce the best SPEED map for GAME-MAP.
 
-Given that I'm at MY-POS, ow many BOOSTS I have
+Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (-> (states-with-fewest-moves game-map my-pos boosts speed)
+  (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
     only-those-which-dont-slow
     copy-seq
     (sort #'> :key (lambda (state) (nth 3 state)))
@@ -218,9 +236,9 @@ Given that the car was going at INITIAL-SPEED originally."
       (when (>= (nth 2 state) fastest)
         (collecting state)))))
 
-(defun states-with-fewest-moves (game-map my-pos boosts speed)
+(defun states-with-fewest-moves (game-map my-pos boosts lizards trucks speed)
   "Produce the states with the shortest paths to the end of the GAME-MAP."
-  (bind ((end-states         (states-from game-map my-pos speed boosts))
+  (bind ((end-states         (states-from game-map my-pos speed boosts lizards trucks))
          (fewest-moves       (only-shortest-path-length end-states)))
     fewest-moves))
 
@@ -328,11 +346,11 @@ Use MAP-LENGTH to compute the actual X value."
 ;;  - decelerates the car;
 
 ;; TODO: Check.  There's something wrong here...
-(defun states-from (game-map my-pos speed boosts)
+(defun states-from (game-map my-pos speed boosts lizards trucks)
   "Produce all possible states using GAME-MAP.
 
-Where my car is at MY-POS and is going at SPEED and I have BOOSTS
-boosts left.
+Where my car is at MY-POS and is going at SPEED and I have BOOSTS,
+LIZARDS and TRUCKS left.
 
 First element of a path is the path taken.
 Second is my current position.
@@ -341,12 +359,13 @@ Fourth is my boosts left."
   (iter
     (with shortest-path = most-positive-fixnum)
     (with counter = 0)
-    (with paths-to-explore = (list (list nil my-pos speed boosts)))
+    (with paths-to-explore = (list (list nil my-pos speed boosts lizards trucks)))
     (with explored = (make-hash-table :test #'equal))
     (with found-paths)
     (while (and (not (null paths-to-explore))
                 (< counter 100000)))
-    (bind (((path current-pos current-speed current-boosts) (pop paths-to-explore)))
+    (bind (((path current-pos current-speed current-boosts current-lizards current-trucks)
+            (pop paths-to-explore)))
       (when (or (gethash path explored)
                 (> (length path) shortest-path))
         (next-iteration))
@@ -356,10 +375,14 @@ Fourth is my boosts left."
             (push (list path current-pos current-speed current-boosts)
                  found-paths))
           (iter
-            (for move in (remove-impossible-moves current-boosts current-pos all-moves))
-            (bind (((:values new-pos new-speed new-boosts)
-                    (make-move move game-map current-pos current-speed current-boosts)))
-              (push (list (cons move path) new-pos new-speed new-boosts)
+            (for move in (remove-impossible-moves current-boosts
+                                                  current-lizards
+                                                  current-trucks
+                                                  current-pos
+                                                  all-moves))
+            (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks)
+                    (make-move move game-map current-pos current-speed current-boosts current-lizards current-trucks)))
+              (push (list (cons move path) new-pos new-speed new-boosts new-lizards new-trucks)
                     paths-to-explore)))))
     (incf counter)
     (finally (return found-paths))))
@@ -415,7 +438,7 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
-(defun make-move (move game-map position speed boosts)
+(defun make-move (move game-map position speed boosts lizards trucks)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
@@ -441,10 +464,12 @@ Produce the new new position, etc. as values."
          (new-boosts  (case move
                         (turn_left  (ahead-of speed up    new-speed game-map position))
                         (turn_right (ahead-of speed down  new-speed game-map position))
-                        (use_boost  (1- (ahead-of speed ahead new-speed game-map position)))
+                        (use_boost  (+ boosts (1- (ahead-of speed ahead new-speed game-map position))))
                         (otherwise  (ahead-of speed ahead new-speed game-map position))))
+         (new-lizards lizards)
+         (new-trucks  trucks)
          (final-speed (decrease-speed-by muds-hit new-speed)))
-    (values new-pos final-speed (+ new-boosts boosts))))
+    (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
 (defun decrease-speed-by (times speed)
   "Reduce SPEED TIMES times."
@@ -479,12 +504,14 @@ Produce the new new position, etc. as values."
   "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
   (>= (car position) (game-map-x-dim game-map)))
 
-(defun move-can-be-made (move boosts y)
+(defun move-can-be-made (move boosts lizards trucks y)
   "Produce T if the MOVE can be made from Y coordinate."
   (case move
     (turn_right (< y 3))
     (turn_left  (> y 0))
     (use_boost  (> boosts 0))
+    (use_tweet  (> trucks 0))
+    (use_lizard (> lizards 0))
     (t          t)))
 
 (defun aref-game-map (game-map y x)
@@ -699,13 +726,18 @@ after my move and the OPPONENT-POS after his/her move."
                        (rows current-state)
                        (car (positions current-state))
                        (my-speed current-state)
-                       (my-boosts current-state)))
+                       (my-boosts current-state)
+                       (my-lizards current-state)
+                       (my-trucks current-state)))
            ((:values opponent-pos opponent-speed opponent-boosts)
             (make-move opponent-move
                        (rows current-state)
                        (cdr (positions current-state))
                        (opponent-speed current-state)
-                       ;; I don't know how many boosts my opponent has(!?)
+                       ;; I don't know how many boosts, lizards or
+                       ;; trucks my opponent has(!?)
+                       0
+                       0
                        0))
            ((my-orig-pos . opponent-orig-pos) (positions current-state))
            (resolved-relative-pos
