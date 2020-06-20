@@ -1,6 +1,6 @@
 .PHONY: default
 default:
-	sbcl --load build.lisp
+	sbcl --non-interactive --load build.lisp
 
 .PHONY: clean_rounds
 clean_rounds:
