@@ -322,7 +322,7 @@ Take into account the nuances of changing direction and not counting
 the current square.  e.g. changing direction means that you travel
 diagonally ignoring the squars on the rectalinear path.
 
-If TYPE is 'SPEED then produce `speed-ahead-of' if it's 'MUD then
+If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
 produce `mud-ahead-of'.
 
 If DIRECTION is 'AHEAD then don't change direction.  A DIRECTION of
@@ -332,7 +332,8 @@ right.
 SPEED, GAME-MAP, and POS should be un-adjusted values."
   (bind ((fun       (ecase type
                       (mud   'mud-ahead-of)
-                      (speed 'speed-ahead-of)))
+                      (speed 'boost-ahead-of)
+                      (wall  'wall-ahead-of)))
          (adj-speed (ecase direction
                       (up    `(- ,speed 2))
                       (down  `(- ,speed 2))
@@ -447,17 +448,36 @@ Produce the new new position, etc. as values."
   "Produce the value in GAME-MAP at coordinate Y, X."
   (aref (car game-map) y x))
 
+;; Paul Graham: On Lisp
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defun mkstr (&rest args)
+  (with-output-to-string (s)
+    (dolist (a args) (princ a s))))
+
+  (defun symb (&rest args)
+    (values (intern (apply #'mkstr args)))))
+
+(defmacro defun-ahead-of (type)
+  "Produce a function which counts the number of TYPE blocks.
+
+On a given game-map when travelling at a given speed from a given
+coordinate."
+  `(defun ,(symb type '-ahead-of) (speed game-map x y)
+     ,(concatenate 'string "Produce the count of " (symbol-name type) " blocks of GAME-MAP ahead of (X, Y).")
+     (iter
+       (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+       (counting (eq (quote ,type) (aref-game-map game-map y i))))))
+
+(defun-ahead-of boost)
+(defun-ahead-of wall)
+
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
     (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
     (counting (member (aref-game-map game-map y i) '(mud oil-spill)))))
-
-(defun speed-ahead-of (speed game-map x y)
-  "Produce the count of boosts on SPEED blocks of GAME-MAP ahead of (X, Y)."
-  (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
-    (counting (eq 'boost (aref-game-map game-map y i)))))
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
