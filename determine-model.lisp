@@ -81,30 +81,21 @@ distribution of likely states that the bot could end up in."
       (iter
         (with i = 0)
         (for move-1 in all-moves)
-        (iter
-          (for move-2 in all-moves)
-          (for new-y = (case move-1
-                         (turn_left  (move-lat up    y))
-                         (turn_right (move-lat down  y))
-                         (otherwise  (move-lat ahead y))))
-          (when (and (move-can-be-made move-1 boosts y)
-                     (move-can-be-made move-2 boosts new-y))
-            (bind (((:values pos-1 speed-1 boosts-1)
-                    (make-move move-1
-                               game-map
-                               initial-position
-                               entry-speed
-                               boosts))
-                   ((:values pos-2 speed-2 boosts-2)
-                    (make-move move-2
-                               game-map
-                               pos-1
-                               speed-1
-                               boosts-1))
-                   ((x . _) pos-2))
-              (declare (ignore speed-2 boosts-2))
-              (incf (gethash x (nth i distribution) 0))))
-          (incf i))))))
+        (for new-y = (case move-1
+                       (turn_left  (move-lat up    y))
+                       (turn_right (move-lat down  y))
+                       (otherwise  (move-lat ahead y))))
+        (when (and (move-can-be-made move-1 boosts y))
+          (bind (((:values pos-1 speed-1 boosts-1)
+                  (make-move move-1
+                             game-map
+                             initial-position
+                             entry-speed
+                             boosts))
+                 ((x . _) pos-1))
+            (declare (ignore speed-1 boosts-1))
+            (incf (gethash x (nth i distribution) 0))))
+        (incf i)))))
 
 (defun encode-entry-state-key (speed x y boosts)
   "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
