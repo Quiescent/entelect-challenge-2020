@@ -391,6 +391,11 @@ Produce the new new position, etc. as values."
                         (turn_right (ahead-of mud down  new-speed game-map position))
                         (use_lizard (ahead-of mud ahead 0         game-map new-pos))
                         (otherwise  (ahead-of mud ahead new-speed game-map position))))
+         (walls-hit   (case move
+                        (turn_left  (ahead-of wall up    new-speed game-map position))
+                        (turn_right (ahead-of wall down  new-speed game-map position))
+                        (use_lizard (ahead-of wall ahead 0         game-map new-pos))
+                        (otherwise  (ahead-of wall ahead new-speed game-map position))))
          (new-boosts  (case move
                         (turn_left  (ahead-of speed up    new-speed game-map position))
                         (turn_right (ahead-of speed down  new-speed game-map position))
@@ -398,7 +403,7 @@ Produce the new new position, etc. as values."
                         (otherwise  (ahead-of speed ahead new-speed game-map position))))
          (new-lizards lizards)
          (new-trucks  trucks)
-         (final-speed (decrease-speed-by muds-hit new-speed)))
+         (final-speed (if walls-hit 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
 (defun decrease-speed-by (times speed)
