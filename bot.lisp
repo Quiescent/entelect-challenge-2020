@@ -238,8 +238,8 @@ Given that the car was going at INITIAL-SPEED originally."
 
 (defun states-with-fewest-moves (game-map my-pos boosts lizards trucks speed)
   "Produce the states with the shortest paths to the end of the GAME-MAP."
-  (bind ((end-states         (states-from game-map my-pos speed boosts lizards trucks))
-         (fewest-moves       (only-shortest-path-length end-states)))
+  (bind ((end-states   (states-from game-map my-pos speed boosts lizards trucks))
+         (fewest-moves (only-shortest-path-length end-states)))
     fewest-moves))
 
 (defconstant window-to-consider-maximax 3
