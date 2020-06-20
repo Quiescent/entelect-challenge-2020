@@ -388,6 +388,7 @@ Produce the new new position, etc. as values."
          (muds-hit    (case move
                         (turn_left  (ahead-of mud up    new-speed game-map position))
                         (turn_right (ahead-of mud down  new-speed game-map position))
+                        (use_lizard (ahead-of mud ahead 0         game-map new-pos))
                         (otherwise  (ahead-of mud ahead new-speed game-map position))))
          (new-boosts  (case move
                         (turn_left  (ahead-of speed up    new-speed game-map position))
