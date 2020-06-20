@@ -331,9 +331,11 @@ right.
 
 SPEED, GAME-MAP, and POS should be un-adjusted values."
   (bind ((fun       (ecase type
-                      (mud   'mud-ahead-of)
-                      (speed 'boost-ahead-of)
-                      (wall  'wall-ahead-of)))
+                      (mud     'mud-ahead-of)
+                      (speed   'boost-ahead-of)
+                      (wall    'wall-ahead-of)
+                      (tweet   'tweet-ahead-of)
+                      (lizzard 'lizzard-ahead-of)))
          (adj-speed (ecase direction
                       (up    `(- ,speed 2))
                       (down  `(- ,speed 2))
@@ -399,10 +401,20 @@ Produce the new new position, etc. as values."
          (new-boosts  (case move
                         (turn_left  (ahead-of speed up    new-speed game-map position))
                         (turn_right (ahead-of speed down  new-speed game-map position))
+                        (use_lizard (ahead-of speed ahead 0         game-map new-pos))
                         (use_boost  (+ boosts (1- (ahead-of speed ahead new-speed game-map position))))
                         (otherwise  (ahead-of speed ahead new-speed game-map position))))
-         (new-lizards lizards)
-         (new-trucks  trucks)
+         (new-lizards (case move
+                        (turn_left  (ahead-of lizzard up    new-speed game-map position))
+                        (turn_right (ahead-of lizzard down  new-speed game-map position))
+                        (use_lizard  (+ lizards (ahead-of lizzard ahead 0 game-map new-pos)))
+                        (otherwise  (ahead-of lizzard ahead new-speed game-map position))))
+         (new-trucks  (case move
+                        (turn_left  (ahead-of tweet up    new-speed game-map position))
+                        (turn_right (ahead-of tweet down  new-speed game-map position))
+                        (use_lizard (ahead-of tweet ahead 0         game-map new-pos))
+                        (use_tweet  (+ trucks (1- (ahead-of tweet ahead new-speed game-map position))))
+                        (otherwise  (ahead-of tweet ahead new-speed game-map position))))
          (final-speed (if walls-hit 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
@@ -477,6 +489,8 @@ coordinate."
 
 (defun-ahead-of boost)
 (defun-ahead-of wall)
+(defun-ahead-of lizzard)
+(defun-ahead-of tweet)
 
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
