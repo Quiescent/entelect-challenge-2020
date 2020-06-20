@@ -12,8 +12,8 @@ every map in a collection of randomly generated maps, what is the
 distribution of likely states that the bot could end up in."
   (iter
     (with model = (iter
-                    (for (speed x y boosts) in (all-possible-entry-states))
-                    (collecting (cons (encode-entry-state-key speed x y boosts)
+                    (for (speed x y boosts lizards trucks) in (all-possible-entry-states))
+                    (collecting (cons (encode-entry-state-key speed x y boosts lizards trucks)
                                       (iter (repeat (* (length all-moves)
                                                        (length all-moves)))
                                         (collecting (make-hash-table :test #'eq)))))))
@@ -70,7 +70,7 @@ distribution of likely states that the bot could end up in."
     (declare (ignore next-state opponent-move current-move))
     (iter
       (for (entry-key . distribution) in model)
-      (for (speed x y boosts) = (decode-entry-state-key entry-key))
+      (for (speed x y boosts lizards trucks) = (decode-entry-state-key entry-key))
       ;; use of x for speed is deliberate.  We're computing
       ;; how much mud you went through getting into this
       ;; map
@@ -85,31 +85,37 @@ distribution of likely states that the bot could end up in."
                        (turn_left  (move-lat up    y))
                        (turn_right (move-lat down  y))
                        (otherwise  (move-lat ahead y))))
-        (when (and (move-can-be-made move-1 boosts y))
+        (when (and (move-can-be-made move-1 boosts lizards trucks y))
           (bind (((:values pos-1 speed-1 boosts-1)
                   (make-move move-1
                              game-map
                              initial-position
                              entry-speed
-                             boosts))
+                             boosts
+                             lizards
+                             trucks))
                  ((x . _) pos-1))
             (declare (ignore speed-1 boosts-1))
             (incf (gethash x (nth i distribution) 0))))
         (incf i)))))
 
-(defun encode-entry-state-key (speed x y boosts)
-  "Encode SPEED, X, Y and BOOSTS as a key for an entry state."
+(defun encode-entry-state-key (speed x y boosts lizards trucks)
+  "Encode SPEED, X, Y and BOOSTS, LIZARDS and TRUCKS left as a key for an entry state."
   (logior speed
           (ash x 5)
           (ash y 10)
-          (if (> boosts 0) (ash 1 15) 0)))
+          (if (> boosts 0) (ash 1 15) 0)
+          (if (> lizards 0) (ash 1 15) 0)
+          (if (> trucks 0) (ash 1 15) 0)))
 
 (defun decode-entry-state-key (key)
   "Decode KEY into a (SPEED X Y)."
   (list (logand 15 key)
         (ash (logand key 992)        -5)
         (ash (logand key 31744)      -10)
-        (ash (logand key (ash 1 15)) -15)))
+        (ash (logand key (ash 1 15)) -15)
+        (ash (logand key (ash 1 20)) -20)
+        (ash (logand key (ash 1 25)) -25)))
 
 (defun all-possible-entry-states ()
   "Produce all the possible states that a bot could transition into a state in."
@@ -121,7 +127,11 @@ distribution of likely states that the bot could end up in."
         (for x in '(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14))
         (iter
           (for boosts in '(0 1))
-          (in outer (collecting (list speed x y boosts))))))))
+          (iter
+            (for lizards in '(0 1))
+            (iter
+              (for trucks in '(0 1))
+              (in outer (collecting (list speed x y boosts lizards trucks))))))))))
 
 (defun fix-entry-key-csv ()
   "Fix the entry-keys in the model csv file."
