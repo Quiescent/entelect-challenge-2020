@@ -14,9 +14,10 @@
   :description "Entellect challenge bot"
   :long-description "Bot for the Entellect Challenge"
   :depends-on (:yason :cl-ppcre :iterate :metabang-bind :anaphora :arrow-macros)
-  :components ((:file "bot" :depends-on ("state" "package" "dot-parser"))
+  :components ((:file "bot" :depends-on ("state" "package" "prediction"))
                (:file "state" :depends-on ("parsing" "package"))
                (:file "parsing" :depends-on ("package"))
+               (:file "prediction")
                (:file "package")
                (:file "find-data" :depends-on ("bot"))
                (:file "determine-model" :depends-on ("find-data" "bot"))
