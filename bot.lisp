@@ -132,7 +132,7 @@ breaks ties on the X-POS and then finally on the SPEED."
      (* 100 x-pos)
      speed))
 
-(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate)
+(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_tweet use_lizard)
   "All the moves which I can make.")
 
 (defun make-opposed-move-iter (game-map my-pos boosts lizards trucks speed
