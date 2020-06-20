@@ -175,7 +175,11 @@ breaks ties on the X-POS and then finally on the SPEED."
 Given that I've got BOOSTS left and am going at SPEED."
   (iter
     (for state in (states-with-fewest-moves game-map my-pos boosts speed))
-    (maximizing (best-median-distance-score state (array-dimension game-map 1)))))
+    (maximizing (best-median-distance-score state (game-map-x-dim game-map)))))
+
+(defun game-map-x-dim (game-map)
+  "Produce the number of squares in the x dimension of GAME-MAP."
+  (array-dimension (car game-map) 1))
 
 (defun make-speed-move (game-map my-pos boosts speed)
   "Produce the best SPEED map for GAME-MAP.
@@ -191,12 +195,12 @@ board."
                  :key (lambda (state)
                         (variance-score
                          state
-                         (array-dimension game-map 1))))
+                         (game-map-x-dim game-map))))
     (stable-sort #'>
                  :key (lambda (state)
                         (best-median-distance-score
                          state
-                         (array-dimension game-map 1))))
+                         (game-map-x-dim game-map))))
     caar
     last
     car))
@@ -473,7 +477,7 @@ Produce the new new position, etc. as values."
 
 (defun end-state (position game-map)
   "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
-  (>= (car position) (array-dimension game-map 1)))
+  (>= (car position) (game-map-x-dim game-map)))
 
 (defun move-can-be-made (move boosts y)
   "Produce T if the MOVE can be made from Y coordinate."
@@ -483,17 +487,21 @@ Produce the new new position, etc. as values."
     (use_boost  (> boosts 0))
     (t          t)))
 
+(defun aref-game-map (game-map y x)
+  "Produce the value in GAME-MAP at coordinate Y, X."
+  (aref (car game-map) y x))
+
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (array-dimension game-map 1)))
-    (counting (member (aref game-map y i) '(mud oil-spill)))))
+    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+    (counting (member (aref-game-map game-map y i) '(mud oil-spill)))))
 
 (defun speed-ahead-of (speed game-map x y)
   "Produce the count of boosts on SPEED blocks of GAME-MAP ahead of (X, Y)."
   (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (array-dimension game-map 1)))
-    (counting (eq 'boost (aref game-map y i)))))
+    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+    (counting (eq 'boost (aref-game-map game-map y i)))))
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
@@ -527,7 +535,7 @@ Produce the new new position, etc. as values."
               (6 'wall)
               (7 'lizzard)
               (8 'tweet))))
-    (finally (return result))))
+    (finally (return (cons result nil))))) ;; TODO cdr should be trucks
 
 (defmethod position-to-cons ((this map-position))
   "Produce a cons cell of postions from THIS position."
@@ -660,8 +668,8 @@ If they're not equal then pretty print both forms."
     (with game-map = (rows (load-state-from-file "state.json")))
     (for y from 0 below (array-dimension game-map 0))
     (iter
-      (for x from 0 below (array-dimension game-map 1))
-      (setf (aref game-map y x) nil))
+      (for x from 0 below (game-map-x-dim game-map))
+      (setf (aref-game-map game-map y x) nil))
     (finally (return game-map)))
   "An empty game map for testing purposes.")
 
