@@ -1,6 +1,7 @@
 # Compiled
 *.fasl
 bot
+target
 
 # Editor
 *~
