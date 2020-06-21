@@ -319,43 +319,43 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
-(defmacro ahead-of (move type direction speed game-map pos)
+(defmacro ahead-of (move type speed game-map pos)
   "Produce the appropriate `ahead-of' form.
 
 Take into account the nuances of changing direction and not counting
 the current square.  e.g. changing direction means that you travel
 diagonally ignoring the squars on the rectalinear path.
 
-MOVE can modify where we look.  For instance a MOVE of LIZZARD means
+MOVE can modify where we look.  For instance a MOVE of LIZARD means
 that we need to only look at the square which we land on.
 
 If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
 produce `mud-ahead-of' etc.
 
-If DIRECTION is 'AHEAD then don't change direction.  A DIRECTION of
-'UP corresponds to turning left and 'DOWN corresponds to turning
-right.
-
 SPEED, GAME-MAP, and POS should be un-adjusted values."
   (bind ((fun       (ecase type
-                      (mud     'mud-ahead-of)
-                      (speed   'boost-ahead-of)
-                      (wall    'wall-ahead-of)
-                      (tweet   'tweet-ahead-of)
-                      (lizzard 'lizzard-ahead-of)))
-         (adj-speed (if (eq move 'use_lizard)
-                        0
-                        `(1- ,speed)))
-         (adj-x     (if (eq move 'use_lizard)
-                        `(+ ,speed (car ,pos))
-                        (ecase direction
-                          (up    `(car ,pos))
-                          (down  `(car ,pos))
-                          (ahead `(1+ (car ,pos))))))
-         (adj-y     (ecase direction
-                      (up    `(1- (cdr ,pos)))
-                      (down  `(1+ (cdr ,pos)))
-                      (ahead `(cdr ,pos)))))
+                      (mud    'mud-ahead-of)
+                      (boost  'boost-ahead-of)
+                      (wall   'wall-ahead-of)
+                      (tweet  'tweet-ahead-of)
+                      (lizard 'lizard-ahead-of)))
+         (adj-speed `(if (eq ,move 'use_lizard)
+                         0
+                         (1- ,speed)))
+         (direction `(case ,move
+                       (turn_left  'up)
+                       (turn_right 'down)
+                       (otherwise  'ahead)))
+         (adj-x     `(if (eq ,move 'use_lizard)
+                         (+ ,speed (car ,pos))
+                         (ecase ,direction
+                           (up    (car ,pos))
+                           (down  (car ,pos))
+                           (ahead (1+ (car ,pos))))))
+         (adj-y     `(ecase ,direction
+                       (up    (1- (cdr ,pos)))
+                       (down  (1+ (cdr ,pos)))
+                       (ahead (cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
 (defmacro move-car (direction speed x)
@@ -378,17 +378,30 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
       0
       (decrease-speed speed)))
 
+(defmacro accumulating-powerups (count-name move type speed game-map position)
+  "Produce the value of COUNT-NAME with collected powerups.
+
+Use the state transitions which occur when MOVE is made, finding
+powerups of TYPE on the GAME-MAP starting from POSITION."
+  `(+ ,count-name
+      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
+      (ahead-of ,move ,type ,speed ,game-map ,position)))
+
+(defmacro new-speed (move speed)
+  "Produce the speed which MOVE will change SPEED to."
+  `(case ,move
+     (accelerate (increase-speed ,speed))
+     (decelerate (decrease-speed ,speed))
+     (use_boost  15)
+     (otherwise  ,speed)))
+
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
 (defun make-move (move game-map position speed boosts lizards trucks)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (bind ((new-speed   (case move
-                        (accelerate (increase-speed speed))
-                        (decelerate (decrease-speed speed))
-                        (use_boost  15)
-                        (otherwise  speed)))
+  (bind ((new-speed   (new-speed move speed))
          ((x . y)     position)
          (new-x       (case move
                         (turn_left  (move-car up    new-speed x))
@@ -399,36 +412,11 @@ Produce the new new position, etc. as values."
                         (turn_right (move-lat down  y))
                         (otherwise  (move-lat ahead y))))
          (new-pos     (cons new-x new-y))
-         (muds-hit    (case move
-                        (turn_left  (ahead-of turn_left mud up    new-speed game-map position))
-                        (turn_right (ahead-of turn_right mud down  new-speed game-map position))
-                        (use_lizard (ahead-of use_lizard mud ahead new-speed game-map position))
-                        (otherwise  (ahead-of otherwise mud ahead new-speed game-map position))))
-         (walls-hit   (case move
-                        (turn_left  (ahead-of turn_left wall up    new-speed game-map position))
-                        (turn_right (ahead-of turn_right wall down  new-speed game-map position))
-                        (use_lizard (ahead-of use_lizard wall ahead new-speed game-map position))
-                        (otherwise  (ahead-of otherwise wall ahead new-speed game-map position))))
-         (new-boosts  (+ boosts
-                         (case move
-                           (turn_left  (ahead-of turn_left speed up    new-speed game-map position))
-                           (turn_right (ahead-of turn_right speed down  new-speed game-map position))
-                           (use_lizard (ahead-of use_lizard speed ahead new-speed game-map position))
-                           (use_boost  (1- (ahead-of use_boost speed ahead new-speed game-map position)))
-                           (otherwise  (ahead-of otherwise speed ahead new-speed game-map position)))))
-         (new-lizards (+ lizards
-                         (case move
-                           (turn_left  (ahead-of turn_left lizzard up    new-speed game-map position))
-                           (turn_right (ahead-of turn_right lizzard down  new-speed game-map position))
-                           (use_lizard  (1- (ahead-of use_lizard lizzard ahead new-speed game-map position)))
-                           (otherwise  (ahead-of otherwise lizzard ahead new-speed game-map position)))))
-         (new-trucks  (+ trucks
-                         (case move
-                           (turn_left  (ahead-of turn_left tweet up    new-speed game-map position))
-                           (turn_right (ahead-of turn_right tweet down  new-speed game-map position))
-                           (use_lizard (ahead-of use_lizard tweet ahead new-speed game-map position))
-                           (use_tweet  (1- (ahead-of use_tweet tweet ahead new-speed game-map position)))
-                           (otherwise  (ahead-of otherwise tweet ahead new-speed game-map position)))))
+         (muds-hit    (ahead-of move mud new-speed game-map position))
+         (walls-hit   (ahead-of move wall new-speed game-map position))
+         (new-boosts  (accumulating-powerups boosts  move boost  new-speed game-map position))
+         (new-lizards (accumulating-powerups lizards move lizard new-speed game-map position))
+         (new-trucks  (accumulating-powerups trucks  move tweet  new-speed game-map position))
          (final-speed (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
@@ -503,7 +491,7 @@ coordinate."
 
 (defun-ahead-of boost)
 (defun-ahead-of wall)
-(defun-ahead-of lizzard)
+(defun-ahead-of lizard)
 (defun-ahead-of tweet)
 
 (defun mud-ahead-of (speed game-map x y)
@@ -542,7 +530,7 @@ coordinate."
               (4 'finish-line)
               (5 'boost)
               (6 'wall)
-              (7 'lizzard)
+              (7 'lizard)
               (8 'tweet))))
     (finally (return (cons result nil))))) ;; TODO cdr should be trucks
 
