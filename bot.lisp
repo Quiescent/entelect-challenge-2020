@@ -415,7 +415,7 @@ Produce the new new position, etc. as values."
                         (use_lizard (ahead-of tweet ahead 0         game-map new-pos))
                         (use_tweet  (+ trucks (1- (ahead-of tweet ahead new-speed game-map position))))
                         (otherwise  (ahead-of tweet ahead new-speed game-map position))))
-         (final-speed (if walls-hit 3 (decrease-speed-by muds-hit new-speed))))
+         (final-speed (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
 (defun decrease-speed-by (times speed)
