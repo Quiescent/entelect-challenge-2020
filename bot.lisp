@@ -144,6 +144,7 @@ The opponent is at the _absolute_ coordinate:
                                      my-pos
                                      my-boosts
                                      my-speed))
+         (*ahead-of-cache* (make-hash-table :test #'equal))
          ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
           (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed)))
     (declare (ignore op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2))
@@ -171,16 +172,17 @@ POS."
 The optimiser is run with my bot at MY-POS, with BOOSTS, LIZARDS and
 TRUCKS remaining running at SPEED and the opponent running from OP-POS
 with OP-BOOSTS at OP-SPEED."
-  (caddr (make-opposed-move-iter game-map
-                                 my-pos
-                                 boosts
-                                 lizards
-                                 trucks
-                                 speed
-                                 op-pos
-                                 op-boosts
-                                 op-speed
-                                 maximax-depth)))
+  (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+    (caddr (make-opposed-move-iter game-map
+                                   my-pos
+                                   boosts
+                                   lizards
+                                   trucks
+                                   speed
+                                   op-pos
+                                   op-boosts
+                                   op-speed
+                                   maximax-depth))))
 
 (defun maximax-score (turns-to-end x-pos speed)
   "Produce a score for a state in maximax.
@@ -268,23 +270,24 @@ breaks ties on the X-POS and then finally on the SPEED."
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
-    only-those-which-dont-slow
-    copy-seq
-    (sort #'> :key (lambda (state) (nth 3 state)))
-    (stable-sort #'<
-                 :key (lambda (state)
-                        (variance-score
-                         state
-                         (game-map-x-dim game-map))))
-    (stable-sort #'>
-                 :key (lambda (state)
-                        (best-median-distance-score
-                         state
-                         (game-map-x-dim game-map))))
-    caar
-    last
-    car))
+  (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+    (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
+      only-those-which-dont-slow
+      copy-seq
+      (sort #'> :key (lambda (state) (nth 3 state)))
+      (stable-sort #'<
+                   :key (lambda (state)
+                          (variance-score
+                           state
+                           (game-map-x-dim game-map))))
+      (stable-sort #'>
+                   :key (lambda (state)
+                          (best-median-distance-score
+                           state
+                           (game-map-x-dim game-map))))
+      caar
+      last
+      car)))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least.
@@ -534,8 +537,7 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-         (new-speed        (new-speed move speed))
+  (bind ((new-speed        (new-speed move speed))
          ((x . y)          position)
          (new-x            (new-x x move new-speed))
          (new-y            (new-y y move))
@@ -765,7 +767,8 @@ after my move and the OPPONENT-POS after his/her move."
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
-    (bind (((:values new-relative-pos new-speed new-boosts)
+    (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+           ((:values new-relative-pos new-speed new-boosts)
             (make-move current-move
                        (rows current-state)
                        (car (positions current-state))
