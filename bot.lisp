@@ -132,15 +132,15 @@ my bot running from MY-POS with MY-BOOSTS at MY-SPEED.
 The opponent is at the _absolute_ coordinate:
 (OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
-  (bind (((op-score my-score op-move) (make-opposed-move game-map
-                                                         op-pos
-                                                         op-boosts
-                                                         op-lizards
-                                                         op-trucks
-                                                         op-speed
-                                                         my-pos
-                                                         my-boosts
-                                                         my-speed))
+  (bind ((op-move (make-opposed-move game-map
+                                     op-pos
+                                     op-boosts
+                                     op-lizards
+                                     op-trucks
+                                     op-speed
+                                     my-pos
+                                     my-boosts
+                                     my-speed))
          ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
           (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed)))
     (declare (ignore op-score my-score op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2))
@@ -150,12 +150,12 @@ The opponent is at the _absolute_ coordinate:
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
   `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos)))))
 
-(defun remove-impossible-moves (boosts lizards trucks pos all-moves)
+(defun remove-impossible-moves (boosts lizards trucks pos all-makeable-moves)
   "Remove impossible moves from ALL-MOVES.
 
 Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
-  (remove-if (cannot-make-move boosts lizards trucks pos) all-moves))
+  (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
 
 (defconstant maximax-depth 3
   "The depth that we should search the game tree.")
@@ -188,7 +188,7 @@ breaks ties on the X-POS and then finally on the SPEED."
      (* 100 x-pos)
      speed))
 
-(defvar all-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_tweet use_lizard)
+(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
 
 (defun make-opposed-move-iter (game-map my-pos boosts lizards trucks speed
@@ -197,13 +197,13 @@ breaks ties on the X-POS and then finally on the SPEED."
   (iter
     (for cell
          in (iter
-              (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-moves))
+              (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-makeable-moves))
               (collecting
                (bind (((:values my-pos-2 my-speed-2 my-boosts-2 my-lizards-2 my-trucks-2)
                        (make-move my-move game-map my-pos speed boosts trucks speed)))
                  (iter inner
                    ;; Assume that the opponent always has powerups
-                   (for op-move in (remove-impossible-moves 1 1 1 op-pos all-moves))
+                   (for op-move in (remove-impossible-moves 1 1 1 op-pos all-makeable-moves))
                    (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
                            (make-move op-move
                                       game-map
@@ -367,7 +367,7 @@ Fourth is my boosts left."
                                                   current-lizards
                                                   current-trucks
                                                   current-pos
-                                                  all-moves))
+                                                  all-makeable-moves))
             (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks)
                     (make-move move game-map current-pos current-speed current-boosts current-lizards current-trucks)))
               (push (list (cons move path) new-pos new-speed new-boosts new-lizards new-trucks)
