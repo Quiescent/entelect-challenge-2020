@@ -85,9 +85,6 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (cond
-    ((and (> trucks 0)
-          (> opponent-speed 3))
-     (place-cyber-truck opponent-abs-x (cdr opponent-pos)))
     ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
      (make-opposed-move game-map
                         my-pos
