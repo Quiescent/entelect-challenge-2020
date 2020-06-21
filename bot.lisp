@@ -375,6 +375,24 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
+(defvar *ahead-of-cache* nil
+  "A cache of obstacles ahead of certain points.
+
+Key is (speed (x . y)).
+
+Value is (muds boosts walls tweets lizards).")
+
+;; Paul Graham: On Lisp
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defun mkstr (&rest args)
+  (with-output-to-string (s)
+    (dolist (a args) (princ a s))))
+
+  (defun symb (&rest args)
+    (values (intern (apply #'mkstr args)))))
+
 (defmacro ahead-of (move type speed game-map pos)
   "Produce the appropriate `ahead-of' form.
 
@@ -414,17 +432,6 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                        (ahead (cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
-;; Paul Graham: On Lisp
-(eval-when (:compile-toplevel
-            :load-toplevel
-            :execute)
-  (defun mkstr (&rest args)
-  (with-output-to-string (s)
-    (dolist (a args) (princ a s))))
-
-  (defun symb (&rest args)
-    (values (intern (apply #'mkstr args)))))
-
 (defmacro defun-ahead-of (type)
   "Produce a function which counts the number of TYPE blocks.
 
@@ -440,6 +447,7 @@ coordinate."
 (defun-ahead-of wall)
 (defun-ahead-of lizard)
 (defun-ahead-of tweet)
+(defun-ahead-of mud)
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
@@ -561,12 +569,6 @@ Produce the new new position, etc. as values."
   "Produce the value in GAME-MAP at coordinate Y, X."
   (aref (car game-map) y x))
 
-(defun mud-ahead-of (speed game-map x y)
-  "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."
-  (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
-    (counting (member (aref-game-map game-map y i) '(mud oil-spill)))))
-
 (defun load-state-file (round)
   "Load the state file for ROUND."
   (load-state-from-file (format nil "rounds/~a/state.json" round)))
@@ -592,7 +594,7 @@ Produce the new new position, etc. as values."
             (case (slot-value cell 'surface-object)
               (0 nil)
               (1 'mud)
-              (2 'oil-spill)
+              (2 'mud) ; Would have been an oil spill, but there's no difference(!)
               (3 'oil-item)
               (4 'finish-line)
               (5 'boost)
