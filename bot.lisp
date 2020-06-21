@@ -395,6 +395,20 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
      (use_boost  15)
      (otherwise  ,speed)))
 
+(defmacro new-x (x move speed)
+  "Produce the new value of X when MOVE is made at SPEED."
+  `(case ,move
+     (turn_left  (move-car up    ,speed ,x))
+     (turn_right (move-car down  ,speed ,x))
+     (otherwise  (move-car ahead ,speed ,x))))
+
+(defmacro new-y (y move)
+  "Produce the new value of Y when MOVE is made."
+  `(case ,move
+     (turn_left  (move-lat up    ,y))
+     (turn_right (move-lat down  ,y))
+     (otherwise  (move-lat ahead ,y))))
+
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
 (defun make-move (move game-map position speed boosts lizards trucks)
@@ -403,14 +417,8 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
 Produce the new new position, etc. as values."
   (bind ((new-speed   (new-speed move speed))
          ((x . y)     position)
-         (new-x       (case move
-                        (turn_left  (move-car up    new-speed x))
-                        (turn_right (move-car down  new-speed x))
-                        (otherwise  (move-car ahead new-speed x))))
-         (new-y       (case move
-                        (turn_left  (move-lat up    y))
-                        (turn_right (move-lat down  y))
-                        (otherwise  (move-lat ahead y))))
+         (new-x       (new-x x move new-speed))
+         (new-y       (new-y y move))
          (new-pos     (cons new-x new-y))
          (muds-hit    (ahead-of move mud new-speed game-map position))
          (walls-hit   (ahead-of move wall new-speed game-map position))
