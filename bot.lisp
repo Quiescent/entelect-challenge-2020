@@ -195,6 +195,10 @@ breaks ties on the X-POS and then finally on the SPEED."
                               maximizing op-score)))))))
     (finding cell maximizing (car cell))))
 
+(defun game-map-y-dim (game-map)
+  "Produce the number of squares in the y dimension of GAME-MAP."
+  (array-dimension (car game-map) 0))
+
 (defun game-map-x-dim (game-map)
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
@@ -664,10 +668,10 @@ If they're not equal then pretty print both forms."
 (defvar empty-game-map
   (iter
     (with game-map = (rows (load-state-from-file "state.json")))
-    (for y from 0 below (array-dimension game-map 0))
+    (for y from 0 below (game-map-y-dim game-map))
     (iter
       (for x from 0 below (game-map-x-dim game-map))
-      (setf (aref-game-map game-map y x) nil))
+      (setf (aref (car game-map) y x) nil))
     (finally (return game-map)))
   "An empty game map for testing purposes.")
 
