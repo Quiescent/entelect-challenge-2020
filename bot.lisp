@@ -817,6 +817,7 @@ after my move and the OPPONENT-POS after his/her move."
     (sb-sprof:with-profiling (:max-samples 1000
                               :report :flat
                               :loop t)
+      (format t "Tick~%")
       (with-consecutive-states folder-path "Quantum" 'A
         (declare (ignore current-move opponent-move next-state))
         (move-for-state current-state)))))
