@@ -378,9 +378,9 @@ Fourth is my boosts left."
 (defvar *ahead-of-cache* nil
   "A cache of obstacles ahead of certain points.
 
-Key is (speed (x . y)).
+Key is (speed x y).
 
-Value is (muds boosts walls tweets lizards).")
+Value is [muds boosts walls tweets lizards].")
 
 ;; Paul Graham: On Lisp
 (eval-when (:compile-toplevel
@@ -407,12 +407,12 @@ If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
 produce `mud-ahead-of' etc.
 
 SPEED, GAME-MAP, and POS should be un-adjusted values."
-  (bind ((fun       (ecase type
-                      (mud    'mud-ahead-of)
-                      (boost  'boost-ahead-of)
-                      (wall   'wall-ahead-of)
-                      (tweet  'tweet-ahead-of)
-                      (lizard 'lizard-ahead-of)))
+  (bind ((index     (ecase type
+                      (mud    0)
+                      (boost  1)
+                      (wall   2)
+                      (tweet  3)
+                      (lizard 4)))
          (adj-speed `(if (eq ,move 'use_lizard)
                          0
                          (1- ,speed)))
@@ -430,24 +430,25 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                        (up    (1- (cdr ,pos)))
                        (down  (1+ (cdr ,pos)))
                        (ahead (cdr ,pos)))))
-    `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
+    `(aif (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+          (aref it ,index)
+          (aref (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                      (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y))
+                ,index))))
 
-(defmacro defun-ahead-of (type)
-  "Produce a function which counts the number of TYPE blocks.
+(defun all-ahead-of (speed game-map x y)
+  "Produce a count of all types of powerups and obstacles.
 
-On a given game-map when travelling at a given speed from a given
-coordinate."
-  `(defun ,(symb type '-ahead-of) (speed game-map x y)
-     ,(concatenate 'string "Produce the count of " (symbol-name type) " blocks of GAME-MAP ahead of (X, Y).")
-     (iter
-       (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
-       (counting (eq (quote ,type) (aref-game-map game-map y i))))))
-
-(defun-ahead-of boost)
-(defun-ahead-of wall)
-(defun-ahead-of lizard)
-(defun-ahead-of tweet)
-(defun-ahead-of mud)
+When going at SPEED from X, Y on GAME-MAP."
+  (iter
+    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+    (for tile = (aref-game-map game-map y i))
+    (counting (eq 'mud tile)    into muds)
+    (counting (eq 'wall tile)   into walls)
+    (counting (eq 'boost tile)  into boosts)
+    (counting (eq 'lizard tile) into lizards)
+    (counting (eq 'tweet tile)  into tweets)
+    (finally (return (vector muds boosts walls tweets lizards)))))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
@@ -530,17 +531,18 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (bind ((new-speed   (new-speed move speed))
-         ((x . y)     position)
-         (new-x       (new-x x move new-speed))
-         (new-y       (new-y y move))
-         (new-pos     (cons new-x new-y))
-         (muds-hit    (ahead-of                      move mud    new-speed game-map position))
-         (walls-hit   (ahead-of                      move wall   new-speed game-map position))
-         (new-boosts  (accumulating-powerups boosts  move boost  new-speed game-map position))
-         (new-lizards (accumulating-powerups lizards move lizard new-speed game-map position))
-         (new-trucks  (accumulating-powerups trucks  move tweet  new-speed game-map position))
-         (final-speed (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
+  (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+         (new-speed        (new-speed move speed))
+         ((x . y)          position)
+         (new-x            (new-x x move new-speed))
+         (new-y            (new-y y move))
+         (new-pos          (cons new-x new-y))
+         (muds-hit         (ahead-of                      move mud    new-speed game-map position))
+         (walls-hit        (ahead-of                      move wall   new-speed game-map position))
+         (new-boosts       (accumulating-powerups boosts  move boost  new-speed game-map position))
+         (new-lizards      (accumulating-powerups lizards move lizard new-speed game-map position))
+         (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
+         (final-speed      (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
 (defun decrease-speed-by (times speed)
