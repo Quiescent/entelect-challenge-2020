@@ -319,15 +319,18 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
-(defmacro ahead-of (type direction speed game-map pos)
+(defmacro ahead-of (move type direction speed game-map pos)
   "Produce the appropriate `ahead-of' form.
 
 Take into account the nuances of changing direction and not counting
 the current square.  e.g. changing direction means that you travel
 diagonally ignoring the squars on the rectalinear path.
 
+MOVE can modify where we look.  For instance a MOVE of LIZZARD means
+that we need to only look at the square which we land on.
+
 If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
-produce `mud-ahead-of'.
+produce `mud-ahead-of' etc.
 
 If DIRECTION is 'AHEAD then don't change direction.  A DIRECTION of
 'UP corresponds to turning left and 'DOWN corresponds to turning
@@ -340,11 +343,15 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (wall    'wall-ahead-of)
                       (tweet   'tweet-ahead-of)
                       (lizzard 'lizzard-ahead-of)))
-         (adj-speed `(1- ,speed))
-         (adj-x     (ecase direction
-                      (up    `(car ,pos))
-                      (down  `(car ,pos))
-                      (ahead `(1+ (car ,pos)))))
+         (adj-speed (if (eq move 'use_lizard)
+                        0
+                        `(1- ,speed)))
+         (adj-x     (if (eq move 'use_lizard)
+                        `(+ ,speed (car ,pos))
+                        (ecase direction
+                          (up    `(car ,pos))
+                          (down  `(car ,pos))
+                          (ahead `(1+ (car ,pos))))))
          (adj-y     (ecase direction
                       (up    `(1- (cdr ,pos)))
                       (down  `(1+ (cdr ,pos)))
@@ -393,35 +400,35 @@ Produce the new new position, etc. as values."
                         (otherwise  (move-lat ahead y))))
          (new-pos     (cons new-x new-y))
          (muds-hit    (case move
-                        (turn_left  (ahead-of mud up    new-speed game-map position))
-                        (turn_right (ahead-of mud down  new-speed game-map position))
-                        (use_lizard (ahead-of mud ahead 1         game-map (subtract-x 1 new-pos)))
-                        (otherwise  (ahead-of mud ahead new-speed game-map position))))
+                        (turn_left  (ahead-of turn_left mud up    new-speed game-map position))
+                        (turn_right (ahead-of turn_right mud down  new-speed game-map position))
+                        (use_lizard (ahead-of use_lizard mud ahead new-speed game-map position))
+                        (otherwise  (ahead-of otherwise mud ahead new-speed game-map position))))
          (walls-hit   (case move
-                        (turn_left  (ahead-of wall up    new-speed game-map position))
-                        (turn_right (ahead-of wall down  new-speed game-map position))
-                        (use_lizard (ahead-of wall ahead 1         game-map (subtract-x 1 new-pos)))
-                        (otherwise  (ahead-of wall ahead new-speed game-map position))))
+                        (turn_left  (ahead-of turn_left wall up    new-speed game-map position))
+                        (turn_right (ahead-of turn_right wall down  new-speed game-map position))
+                        (use_lizard (ahead-of use_lizard wall ahead new-speed game-map position))
+                        (otherwise  (ahead-of otherwise wall ahead new-speed game-map position))))
          (new-boosts  (+ boosts
                          (case move
-                           (turn_left  (ahead-of speed up    new-speed game-map position))
-                           (turn_right (ahead-of speed down  new-speed game-map position))
-                           (use_lizard (ahead-of speed ahead 1         game-map (subtract-x 1 new-pos)))
-                           (use_boost  (1- (ahead-of speed ahead new-speed game-map position)))
-                           (otherwise  (ahead-of speed ahead new-speed game-map position)))))
+                           (turn_left  (ahead-of turn_left speed up    new-speed game-map position))
+                           (turn_right (ahead-of turn_right speed down  new-speed game-map position))
+                           (use_lizard (ahead-of use_lizard speed ahead new-speed game-map position))
+                           (use_boost  (1- (ahead-of use_boost speed ahead new-speed game-map position)))
+                           (otherwise  (ahead-of otherwise speed ahead new-speed game-map position)))))
          (new-lizards (+ lizards
                          (case move
-                           (turn_left  (ahead-of lizzard up    new-speed game-map position))
-                           (turn_right (ahead-of lizzard down  new-speed game-map position))
-                           (use_lizard  (1- (ahead-of lizzard ahead 1 game-map (subtract-x 1 new-pos))))
-                           (otherwise  (ahead-of lizzard ahead new-speed game-map position)))))
+                           (turn_left  (ahead-of turn_left lizzard up    new-speed game-map position))
+                           (turn_right (ahead-of turn_right lizzard down  new-speed game-map position))
+                           (use_lizard  (1- (ahead-of use_lizard lizzard ahead new-speed game-map position)))
+                           (otherwise  (ahead-of otherwise lizzard ahead new-speed game-map position)))))
          (new-trucks  (+ trucks
                          (case move
-                           (turn_left  (ahead-of tweet up    new-speed game-map position))
-                           (turn_right (ahead-of tweet down  new-speed game-map position))
-                           (use_lizard (ahead-of tweet ahead 1         game-map (subtract-x 1 new-pos)))
-                           (use_tweet  (1- (ahead-of tweet ahead new-speed game-map position)))
-                           (otherwise  (ahead-of tweet ahead new-speed game-map position)))))
+                           (turn_left  (ahead-of turn_left tweet up    new-speed game-map position))
+                           (turn_right (ahead-of turn_right tweet down  new-speed game-map position))
+                           (use_lizard (ahead-of use_lizard tweet ahead new-speed game-map position))
+                           (use_tweet  (1- (ahead-of use_tweet tweet ahead new-speed game-map position)))
+                           (otherwise  (ahead-of otherwise tweet ahead new-speed game-map position)))))
          (final-speed (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
