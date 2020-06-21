@@ -801,3 +801,15 @@ after my move and the OPPONENT-POS after his/her move."
                 current-move
                 computed
                 actual)))))
+
+#+nil
+(progn
+  (require :sb-sprof)
+  (defun profile-a-game (folder-path)
+    "Run the profiler on my bot for each round in FOLDER-PATH."
+    (sb-sprof:with-profiling (:max-samples 1000
+                              :report :flat
+                              :loop t)
+      (with-consecutive-states folder-path "Quantum" 'A
+        (declare (ignore current-move opponent-move next-state))
+        (move-for-state current-state)))))
