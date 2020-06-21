@@ -85,6 +85,19 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (cond
+    ((and (> trucks 0)
+          (> opponent-speed 3)
+          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+     (place-cyber-truck game-map
+                        opponent-pos
+                        1
+                        1
+                        1
+                        opponent-speed
+                        my-pos
+                        1
+                        speed
+                        opponent-abs-x))
     ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
      (make-opposed-move game-map
                         my-pos
@@ -98,13 +111,40 @@ MY-ABS-X position on the board."
     (t
      (make-speed-move game-map my-pos boosts lizards trucks speed))))
 
-(defun place-cyber-truck (opponent-abs-x opponent-abs-y)
-  "Produce a move which place the Cyber Truck in front of the opponent.
+(defun place-cyber-truck (game-map
+                          op-pos
+                          op-boosts
+                          op-lizards
+                          op-trucks
+                          op-speed
+                          my-pos
+                          my-boosts
+                          my-speed
+                          opponent-abs-x)
+  "Place the truck in front of my opponents best move.
+
+Run minimax from my opponents perspective to find his best move.
+
+The optimiser is run with my the opponent bot at OP-POS, with
+OP-BOOSTS, OP-LIZARDS and OP-TRUCKS remaining running at OP-SPEED and
+my bot running from MY-POS with MY-BOOSTS at MY-SPEED.
 
 The opponent is at the _absolute_ coordinate:
-(opponent-abs-x, opponent-abs-y)."
+(OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
-  (cons 'use_tweet (cons (1+ opponent-abs-x) (1+ opponent-abs-y))))
+  (bind (((op-score my-score op-move) (make-opposed-move game-map
+                                                         op-pos
+                                                         op-boosts
+                                                         op-lizards
+                                                         op-trucks
+                                                         op-speed
+                                                         my-pos
+                                                         my-boosts
+                                                         my-speed))
+         ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
+          (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed)))
+    (declare (ignore op-score my-score op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2))
+    (cons 'use_tweet (cons (+ (- (car op-pos-2) (car op-pos)) opponent-abs-x) (1+ (cdr op-pos-2))))))
 
 (defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
