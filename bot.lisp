@@ -398,23 +398,26 @@ Produce the new new position, etc. as values."
                         (turn_right (ahead-of wall down  new-speed game-map position))
                         (use_lizard (ahead-of wall ahead 0         game-map new-pos))
                         (otherwise  (ahead-of wall ahead new-speed game-map position))))
-         (new-boosts  (case move
-                        (turn_left  (ahead-of speed up    new-speed game-map position))
-                        (turn_right (ahead-of speed down  new-speed game-map position))
-                        (use_lizard (ahead-of speed ahead 0         game-map new-pos))
-                        (use_boost  (+ boosts (1- (ahead-of speed ahead new-speed game-map position))))
-                        (otherwise  (ahead-of speed ahead new-speed game-map position))))
-         (new-lizards (case move
-                        (turn_left  (ahead-of lizzard up    new-speed game-map position))
-                        (turn_right (ahead-of lizzard down  new-speed game-map position))
-                        (use_lizard  (+ lizards (ahead-of lizzard ahead 0 game-map new-pos)))
-                        (otherwise  (ahead-of lizzard ahead new-speed game-map position))))
-         (new-trucks  (case move
-                        (turn_left  (ahead-of tweet up    new-speed game-map position))
-                        (turn_right (ahead-of tweet down  new-speed game-map position))
-                        (use_lizard (ahead-of tweet ahead 0         game-map new-pos))
-                        (use_tweet  (+ trucks (1- (ahead-of tweet ahead new-speed game-map position))))
-                        (otherwise  (ahead-of tweet ahead new-speed game-map position))))
+         (new-boosts  (+ boosts
+                         (case move
+                           (turn_left  (ahead-of speed up    new-speed game-map position))
+                           (turn_right (ahead-of speed down  new-speed game-map position))
+                           (use_lizard (ahead-of speed ahead 0         game-map new-pos))
+                           (use_boost  (1- (ahead-of speed ahead new-speed game-map position)))
+                           (otherwise  (ahead-of speed ahead new-speed game-map position)))))
+         (new-lizards (+ lizards
+                         (case move
+                           (turn_left  (ahead-of lizzard up    new-speed game-map position))
+                           (turn_right (ahead-of lizzard down  new-speed game-map position))
+                           (use_lizard  (1- (ahead-of lizzard ahead 0 game-map new-pos)))
+                           (otherwise  (ahead-of lizzard ahead new-speed game-map position)))))
+         (new-trucks  (+ trucks
+                         (case move
+                           (turn_left  (ahead-of tweet up    new-speed game-map position))
+                           (turn_right (ahead-of tweet down  new-speed game-map position))
+                           (use_lizard (ahead-of tweet ahead 0         game-map new-pos))
+                           (use_tweet  (1- (ahead-of tweet ahead new-speed game-map position)))
+                           (otherwise  (ahead-of tweet ahead new-speed game-map position)))))
          (final-speed (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
