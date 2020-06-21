@@ -381,20 +381,20 @@ Fourth is my boosts left."
     (incf counter)
     (finally (return found-paths))))
 
-(defvar *ahead-of-cache* nil
-  "A cache of obstacles ahead of certain points.
+;; Paul Graham: On Lisp
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defvar *ahead-of-cache* nil
+    "A cache of obstacles ahead of certain points.
 
 Key is (speed x y).
 
 Value is [muds boosts walls tweets lizards].")
 
-;; Paul Graham: On Lisp
-(eval-when (:compile-toplevel
-            :load-toplevel
-            :execute)
   (defun mkstr (&rest args)
-  (with-output-to-string (s)
-    (dolist (a args) (princ a s))))
+    (with-output-to-string (s)
+      (dolist (a args) (princ a s))))
 
   (defun symb (&rest args)
     (values (intern (apply #'mkstr args)))))
