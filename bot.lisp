@@ -15,8 +15,11 @@
 
 (defun move-for-round (round-number)
   "Produce a move which is appropriate for ROUND-NUMBER."
-  (bind ((state             (load-state-file round-number))
-         (map               (rows state))
+  (move-for-state (load-state-file round-number)))
+
+(defun move-for-state (state)
+  "Produce the move which my bot makes from STATE."
+  (bind ((map               (rows state))
          ((my-pos . op-pos) (positions state))
          (my-abs-x          (my-abs-x state))
          (opponent-abs-x    (opponent-abs-x state))
