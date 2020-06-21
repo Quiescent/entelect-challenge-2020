@@ -5,7 +5,13 @@
     (while t)
     (for round-number = (read-line))
     (for move = (move-for-round round-number))
-    (format t "C;~a;~a~%" round-number move)))
+    (format t "C;~a;~a~%" round-number (move-to-string move))))
+
+(defun move-to-string (move)
+  "Produce a string representation of MOVE."
+  (if (consp move)
+      (format nil "~a ~a ~a" (car move) (cadr move) (cddr move))
+      (format nil "~a" move)))
 
 (defun move-for-round (round-number)
   "Produce a move which is appropriate for ROUND-NUMBER."
@@ -78,17 +84,30 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
-  (if (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-      (make-opposed-move game-map
-                         my-pos
-                         boosts
-                         lizards
-                         trucks
-                         speed
-                         opponent-pos
-                         opponent-boosts
-                         opponent-speed)
-      (make-speed-move game-map my-pos boosts lizards trucks speed)))
+  (cond
+    ((and (> trucks 0)
+          (> opponent-speed 3))
+     (place-cyber-truck opponent-abs-x (cdr opponent-pos)))
+    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
+     (make-opposed-move game-map
+                        my-pos
+                        boosts
+                        lizards
+                        trucks
+                        speed
+                        opponent-pos
+                        opponent-boosts
+                        opponent-speed))
+    (t
+     (make-speed-move game-map my-pos boosts lizards trucks speed))))
+
+(defun place-cyber-truck (opponent-abs-x opponent-abs-y)
+  "Produce a move which place the Cyber Truck in front of the opponent.
+
+The opponent is at the _absolute_ coordinate:
+(opponent-abs-x, opponent-abs-y)."
+  ;; Add one to y because their coordinates are 1-based
+  (cons 'use_tweet (cons (1+ opponent-abs-x) (1+ opponent-abs-y))))
 
 (defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
@@ -358,6 +377,33 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                        (ahead (cdr ,pos)))))
     `(,fun ,adj-speed ,game-map ,adj-x ,adj-y)))
 
+;; Paul Graham: On Lisp
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defun mkstr (&rest args)
+  (with-output-to-string (s)
+    (dolist (a args) (princ a s))))
+
+  (defun symb (&rest args)
+    (values (intern (apply #'mkstr args)))))
+
+(defmacro defun-ahead-of (type)
+  "Produce a function which counts the number of TYPE blocks.
+
+On a given game-map when travelling at a given speed from a given
+coordinate."
+  `(defun ,(symb type '-ahead-of) (speed game-map x y)
+     ,(concatenate 'string "Produce the count of " (symbol-name type) " blocks of GAME-MAP ahead of (X, Y).")
+     (iter
+       (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+       (counting (eq (quote ,type) (aref-game-map game-map y i))))))
+
+(defun-ahead-of boost)
+(defun-ahead-of wall)
+(defun-ahead-of lizard)
+(defun-ahead-of tweet)
+
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
   `(+ ,x ,(ecase direction
@@ -372,20 +418,29 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
     (down  `(1+ ,y))
     (ahead y)))
 
-(defun manual-decelerate (speed)
-  "Decelerate from SPEED as an action."
-  (if (= speed 3)
-      0
-      (decrease-speed speed)))
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (defun increase-speed (speed)
+    "Produce the speed which is one faster than SPEED."
+    (case speed
+      (0 3)
+      (3 6)
+      (5 6)
+      (6 8)
+      (8 9)
+      (t speed)))
 
-(defmacro accumulating-powerups (count-name move type speed game-map position)
-  "Produce the value of COUNT-NAME with collected powerups.
-
-Use the state transitions which occur when MOVE is made, finding
-powerups of TYPE on the GAME-MAP starting from POSITION."
-  `(+ ,count-name
-      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
-      (ahead-of ,move ,type ,speed ,game-map ,position)))
+  (defun decrease-speed (speed)
+    "Produce the speed which is one slower than SPEED."
+    (case speed
+      (3  3)
+      (5  3)
+      (6  3)
+      (8  6)
+      (9  8)
+      (15 9)
+      (t speed))))
 
 (defmacro new-speed (move speed)
   "Produce the speed which MOVE will change SPEED to."
@@ -408,6 +463,21 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
      (turn_left  (move-lat up    ,y))
      (turn_right (move-lat down  ,y))
      (otherwise  (move-lat ahead ,y))))
+
+(defun manual-decelerate (speed)
+  "Decelerate from SPEED as an action."
+  (if (= speed 3)
+      0
+      (decrease-speed speed)))
+
+(defmacro accumulating-powerups (count-name move type speed game-map position)
+  "Produce the value of COUNT-NAME with collected powerups.
+
+Use the state transitions which occur when MOVE is made, finding
+powerups of TYPE on the GAME-MAP starting from POSITION."
+  `(+ ,count-name
+      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
+      (ahead-of ,move ,type ,speed ,game-map ,position)))
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
@@ -436,27 +506,6 @@ Produce the new new position, etc. as values."
     (setf final-speed (decrease-speed final-speed))
     (finally (return final-speed))))
 
-(defun increase-speed (speed)
-  "Produce the speed which is one faster than SPEED."
-  (case speed
-    (0 3)
-    (3 6)
-    (5 6)
-    (6 8)
-    (8 9)
-    (t speed)))
-
-(defun decrease-speed (speed)
-  "Produce the speed which is one slower than SPEED."
-  (case speed
-    (3  3)
-    (5  3)
-    (6  3)
-    (8  6)
-    (9  8)
-    (15 9)
-    (t speed)))
-
 (defun end-state (position game-map)
   "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
   (>= (car position) (game-map-x-dim game-map)))
@@ -474,33 +523,6 @@ Produce the new new position, etc. as values."
 (defun aref-game-map (game-map y x)
   "Produce the value in GAME-MAP at coordinate Y, X."
   (aref (car game-map) y x))
-
-;; Paul Graham: On Lisp
-(eval-when (:compile-toplevel
-            :load-toplevel
-            :execute)
-  (defun mkstr (&rest args)
-  (with-output-to-string (s)
-    (dolist (a args) (princ a s))))
-
-  (defun symb (&rest args)
-    (values (intern (apply #'mkstr args)))))
-
-(defmacro defun-ahead-of (type)
-  "Produce a function which counts the number of TYPE blocks.
-
-On a given game-map when travelling at a given speed from a given
-coordinate."
-  `(defun ,(symb type '-ahead-of) (speed game-map x y)
-     ,(concatenate 'string "Produce the count of " (symbol-name type) " blocks of GAME-MAP ahead of (X, Y).")
-     (iter
-       (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
-       (counting (eq (quote ,type) (aref-game-map game-map y i))))))
-
-(defun-ahead-of boost)
-(defun-ahead-of wall)
-(defun-ahead-of lizard)
-(defun-ahead-of tweet)
 
 (defun mud-ahead-of (speed game-map x y)
   "Produce the count of mud on SPEED blocks of GAME-MAP ahead of (X, Y)."

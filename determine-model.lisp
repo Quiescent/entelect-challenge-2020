@@ -75,7 +75,7 @@ distribution of likely states that the bot could end up in."
       ;; how much mud you went through getting into this
       ;; map
       (for game-map         = (rows current-state))
-      (for muds-hit         = (ahead-of mud ahead x game-map (cons 4 y)))
+      (for muds-hit         = (ahead-of current-move mud x game-map (cons 4 y)))
       (for entry-speed      = (decrease-speed-by muds-hit speed))
       (for initial-position = (cons (+ x 4) y))
       (iter

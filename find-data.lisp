@@ -56,14 +56,15 @@ is the binominal label."
              (final-speed (decrease-speed-by muds-hit new-speed))
              (mud_through (+ muds-hit
                              (muds-hit current-move game-map new-pos final-speed)))
-             (mud-0       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
-             (mud-1       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
-             (mud-2       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
-             (mud-3       (ahead-of mud ahead blocks-to-end-of-map game-map (cons (car my-pos) 3)))
-             (speed-0     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 0)))
-             (speed-1     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 1)))
-             (speed-2     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 2)))
-             (speed-3     (ahead-of speed ahead blocks-to-end-of-map game-map (cons (car my-pos) 3))))
+             (do-nothing  'nothing)
+             (mud-0       (ahead-of do-nothing mud blocks-to-end-of-map game-map (cons (car my-pos) 0)))
+             (mud-1       (ahead-of do-nothing mud blocks-to-end-of-map game-map (cons (car my-pos) 1)))
+             (mud-2       (ahead-of do-nothing mud blocks-to-end-of-map game-map (cons (car my-pos) 2)))
+             (mud-3       (ahead-of do-nothing mud blocks-to-end-of-map game-map (cons (car my-pos) 3)))
+             (speed-0     (ahead-of do-nothing boost blocks-to-end-of-map game-map (cons (car my-pos) 0)))
+             (speed-1     (ahead-of do-nothing boost blocks-to-end-of-map game-map (cons (car my-pos) 1)))
+             (speed-2     (ahead-of do-nothing boost blocks-to-end-of-map game-map (cons (car my-pos) 2)))
+             (speed-3     (ahead-of do-nothing boost blocks-to-end-of-map game-map (cons (car my-pos) 3))))
         (push (list (car my-abs-pos)
                     (cdr my-abs-pos)
                     my-speed
@@ -88,10 +89,7 @@ is the binominal label."
                         (accelerate (increase-speed speed))
                         (use_boost  15)
                         (otherwise  speed))))
-    (case move
-      (turn_left  (ahead-of mud up    new-speed game-map position))
-      (turn_right (ahead-of mud down  new-speed game-map position))
-      (otherwise  (ahead-of mud ahead new-speed game-map position)))))
+    (ahead-of move mud new-speed game-map position)))
 
 (defun finished-in-less-than (objective-round relative-folder-path)
   "Produce T if the game in RELATIVE-FOLDER-PATH finished faster than OBJECTIVE-ROUND."
