@@ -114,6 +114,13 @@ MY-ABS-X position on the board."
     (t
      (make-speed-move game-map my-pos boosts lizards trucks speed))))
 
+(defvar *ahead-of-cache* nil
+    "A cache of obstacles ahead of certain points.
+
+Key is (speed x y).
+
+Value is [muds boosts walls tweets lizards].")
+
 (defun place-cyber-truck (game-map
                           op-pos
                           op-boosts
@@ -385,12 +392,6 @@ Fourth is my boosts left."
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
-  (defvar *ahead-of-cache* nil
-    "A cache of obstacles ahead of certain points.
-
-Key is (speed x y).
-
-Value is [muds boosts walls tweets lizards].")
 
   (defun mkstr (&rest args)
     (with-output-to-string (s)
