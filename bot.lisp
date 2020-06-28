@@ -598,6 +598,7 @@ Produce the new new position, etc. as values."
   "Produce rows as a 2D array of cells from the map in THIS state."
   (iter
     (with world-map = (slot-value this 'world-map))
+    (with trucks = '())
     (with result = (make-array (list (length world-map)
                                      (length (aref world-map 0)))
                                :initial-element nil))
@@ -606,6 +607,8 @@ Produce the new new position, etc. as values."
     (iter
       (for cell in-vector row)
       (for x from 0)
+      (when (isOccupied-by-cyber-truck cell)
+        (push (cons x y) trucks))
       (setf (aref result y x)
             (case (slot-value cell 'surface-object)
               (0 nil)
@@ -617,7 +620,7 @@ Produce the new new position, etc. as values."
               (6 'wall)
               (7 'lizard)
               (8 'tweet))))
-    (finally (return (cons result nil))))) ;; TODO cdr should be trucks
+    (finally (return (cons result trucks)))))
 
 (defmethod position-to-cons ((this map-position))
   "Produce a cons cell of postions from THIS position."
