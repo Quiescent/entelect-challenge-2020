@@ -204,6 +204,9 @@ breaks ties on the X-POS and then finally on the SPEED."
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
 
+(defvar all-straight-moves '(accelerate use_boost nothing decelerate)
+  "All moves which will result in going straight without jumping.")
+
 (defun make-opposed-move-iter (game-map my-pos boosts lizards trucks speed
                                op-pos op-boosts op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
@@ -389,12 +392,24 @@ Fourth is my boosts left."
                                                   current-trucks
                                                   current-pos
                                                   all-makeable-moves))
+            (when (and (member move all-straight-moves)
+                       (truck-infront-of current-pos game-map))
+              (next-iteration))
             (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks)
                     (make-move move game-map current-pos current-speed current-boosts current-lizards current-trucks)))
               (push (list (cons move path) new-pos new-speed new-boosts new-lizards new-trucks)
                     paths-to-explore)))))
     (incf counter)
     (finally (return found-paths))))
+
+(defun truck-infront-of (current-pos game-map)
+  "Produce t if there is a truck immediately in front of CURRENT-POS on GAME-MAP."
+  (bind (((_ . trucks) game-map)
+         ((x . y)      current-pos))
+    (iter
+      (for (x-truck . y-truck) in trucks)
+      (thereis (and (eq y-truck y)
+                    (eq x (1- x-truck)))))))
 
 ;; Paul Graham: On Lisp
 (eval-when (:compile-toplevel
