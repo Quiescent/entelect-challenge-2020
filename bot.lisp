@@ -155,7 +155,8 @@ The opponent is at the _absolute_ coordinate:
          ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
           (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed)))
     (declare (ignore op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2))
-    (cons 'use_tweet (cons (+ (- (car op-pos-2) (car op-pos)) opponent-abs-x) (1+ (cdr op-pos-2))))))
+    ;; Offset by one so that the opponent doesn't land *on* the truck
+    (cons 'use_tweet (cons (+ 1 (- (car op-pos-2) (car op-pos)) opponent-abs-x) (1+ (cdr op-pos-2))))))
 
 (defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
