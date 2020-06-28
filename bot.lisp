@@ -272,14 +272,26 @@ breaks ties on the X-POS and then finally on the SPEED."
   (array-dimension (car game-map) 1))
 
 (defun make-speed-move (game-map my-pos boosts lizards trucks speed)
-  "Produce the best SPEED map for GAME-MAP.
+  "Produce the best speed move to make on GAME-MAP.
+
+Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
+left, the SPEED at which I'm going and MY-ABS-X position on the
+board."
+  (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+    (-> (rank-order-all-moves game-map my-pos boosts lizards trucks speed)
+      only-those-which-dont-slow
+      caar
+      last
+      car)))
+
+(defun rank-order-all-moves (game-map my-pos boosts lizards trucks speed)
+  "Produce all the moves from GAME-MAP ordered by best placement on the global map.
 
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
-      only-those-which-dont-slow
       copy-seq
       (sort #'> :key (lambda (state) (nth 3 state)))
       (stable-sort #'<
@@ -291,15 +303,10 @@ board."
                    :key (lambda (state)
                           (best-median-distance-score
                            state
-                           (game-map-x-dim game-map))))
-      caar
-      last
-      car)))
+                           (game-map-x-dim game-map)))))))
 
 (defun only-those-which-dont-slow (end-states)
-  "Filter END-STATES to those which don't lose speed or lose least.
-
-Given that the car was going at INITIAL-SPEED originally."
+  "Filter END-STATES to those which don't lose speed or lose least."
   (bind ((fastest
           (iter
             (for state in end-states)
