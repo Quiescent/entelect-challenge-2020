@@ -556,7 +556,7 @@ Produce the new new position, etc. as values."
          (new-lizards      (accumulating-powerups lizards move lizard new-speed game-map position))
          (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
          (truck-x          (hit-a-truck game-map x new-x new-y))
-         (new-pos          (cons (or truck-x new-x) new-y))
+         (new-pos          (cons (if truck-x (1- truck-x) new-x) new-y))
          (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
 
@@ -624,7 +624,7 @@ up in, in your lane."
       (for cell in-vector row)
       (for x from 0)
       (when (is-occupied-by-cyber-truck cell)
-        (push (cons (1- x) y) trucks))
+        (push (cons x y) trucks))
       (setf (aref result y x)
             (case (slot-value cell 'surface-object)
               (0 nil)
