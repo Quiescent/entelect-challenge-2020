@@ -298,8 +298,13 @@ board."
     (-> (states-from game-map my-pos speed boosts lizards trucks)
       states-with-fewest-moves
       copy-seq
+      (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
+      (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'< :key (lambda (state) (car (nth 1 state)))))))
+      (stable-sort #'> :key (lambda (state) (if (and (eq (-> state car last car) 'use_boost)
+                                                (not (> (- (nth 2 state) speed) 3)))
+                                           0
+                                           1))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
