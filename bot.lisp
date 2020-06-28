@@ -815,7 +815,7 @@ after my move and the OPPONENT-POS after his/her move."
 (defun compare-rankings-to-opponent-move (folder-path opponent-name opponent-player)
   "Compare my decisions to the opponents for each round in FOLDER-PATH."
   (with-consecutive-states folder-path opponent-name opponent-player
-    (declare (ignore current-move next-state))
+    (declare (ignore opponent-move next-state))
     (bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
            (game-map           (rows current-state))
            ((my-pos . op-pos)  (positions current-state))
@@ -848,8 +848,8 @@ after my move and the OPPONENT-POS after his/her move."
                                                      speed)))
       (format t "========================================~%")
       (format t "==============Round: ~a=============~%~%" round)
-      (format t "I would make:  ~a~%" move-i-would-make)
-      (format t "Op made:       ~a~%~%" opponent-move)
+      (format t "I would make:  ~a~%"   move-i-would-make)
+      (format t "Op made:       ~a~%~%" current-move)
       (format t
               "How I rank speed moves:~% ~{~a~^~%~}~%"
               ranked-speed-moves)
