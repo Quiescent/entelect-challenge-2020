@@ -88,29 +88,29 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (cond
-    ((and (> trucks 0)
-          (> opponent-speed 3)
-          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
-     (place-cyber-truck game-map
-                        opponent-pos
-                        1
-                        1
-                        1
-                        opponent-speed
-                        my-pos
-                        1
-                        speed
-                        opponent-abs-x))
-    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-     (make-opposed-move game-map
-                        my-pos
-                        boosts
-                        lizards
-                        trucks
-                        speed
-                        opponent-pos
-                        opponent-boosts
-                        opponent-speed))
+    ;; ((and (> trucks 0)
+    ;;       (> opponent-speed 3)
+    ;;       (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+    ;;  (place-cyber-truck game-map
+    ;;                     opponent-pos
+    ;;                     1
+    ;;                     1
+    ;;                     1
+    ;;                     opponent-speed
+    ;;                     my-pos
+    ;;                     1
+    ;;                     speed
+    ;;                     opponent-abs-x))
+    ;; ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
+    ;;  (make-opposed-move game-map
+    ;;                     my-pos
+    ;;                     boosts
+    ;;                     lizards
+    ;;                     trucks
+    ;;                     speed
+    ;;                     opponent-pos
+    ;;                     opponent-boosts
+    ;;                     opponent-speed))
     (t
      (make-speed-move game-map my-pos boosts lizards trucks speed))))
 
