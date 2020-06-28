@@ -295,7 +295,8 @@ Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
+    (-> (states-from game-map my-pos speed boosts lizards trucks)
+      states-with-fewest-moves
       copy-seq
       (sort #'<
             :key (lambda (state)
@@ -321,11 +322,9 @@ board."
       (when (>= (nth 2 state) fastest)
         (collecting state)))))
 
-(defun states-with-fewest-moves (game-map my-pos boosts lizards trucks speed)
+(defun states-with-fewest-moves (states)
   "Produce the states with the shortest paths to the end of the GAME-MAP."
-  (bind ((end-states   (states-from game-map my-pos speed boosts lizards trucks))
-         (fewest-moves (only-shortest-path-length end-states)))
-    fewest-moves))
+  (only-shortest-path-length states))
 
 (defconstant window-to-consider-maximax 3
   "The window around me that I should use to consider using maximax.")
