@@ -297,17 +297,18 @@ board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-with-fewest-moves game-map my-pos boosts lizards trucks speed)
       copy-seq
-      (sort #'> :key (lambda (state) (nth 3 state)))
-      (stable-sort #'<
-                   :key (lambda (state)
-                          (variance-score
-                           state
-                           (game-map-x-dim game-map))))
+      (sort #'<
+            :key (lambda (state)
+                   (variance-score
+                    state
+                    (game-map-x-dim game-map))))
       (stable-sort #'>
                    :key (lambda (state)
                           (best-median-distance-score
                            state
-                           (game-map-x-dim game-map)))))))
+                           (game-map-x-dim game-map))))
+      (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
+      (stable-sort #'> :key (lambda (state) (nth 2 state))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
