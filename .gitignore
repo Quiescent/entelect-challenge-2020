@@ -21,3 +21,6 @@ script_bin/*
 # Temp/editting
 .slime-history.eld
 scratch/
+
+# Tournament replays
+tournament_replays/
