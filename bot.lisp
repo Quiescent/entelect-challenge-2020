@@ -550,14 +550,30 @@ Produce the new new position, etc. as values."
          ((x . y)          position)
          (new-x            (new-x x move new-speed))
          (new-y            (new-y y move))
-         (new-pos          (cons new-x new-y))
          (muds-hit         (ahead-of                      move mud    new-speed game-map position))
          (walls-hit        (ahead-of                      move wall   new-speed game-map position))
          (new-boosts       (accumulating-powerups boosts  move boost  new-speed game-map position))
          (new-lizards      (accumulating-powerups lizards move lizard new-speed game-map position))
          (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
-         (final-speed      (if (> walls-hit 0) 3 (decrease-speed-by muds-hit new-speed))))
+         (truck-x          (hit-a-truck game-map x new-x new-y))
+         (new-pos          (cons (or truck-x new-x) new-y))
+         (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks)))
+
+(defun hit-a-truck (game-map start-x end-x new-y)
+  "Produce t if you would hit a truck on GAME-MAP from START-X.
+
+NEW-Y is the lane which the car ends up in, and END-X is where you end
+up in, in your lane."
+  (bind (((_ . trucks)  game-map))
+    (iter
+      (for (x-truck . y-truck) in trucks)
+      (when (and (eq y-truck new-y)
+                 (< start-x x-truck)
+                 (>= end-x x-truck))
+        (collecting x-truck into hits))
+      (finally (return (iter (for x in hits)
+                         (minimize x)))))))
 
 (defun decrease-speed-by (times speed)
   "Reduce SPEED TIMES times."
@@ -608,7 +624,7 @@ Produce the new new position, etc. as values."
       (for cell in-vector row)
       (for x from 0)
       (when (is-occupied-by-cyber-truck cell)
-        (push (cons x y) trucks))
+        (push (cons (1- x) y) trucks))
       (setf (aref result y x)
             (case (slot-value cell 'surface-object)
               (0 nil)
