@@ -298,18 +298,8 @@ board."
     (-> (states-from game-map my-pos speed boosts lizards trucks)
       states-with-fewest-moves
       copy-seq
-      (sort #'<
-            :key (lambda (state)
-                   (variance-score
-                    state
-                    (game-map-x-dim game-map))))
-      (stable-sort #'>
-                   :key (lambda (state)
-                          (best-median-distance-score
-                           state
-                           (game-map-x-dim game-map))))
-      (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
-      (stable-sort #'> :key (lambda (state) (nth 2 state))))))
+      (stable-sort #'> :key (lambda (state) (nth 2 state)))
+      (stable-sort #'< :key (lambda (state) (car (nth 1 state)))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
@@ -599,8 +589,11 @@ up in, in your lane."
     (finally (return final-speed))))
 
 (defun end-state (position game-map)
-  "Produce T if POSITION, is considered an end state for the search in GAME-MAP."
-  (>= (car position) (game-map-x-dim game-map)))
+  "Produce T if POSITION, is considered an end state for the search in GAME-MAP.
+
+Being at the edge of the map is best, because we don't know what's
+coming!"
+  (>= (car position) (1- (game-map-x-dim game-map))))
 
 (defun move-can-be-made (move boosts lizards trucks y)
   "Produce T if the MOVE can be made from Y coordinate."
