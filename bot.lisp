@@ -607,7 +607,7 @@ Produce the new new position, etc. as values."
     (iter
       (for cell in-vector row)
       (for x from 0)
-      (when (isOccupied-by-cyber-truck cell)
+      (when (is-occupied-by-cyber-truck cell)
         (push (cons x y) trucks))
       (setf (aref result y x)
             (case (slot-value cell 'surface-object)
