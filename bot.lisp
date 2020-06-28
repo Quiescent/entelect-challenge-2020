@@ -694,7 +694,11 @@ Prepend 'WHICH-PLAYER - ' to the path for the players move and state."
                                    ,player))
             (op-path       (->> (directory (format nil "~a/Round ~3,'0d/*" ,path round))
                              (mapcar #'namestring)
-                             (remove-if (lambda (path) (ppcre:all-matches ,player path)))
+                             (remove-if (lambda (path) (ppcre:all-matches (concatenate 'string
+                                                                                       "- "
+                                                                                       ,player
+                                                                                       "/")
+                                                                          path)))
                              car))
             (op-move-path  (format nil
                                    "~a/PlayerCommand.txt"
