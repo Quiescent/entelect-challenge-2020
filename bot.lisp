@@ -777,6 +777,49 @@ after my move and the OPPONENT-POS after his/her move."
       (side-collision (cons (1- (car my-pos)) my-orig-y))
       (t my-pos))))
 
+(defun compare-rankings-to-opponent-move (folder-path opponent-name opponent-player)
+  "Compare my decisions to the opponents for each round in FOLDER-PATH."
+  (with-consecutive-states folder-path opponent-name opponent-player
+    (declare (ignore current-move next-state))
+    (bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
+           (game-map           (rows current-state))
+           ((my-pos . op-pos)  (positions current-state))
+           (my-abs-x           (my-abs-x current-state))
+           (opponent-abs-x     (opponent-abs-x current-state))
+           (boosting           (im-boosting current-state))
+           (boosts             (my-boosts current-state))
+           (lizards            (my-lizards current-state))
+           (trucks             (my-trucks current-state))
+           (speed              (my-speed current-state))
+           (op-boosts          1)
+           (op-speed           (opponent-speed current-state))
+           (move-i-would-make  (determine-move game-map
+                                               my-pos
+                                               boosting
+                                               boosts
+                                               lizards
+                                               trucks
+                                               speed
+                                               my-abs-x
+                                               opponent-abs-x
+                                               op-pos
+                                               op-boosts
+                                               op-speed))
+           (ranked-speed-moves (rank-order-all-moves game-map
+                                                     my-pos
+                                                     boosts
+                                                     lizards
+                                                     trucks
+                                                     speed)))
+      (format t "========================================~%")
+      (format t "==============Round: ~a=============~%~%" round)
+      (format t "I would make:  ~a~%" move-i-would-make)
+      (format t "Op made:       ~a~%~%" opponent-move)
+      (format t
+              "How I rank speed moves:~% ~{~a~^~%~}~%"
+              ranked-speed-moves)
+      (format t "========================================~%"))))
+
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
