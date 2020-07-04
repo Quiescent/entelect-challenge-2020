@@ -119,7 +119,7 @@ MY-ABS-X position on the board."
                         1
                         opponent-speed))
     (t
-     (make-speed-move game-map my-pos boosts lizards trucks speed))))
+     (make-speed-move my-abs-x game-map my-pos boosts lizards trucks speed))))
 
 (defvar *ahead-of-cache* nil
     "A cache of obstacles ahead of certain points.
@@ -311,20 +311,20 @@ breaks ties on the X-POS and then finally on the SPEED."
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
 
-(defun make-speed-move (game-map my-pos boosts lizards trucks speed)
+(defun make-speed-move (game-map my-abs-x my-pos boosts lizards trucks speed)
   "Produce the best speed move to make on GAME-MAP.
 
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (rank-order-all-moves game-map my-pos boosts lizards trucks speed)
+    (-> (rank-order-all-moves my-abs-x game-map my-pos boosts lizards trucks speed)
       only-those-which-dont-slow
       caar
       last
       car)))
 
-(defun rank-order-all-moves (game-map my-pos boosts lizards trucks speed)
+(defun rank-order-all-moves (game-map my-abs-x my-pos boosts lizards trucks speed)
   "Produce all the moves from GAME-MAP ordered by best placement on the global map.
 
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
@@ -336,7 +336,15 @@ board."
       copy-seq
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
-      (stable-sort #'> :key (lambda (state) (nth 2 state))))))
+      (stable-sort #'> :key (lambda (state) (nth 2 state)))
+      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 trucks-2) state))
+                                         (global-score -1
+                                                       (+ my-abs-x (car pos-2))
+                                                       (car pos-2)
+                                                       speed-2
+                                                       boosts-2
+                                                       lizards-2
+                                                       trucks-2)))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
@@ -411,7 +419,7 @@ Fourth is my boosts left."
       (if (end-state current-pos game-map)
           (progn
             (setf shortest-path (min shortest-path (length path)))
-            (push (list path current-pos current-speed current-boosts)
+            (push (list path current-pos current-speed current-boosts current-lizards current-trucks)
                  found-paths))
           (iter
             (for move in (remove-impossible-moves current-boosts
@@ -872,6 +880,7 @@ after my move and the OPPONENT-POS after his/her move."
                                                op-boosts
                                                op-speed))
            (ranked-speed-moves (rank-order-all-moves game-map
+                                                     my-abs-x
                                                      my-pos
                                                      boosts
                                                      lizards
