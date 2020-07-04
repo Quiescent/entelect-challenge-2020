@@ -219,11 +219,11 @@ Score weights the TURNS-TO-END of the current map most highly and then
 breaks ties on the X-POS and then finally on the SPEED."
   (+ (if (/= turns-to-end-of-map -1) (* 10 turns-to-end-of-map) 0)
      (if (>= absolute-x 150) 100 0)
-     (min (* boosts 15) (- 150 absolute-x))
-     (min (* lizards 9) (- 150 absolute-x))
-     trucks
+     (/ (max 1 (min (* boosts 15) (- 150 absolute-x))) (max 1 (- 150 absolute-x)))
+     (/ (max 1 (min (* lizards 9) (- 150 absolute-x))) (max 1 (- 150 absolute-x)))
+     (/ trucks 10)
      x-pos
-     speed))
+     (* 10 speed)))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
