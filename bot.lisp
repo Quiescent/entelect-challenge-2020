@@ -136,8 +136,11 @@ Value is [muds boosts walls tweets lizards].")
                           op-speed
                           my-pos
                           my-boosts
+                          my-lizards
+                          my-trucks
                           my-speed
-                          opponent-abs-x)
+                          opponent-abs-x
+                          my-abs-x)
   "Place the truck in front of my opponents best move.
 
 Run minimax from my opponents perspective to find his best move.
@@ -150,13 +153,17 @@ The opponent is at the _absolute_ coordinate:
 (OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
   (bind ((op-move (make-opposed-move game-map
+                                     opponent-abs-x
                                      op-pos
                                      op-boosts
                                      op-lizards
                                      op-trucks
                                      op-speed
+                                     my-abs-x
                                      my-pos
                                      my-boosts
+                                     my-lizards
+                                     my-trucks
                                      my-speed))
          (*ahead-of-cache* (make-hash-table :test #'equal))
          ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
@@ -179,9 +186,11 @@ POS."
 (defconstant maximax-depth 3
   "The depth that we should search the game tree.")
 
-(defun make-opposed-move (game-map my-pos boosts
-                          lizards trucks speed
-                          op-pos op-boosts op-speed)
+(defun make-opposed-move (game-map my-abs-x my-pos
+                          boosts lizards trucks
+                          speed op-abs-x op-pos
+                          op-boosts op-lizards op-trucks
+                          op-speed)
   "Produce the best move on GAME-MAP as determined by a few rounds of maximax.
 
 The optimiser is run with my bot at MY-POS, with BOOSTS, LIZARDS and
@@ -189,23 +198,31 @@ TRUCKS remaining running at SPEED and the opponent running from OP-POS
 with OP-BOOSTS at OP-SPEED."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (caddr (make-opposed-move-iter game-map
+                                   my-abs-x
                                    my-pos
                                    boosts
                                    lizards
                                    trucks
                                    speed
+                                   op-abs-x
                                    op-pos
                                    op-boosts
+                                   op-lizards
+                                   op-trucks
                                    op-speed
                                    maximax-depth))))
 
-(defun maximax-score (turns-to-end x-pos speed)
+(defun global-score (turns-to-end-of-map absolute-x x-pos speed boosts lizards trucks)
   "Produce a score for a state in maximax.
 
 Score weights the TURNS-TO-END of the current map most highly and then
 breaks ties on the X-POS and then finally on the SPEED."
-  (+ (if (/= turns-to-end -1) (* 10000 turns-to-end) 0)
-     (* 100 x-pos)
+  (+ (if (/= turns-to-end-of-map -1) (* 10 turns-to-end-of-map) 0)
+     (if (>= absolute-x 150) 100 0)
+     (min (* boosts 15) (- 150 absolute-x))
+     (min (* lizards 9) (- 150 absolute-x))
+     trucks
+     x-pos
      speed))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
@@ -214,64 +231,76 @@ breaks ties on the X-POS and then finally on the SPEED."
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
   "All moves which will result in going straight without jumping.")
 
-(defun make-opposed-move-iter (game-map my-pos boosts lizards trucks speed
-                               op-pos op-boosts op-speed count)
+(defun make-opposed-move-iter (game-map my-abs-x my-pos boosts lizards trucks speed
+                               op-abs-x op-pos op-boosts op-lizards op-trucks op-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
   (iter
-    (for cell
-         in (iter
-              (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-makeable-moves))
-              (collecting
-               (bind (((:values my-pos-2 my-speed-2 my-boosts-2 my-lizards-2 my-trucks-2)
-                       (make-move my-move game-map my-pos speed boosts trucks speed)))
-                 (iter inner
-                   ;; Assume that the opponent always has powerups
-                   (for op-move in (remove-impossible-moves 1 1 1 op-pos all-makeable-moves))
-                   (bind (((:values op-pos-2 op-speed-2 op-boosts-2)
-                           (make-move op-move
-                                      game-map
-                                      op-pos
-                                      op-speed
-                                      op-boosts
-                                      1
-                                      1))
-                          (my-resolved-pos-2   (resolve-collisions my-pos
-                                                                   op-pos
-                                                                   my-pos-2
-                                                                   op-pos-2))
-                          (op-resolved-pos-2   (resolve-collisions op-pos
-                                                                   my-pos
-                                                                   op-pos-2
-                                                                   my-pos-2))
-                          (turns-to-end        (if (end-state my-resolved-pos-2 game-map)
-                                                   count
-                                                   -1))
-                          (op-turns-to-end     (if (end-state my-resolved-pos-2 game-map)
-                                                   count
-                                                   -1))
-                          ((my-score
-                            op-score
-                            _)                 (if (or (/= turns-to-end -1)
-                                                       (= count 1))
-                            (list (maximax-score turns-to-end
-                                                 (car my-resolved-pos-2)
-                                                 my-speed-2)
-                                  (maximax-score op-turns-to-end
-                                                 (car op-resolved-pos-2)
-                                                 op-speed-2)
-                                  nil)
-                            (make-opposed-move-iter game-map
-                                                    my-resolved-pos-2
-                                                    my-boosts-2
-                                                    my-lizards-2
-                                                    my-trucks-2
-                                                    my-speed-2
-                                                    op-resolved-pos-2
-                                                    op-boosts-2
-                                                    op-speed-2
-                                                    (1- count)))))
-                     (finding (list my-score op-score my-move)
-                              maximizing op-score)))))))
+    (with cells = (iter
+                    (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-makeable-moves))
+                    (collecting
+                     (bind (((:values my-pos-2 my-speed-2 my-boosts-2 my-lizards-2 my-trucks-2)
+                             (make-move my-move game-map my-pos speed boosts trucks speed)))
+                       (iter inner
+                         ;; Assume that the opponent always has powerups
+                         (for op-move in (remove-impossible-moves op-boosts op-lizards op-trucks op-pos all-makeable-moves))
+                         (bind (((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
+                                 (make-move op-move
+                                            game-map
+                                            op-pos
+                                            op-speed
+                                            op-boosts
+                                            1
+                                            1))
+                                (my-resolved-pos-2   (resolve-collisions my-pos
+                                                                         op-pos
+                                                                         my-pos-2
+                                                                         op-pos-2))
+                                (op-resolved-pos-2   (resolve-collisions op-pos
+                                                                         my-pos
+                                                                         op-pos-2
+                                                                         my-pos-2))
+                                (turns-to-end        (if (end-state my-resolved-pos-2 game-map) count -1))
+                                (op-turns-to-end     (if (end-state op-resolved-pos-2 game-map) count -1))
+                                (my-abs-x-2          (+ my-abs-x (- (car my-pos-2) (car my-pos))))
+                                (op-abs-x-2          (+ op-abs-x (- (car op-pos-2) (car op-pos))))
+                                ((my-score
+                                  op-score
+                                  _)
+                                 (if (or (/= turns-to-end -1)
+                                         (/= op-turns-to-end -1)
+                                         (= count 1))
+                                     (list (global-score turns-to-end
+                                                         my-abs-x-2
+                                                         (car my-resolved-pos-2)
+                                                         my-speed-2
+                                                         my-boosts-2
+                                                         my-lizards-2
+                                                         my-trucks-2)
+                                           (global-score op-turns-to-end
+                                                         op-abs-x-2
+                                                         (car op-resolved-pos-2)
+                                                         op-speed-2
+                                                         op-boosts-2
+                                                         op-lizards-2
+                                                         op-trucks-2)
+                                           nil)
+                                     (make-opposed-move-iter game-map
+                                                             my-abs-x-2
+                                                             my-resolved-pos-2
+                                                             my-boosts-2
+                                                             my-lizards-2
+                                                             my-trucks-2
+                                                             my-speed-2
+                                                             op-abs-x-2
+                                                             op-resolved-pos-2
+                                                             op-boosts-2
+                                                             op-lizards-2
+                                                             op-trucks-2
+                                                             op-speed-2
+                                                             (1- count)))))
+                           (finding (list my-score op-score my-move)
+                                    minimizing my-score)))))))
+    (for cell in cells)
     (finding cell maximizing (car cell))))
 
 (defun game-map-y-dim (game-map)
@@ -328,7 +357,7 @@ board."
   "Produce the states with the shortest paths to the end of the GAME-MAP."
   (only-shortest-path-length states))
 
-(defconstant window-to-consider-maximax 3
+(defconstant window-to-consider-maximax 15
   "The window around me that I should use to consider using maximax.")
 
 (defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
@@ -820,6 +849,8 @@ after my move and the OPPONENT-POS after his/her move."
   "Compare my decisions to the opponents for each round in FOLDER-PATH."
   (with-consecutive-states folder-path opponent-name opponent-player
     (declare (ignore opponent-move next-state))
+    (format t "========================================~%")
+    (format t "==============Round: ~a=============~%~%" round)
     (bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
            (game-map           (rows current-state))
            ((my-pos . op-pos)  (positions current-state))
@@ -850,8 +881,15 @@ after my move and the OPPONENT-POS after his/her move."
                                                      lizards
                                                      trucks
                                                      speed)))
-      (format t "========================================~%")
-      (format t "==============Round: ~a=============~%~%" round)
+      (format t "I'm making a ~a move.~%"
+              (cond
+                ((and (> trucks 0)
+                      (> op-speed 3)
+                      (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos)))
+                 'cyber)
+                ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos))
+                 'opposed)
+                (t 'speed)))
       (format t "I would make:  ~a~%"   move-i-would-make)
       (format t "Op made:       ~a~%~%" current-move)
       (format t
