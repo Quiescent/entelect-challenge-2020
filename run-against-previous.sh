@@ -14,6 +14,8 @@ SCRIPT_BACKUP_DIRECTORY=script_bin
 GIT_ROOT=$(git rev-parse --show-toplevel)
 CURRENT_VERSION=$(git rev-parse HEAD)
 
+source scripts/build_bots.sh
+
 function backup_scripts() {
     echo "> Creating backup directory..."
     mkdir -p $SCRIPT_BACKUP_DIRECTORY
@@ -29,40 +31,11 @@ function run_in_backup() {
     popd
 }
 
-function tracked_by_git() {
-    git ls-files --error-unmatch $1
-    echo $?
-}
-
-function build_bot_if_not_cached() {
-    BOT_DIRECTORY=$1
-    VERSION=$2
-
-    mkdir -p "$BOT_DIRECTORY"
-    cp bot.json "$BOT_DIRECTORY"
-    if [ ! -f "$BOT_DIRECTORY/bot" ]; then
-        git checkout "$VERSION"
-        make
-        cp bot "$BOT_DIRECTORY"
-    fi
-}
-
-function change_bot_name() {
-    sed -i "s/Quantum/$2/g" "$1/bot.json"
-}
-
 function run_matches() {
     # Remove random and nothing from the list of bots and run against
     # the last five bots.
     VERSIONS_TO_RUN=$(git tag | sort -n | tail -5)
-    pushd $GIT_ROOT
-    build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
-    for BOT_VERSION in $VERSIONS_TO_RUN; do
-        build_bot_if_not_cached "bots/$BOT_VERSION" "tags/$BOT_VERSION"
-        change_bot_name "bots/$BOT_VERSION" "$BOT_VERSION"
-    done
-    popd
-    git checkout "master"
+    build_bots $VERSIONS_TO_RUN
     python3 run-against-versions.py "$CURRENT_VERSION" $VERSIONS_TO_RUN
 }
 
