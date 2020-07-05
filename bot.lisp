@@ -223,7 +223,8 @@ breaks ties on the X-POS and then finally on the SPEED."
          (distance-at-speed (min distance-after (* speed (1+ lizards)))))
     (+ absolute-x
        distance-boosted
-       distance-at-speed)))
+       distance-at-speed
+       (if (= speed 3) -15 0))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
