@@ -601,11 +601,11 @@ breaks ties on the X-POS and then finally on the SPEED."
          (turns-at-speed-three    (/ distance-at-speed-three 3))
          (absolute-x-after        (+ absolute-x distance-boosted distance-at-speed-three))
          (distance-to-end-after   (- distance-to-end distance-boosted distance-at-speed-three))
-         ((muds-hit . _)          (muds-and-walls-hit-from-abs-x absolute-x-after))
+         ((muds-hit . _)          (muds-and-walls-hit-from-abs-x (floor absolute-x-after)))
          (average-speed           speed) ;; TODO: not sure how to incorporate muds hit...
          (turns-going-through-mud (/ distance-to-end-after average-speed)))
-    (/ (+ boosts turns-at-speed-three turns-going-through-mud)
-       worst-case-turns-to-end)))
+    (/ worst-case-turns-to-end
+       (+ boosts turns-at-speed-three turns-going-through-mud))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
