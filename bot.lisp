@@ -726,6 +726,7 @@ board."
                                                 (with current-lizards = lizards)
                                                 (with current-trucks  = trucks)
                                                 (for move in (reverse moves))
+                                                (for idx from 1)
                                                 (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks)
                                                         (make-move move
                                                                    game-map
@@ -739,13 +740,13 @@ board."
                                                         current-boosts  new-boosts
                                                         current-lizards new-lizards
                                                         current-trucks  new-trucks))
-                                                (summing (global-score -1
-                                                                       (+ my-abs-x (car current-pos))
-                                                                       (car current-pos)
-                                                                       current-speed
-                                                                       current-boosts
-                                                                       current-lizards
-                                                                       current-trucks)))))))))
+                                                (summing (* idx (global-score -1
+                                                                              (min 1500 (+ my-abs-x (car current-pos)))
+                                                                              (car current-pos)
+                                                                              current-speed
+                                                                              current-boosts
+                                                                              current-lizards
+                                                                              current-trucks))))))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
