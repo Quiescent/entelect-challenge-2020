@@ -716,17 +716,36 @@ board."
     (-> (states-from game-map my-pos speed boosts lizards trucks)
       states-with-fewest-moves
       copy-seq
-      (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
-      (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
-      (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 trucks-2) state))
-                                         (global-score -1
-                                                       (+ my-abs-x (car pos-2))
-                                                       (car pos-2)
-                                                       speed-2
-                                                       boosts-2
-                                                       lizards-2
-                                                       trucks-2)))))))
+      ;; Idea: sum the intermediary scores, because the final score
+      ;; assumes that nothing will change.
+      (stable-sort #'> :key (lambda (state) (bind (((moves . _) state))
+                                              (iter
+                                                (with current-pos     = my-pos)
+                                                (with current-speed   = speed)
+                                                (with current-boosts  = boosts)
+                                                (with current-lizards = lizards)
+                                                (with current-trucks  = trucks)
+                                                (for move in (reverse moves))
+                                                (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks)
+                                                        (make-move move
+                                                                   game-map
+                                                                   current-pos
+                                                                   current-speed
+                                                                   current-boosts
+                                                                   current-lizards
+                                                                   current-trucks)))
+                                                  (setf current-pos     new-pos
+                                                        current-speed   new-speed
+                                                        current-boosts  new-boosts
+                                                        current-lizards new-lizards
+                                                        current-trucks  new-trucks))
+                                                (summing (global-score -1
+                                                                       (+ my-abs-x (car current-pos))
+                                                                       (car current-pos)
+                                                                       current-speed
+                                                                       current-boosts
+                                                                       current-lizards
+                                                                       current-trucks)))))))))
 
 (defun only-those-which-dont-slow (end-states)
   "Filter END-STATES to those which don't lose speed or lose least."
