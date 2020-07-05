@@ -361,13 +361,16 @@ board."
   "Produce the states with the shortest paths to the end of the GAME-MAP."
   (only-shortest-path-length states))
 
-(defconstant window-to-consider-maximax 15
-  "The window around me that I should use to consider using maximax.")
+(defconstant window-ahead-to-consider-maximax 15
+  "The window ahead me that I should use to consider using maximax.")
+
+(defconstant window-behind-to-consider-maximax 5
+  "The window behind me that I should use to consider using maximax.")
 
 (defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
-  (and (>= opponent-abs-x (- my-abs-x window-to-consider-maximax))
-       (<= opponent-abs-x (+ my-abs-x window-to-consider-maximax))
+  (and (>= opponent-abs-x (- my-abs-x window-behind-to-consider-maximax))
+       (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
        (>= opponent-y     (- my-y     1))
        (<= opponent-y     (+ my-y     1))))
 
