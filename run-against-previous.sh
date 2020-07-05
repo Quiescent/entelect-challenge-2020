@@ -14,7 +14,7 @@ SCRIPT_BACKUP_DIRECTORY=script_bin
 GIT_ROOT=$(git rev-parse --show-toplevel)
 CURRENT_VERSION=$(git rev-parse HEAD)
 
-source scripts/build_bots.sh
+source ./build_bots.sh
 
 function backup_scripts() {
     echo "> Creating backup directory..."
