@@ -222,8 +222,8 @@ breaks ties on the X-POS and then finally on the SPEED."
          (distance-after    (- distance-to-end distance-boosted))
          (distance-at-speed (min distance-after (* speed (1+ lizards)))))
     (+ absolute-x
-       (/ distance-boosted 2)
-       (/ distance-at-speed 2)
+       (/ distance-boosted 3)
+       (/ distance-at-speed 4)
        (if (= speed 3) -15 0))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
@@ -386,8 +386,12 @@ the starting state."
            ((:values pos-2 speed-2 boosts-2 lizards-2 trucks-2)
             (make-move move-2 game-map pos-1 speed-1 boosts-1 lizards-1 trucks-1)))
       (when (or (not (eq move-1 'USE_BOOST))
-                (and (eq speed-1 15)
-                     (eq speed-2 15)))
+                (or (eq speed 3)
+                    (eq boosts-1 boosts)
+                    (and (eq speed-1 15)
+                         (eq speed-2 15))))
+        ;; Bookmark: I need to start analysing from round: 51 in the .59 match
+        ;; Maybe when move-2 is boost I should filter it out if it boosts through mud
         (collecting (list (list move-2 move-1) pos-2 speed-2 boosts-2 lizards-2 trucks-2))))))
 
 ;; Speeds:
