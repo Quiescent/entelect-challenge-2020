@@ -31,7 +31,7 @@ function change_bot_name() {
 }
 
 function build_bots() {
-    VERSIONS_TO_BUILD="$1"
+    VERSIONS_TO_BUILD="$*"
     pushd $GIT_ROOT
     build_bot_if_not_cached "bots/$CURRENT_VERSION" $CURRENT_VERSION
     for BOT_VERSION in $VERSIONS_TO_BUILD; do
@@ -44,5 +44,5 @@ function build_bots() {
 
 if [ "$1" == "main" ]; then
     VERSIONS_TO_BUILD=$(git tag | sort -n)
-    build_bots $VERSIONS_TO_BUILD
+    build_bots "$VERSIONS_TO_BUILD"
 fi
