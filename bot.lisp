@@ -356,7 +356,10 @@ board."
 Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
 the starting state."
   (iter
-    (for (path . _) in end-states)
+    (for (path . rest) in end-states)
+    (when (< (length path) 2)
+      (collecting (cons path rest))
+      (next-iteration))
     (for move-1 = (nth (- (length path) 1) path))
     (for move-2 = (nth (- (length path) 2) path))
     (bind (((:values pos-1 speed-1 boosts-1 lizards-1 trucks-1)
