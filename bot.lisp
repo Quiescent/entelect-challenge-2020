@@ -314,7 +314,6 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (rank-order-all-moves my-abs-x game-map my-pos boosts lizards trucks speed)
-      only-those-which-dont-slow
       caar
       last
       car)))
@@ -327,39 +326,16 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-from game-map my-pos speed boosts lizards trucks)
-      states-with-fewest-moves
+      (trim-to-two-moves game-map my-pos boosts lizards trucks speed)
       copy-seq
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((moves . _) state)
-                                              ((:values new-pos new-speed new-boosts new-lizards)
-                                               (make-move (car (last moves))
-                                                          game-map
-                                                          my-pos
-                                                          speed
-                                                          boosts
-                                                          lizards
-                                                          trucks)))
-                                         (global-score (+ my-abs-x (car new-pos))
-                                                       new-speed
-                                                       new-boosts
-                                                       new-lizards)))))))
-
-(defun only-those-which-dont-slow (end-states)
-  "Filter END-STATES to those which don't lose speed or lose least."
-  (bind ((fastest
-          (iter
-            (for state in end-states)
-            (maximizing (nth 2 state)))))
-    (iter
-      (for state in end-states)
-      (when (>= (nth 2 state) fastest)
-        (collecting state)))))
-
-(defun states-with-fewest-moves (states)
-  "Produce the states with the shortest paths to the end of the GAME-MAP."
-  (only-shortest-path-length states))
+      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _) state))
+                                         (global-score (+ my-abs-x (car pos-2))
+                                                       speed-2
+                                                       boosts-2
+                                                       lizards-2)))))))
 
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
@@ -374,10 +350,20 @@ board."
        (>= opponent-y     (- my-y     1))
        (<= opponent-y     (+ my-y     1))))
 
-(defun only-shortest-path-length (end-states)
-  "Produce only those END-STATES which took the shortest number of steps."
-  (bind ((shortest-length (iter (for (path . _) in end-states) (minimize (length path)))))
-    (remove-if (lambda (end-state) (> (length (car end-state)) shortest-length)) end-states)))
+(defun trim-to-two-moves (end-states game-map pos boosts lizards trucks speed)
+  "Trim all end states to two moves deep.
+
+Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
+the starting state."
+  (iter
+    (for (path . _) in end-states)
+    (for move-1 = (nth (- (length path) 1) path))
+    (for move-2 = (nth (- (length path) 2) path))
+    (bind (((:values pos-1 speed-1 boosts-1 lizards-1 trucks-1)
+            (make-move move-1 game-map pos speed boosts lizards trucks))
+           ((:values pos-2 speed-2 boosts-2 lizards-2 trucks-2)
+            (make-move move-2 game-map pos-1 speed-1 boosts-1 lizards-1 trucks-1)))
+      (collecting (list (list move-2 move-1) pos-2 speed-2 boosts-2 lizards-2 trucks-2)))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
@@ -407,7 +393,6 @@ Second is my current position.
 Third is my speed.
 Fourth is my boosts left."
   (iter
-    (with shortest-path = most-positive-fixnum)
     (with counter = 0)
     (with paths-to-explore = (list (list nil my-pos speed boosts lizards trucks)))
     (with explored = (make-hash-table :test #'equal))
@@ -417,11 +402,10 @@ Fourth is my boosts left."
     (bind (((path current-pos current-speed current-boosts current-lizards current-trucks)
             (pop paths-to-explore)))
       (when (or (gethash path explored)
-                (> (length path) shortest-path))
+                (> (length path) 3))
         (next-iteration))
       (if (end-state current-pos game-map)
           (progn
-            (setf shortest-path (min shortest-path (length path)))
             (push (list path current-pos current-speed current-boosts current-lizards current-trucks)
                  found-paths))
           (iter
