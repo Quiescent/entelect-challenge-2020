@@ -593,13 +593,19 @@ Uses previous games from my bot and should be updated regularly as my
 
 Score weights the TURNS-TO-END of the current map most highly and then
 breaks ties on the X-POS and then finally on the SPEED."
-  (+ (if (/= turns-to-end-of-map -1) (* 10 turns-to-end-of-map) 0)
-     (if (>= absolute-x 150) 100 0)
-     (/ (max 1 (min (* boosts 15) (- 150 absolute-x))) (max 1 (- 150 absolute-x)))
-     (/ (max 1 (min (* lizards 9) (- 150 absolute-x))) (max 1 (- 150 absolute-x)))
-     (/ trucks 10)
-     x-pos
-     (* 10 speed)))
+  (bind (((_ . walls-hit)         (muds-and-walls-hit-from-abs-x absolute-x))
+         (distance-to-end         (- 1500 absolute-x))
+         (worst-case-turns-to-end (/ distance-to-end 3))
+         (distance-boosted        (min (* 15 boosts) distance-to-end))
+         (distance-at-speed-three (min (- distance-to-end distance-boosted) (* 3 walls-hit)))
+         (turns-at-speed-three    (/ distance-at-speed-three 3))
+         (absolute-x-after        (+ absolute-x distance-boosted distance-at-speed-three))
+         (distance-to-end-after   (- distance-to-end distance-boosted distance-at-speed-three))
+         ((muds-hit . _)          (muds-and-walls-hit-from-abs-x absolute-x-after))
+         (average-speed           speed) ;; TODO: not sure how to incorporate muds hit...
+         (turns-going-through-mud (/ distance-to-end-after average-speed)))
+    (/ (+ boosts turns-at-speed-three turns-going-through-mud)
+       worst-case-turns-to-end)))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
