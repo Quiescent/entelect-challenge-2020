@@ -327,6 +327,7 @@ board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-from game-map my-pos speed boosts lizards trucks)
       (trim-to-two-moves game-map my-pos boosts lizards trucks speed)
+      (boosting-results-in-two-rounds-at-15 game-map my-pos boosts lizards trucks speed)
       copy-seq
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
@@ -367,6 +368,27 @@ the starting state."
            ((:values pos-2 speed-2 boosts-2 lizards-2 trucks-2)
             (make-move move-2 game-map pos-1 speed-1 boosts-1 lizards-1 trucks-1)))
       (collecting (list (list move-2 move-1) pos-2 speed-2 boosts-2 lizards-2 trucks-2)))))
+
+(defun boosting-results-in-two-rounds-at-15 (end-states game-map pos boosts lizards trucks speed)
+  "Only consider boost moves when we don't boost through mud.
+
+Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
+the starting state."
+  (iter
+    (for (path . rest) in end-states)
+    (when (< (length path) 2)
+      (collecting (cons path rest))
+      (next-iteration))
+    (for move-1 = (nth (- (length path) 1) path))
+    (for move-2 = (nth (- (length path) 2) path))
+    (bind (((:values pos-1 speed-1 boosts-1 lizards-1 trucks-1)
+            (make-move move-1 game-map pos speed boosts lizards trucks))
+           ((:values pos-2 speed-2 boosts-2 lizards-2 trucks-2)
+            (make-move move-2 game-map pos-1 speed-1 boosts-1 lizards-1 trucks-1)))
+      (when (or (not (eq move-1 'USE_BOOST))
+                (and (eq speed-1 15)
+                     (eq speed-2 15)))
+        (collecting (list (list move-2 move-1) pos-2 speed-2 boosts-2 lizards-2 trucks-2))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
