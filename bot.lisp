@@ -417,6 +417,9 @@ Fourth is my boosts left."
                                                   current-trucks
                                                   current-pos
                                                   all-makeable-moves))
+            (when (and (eq move 'use_boost)
+                       (eq current-speed 9))
+              (next-iteration))
             (when (and (member move all-straight-moves)
                        (truck-infront-of current-pos game-map))
               (next-iteration))
