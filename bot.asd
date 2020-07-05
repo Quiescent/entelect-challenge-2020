@@ -15,7 +15,6 @@
   :long-description "Bot for the Entellect Challenge"
   :depends-on (:yason :cl-ppcre :iterate :metabang-bind :anaphora :arrow-macros)
   :components ((:file "bot" :depends-on ("state" "package"))
-               (:file "average-mud-hit" :depends-on ("bot"))
                (:file "state" :depends-on ("parsing" "package"))
                (:file "parsing" :depends-on ("package"))
                (:file "package")))
