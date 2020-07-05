@@ -19,6 +19,7 @@ source ./build_bots.sh
 function backup_scripts() {
     echo "> Creating backup directory..."
     mkdir -p $SCRIPT_BACKUP_DIRECTORY
+    cp build_bots.sh script_bin/
     cp run-against-previous.sh script_bin/
     cp run-against-versions.py script_bin/
 }
