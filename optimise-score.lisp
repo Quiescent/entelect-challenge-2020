@@ -9,6 +9,12 @@
 (defvar population-size 1000
   "The number of solutions in the population.")
 
+(defvar *directory-of-bot-to-optimise* "home/edward/wip/entelect-challenge-2020/bots/to-optimise"
+  "The directory of the bot being optimised.")
+
+(defvar *game-runner-dir* "/home/edward/wip/EntelectChallenge-2020-Overdrive/game-runner"
+  "The directory where the game runner lives.")
+
 ;; NOTE: You must setup the bots to run as do-nothing and to-optimise!!!
 (defun optimise-score ()
   "Use differential evolution to find good score weights for the bot."
@@ -16,6 +22,14 @@
          (scores      (mapcar #'fitness individuals))
          (zipped      (mapcar #'cons scores individuals))
          (sorted      (sort zipped #'> :key #'car)))
+    (with-open-file (f (make-pathname :directory
+                                      (list :absolute
+                                            *directory-of-bot-to-optimise*)
+                                      :name "results")
+                       :if-exists :supersede
+                       :if-does-not-exist :create
+                       :direction :output)
+      (format f "'~A" sorted))
     (car sorted)))
 
 (defun seed-population ()
@@ -26,9 +40,6 @@
                       (/ (random 1000) 1000)
                       (/ (random 1000) 1000)
                       (/ (random 1000) 1000)))))
-
-(defvar *game-runner-dir* "/home/edward/wip/EntelectChallenge-2020-Overdrive/game-runner"
-  "The directory where the game runner lives.")
 
 (defun fitness (optimisation-vector)
   "Produce a measure of the fitness of OPTIMISATION-VECTOR."
@@ -57,9 +68,6 @@
                                                                                           :type :wild)))))
                                                     :name :wild
                                                     :type :wild))))))))
-
-(defvar *directory-of-bot-to-optimise* "home/edward/wip/entelect-challenge-2020/bots/to-optimise"
-  "The directory of the bot being optimised.")
 
 (defun write-config (optimisation-vector)
   "Write OPTIMISATION-VECTOR to the config file for the bot being optimised."
