@@ -37,7 +37,7 @@
     (uiop:chdir *game-runner-dir*)
     (iter
       (for i from 0 below 5)
-      (format t "[~a/5]: ~a~%" i optimisation-vector)
+      (format t "[~a/5]: ~a~%" (1+ i) optimisation-vector)
       (uiop:delete-directory-tree (make-pathname :directory
                                                  (list :absolute
                                                        *game-runner-dir*
