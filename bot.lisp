@@ -212,19 +212,15 @@ with OP-BOOSTS at OP-SPEED."
                                    op-speed
                                    maximax-depth))))
 
-(defun global-score (absolute-x speed boosts lizards)
-  "Produce a score for a state in maximax.
-
-Score weights the TURNS-TO-END of the current map most highly and then
-breaks ties on the X-POS and then finally on the SPEED."
-  (bind ((distance-to-end   (- 1500 absolute-x))
-         (distance-boosted  (min distance-to-end (* 15 boosts)))
-         (distance-after    (- distance-to-end distance-boosted))
-         (distance-at-speed (min distance-after (* speed (1+ lizards)))))
-    (+ absolute-x
-       (/ distance-boosted 3)
-       (/ distance-at-speed 4)
-       (if (= speed 3) -15 0))))
+(progn
+  (with-open-file (f "./score-config")
+    (bind (((x-score speed-score boosts-score lizards-score) (eval (read f))))
+      (setf (fdefinition 'global-score)
+            #'(lambda (absolute-x speed boosts lizards)
+                (+ (* x-score       absolute-x)
+                   (* speed-score   speed)
+                   (* boosts-score  boosts)
+                   (* lizards-score lizards)))))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
