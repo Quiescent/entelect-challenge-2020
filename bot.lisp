@@ -1,8 +1,12 @@
 (in-package :bot)
 
+(defvar *heuristic-coeficients* '(1 1 1 1)
+  "The coefficients to use when computing the score of a position.")
+
 (defun main ()
   (iter
     (while t)
+    (with-open-file (f "./score-config") (setf *heuristic-coeficients* (eval (read f))))
     (for round-number = (read-line))
     (for move = (move-for-round round-number))
     (format t "C;~a;~a~%" round-number (move-to-string move))))
@@ -212,15 +216,13 @@ with OP-BOOSTS at OP-SPEED."
                                    op-speed
                                    maximax-depth))))
 
-(progn
-  (with-open-file (f "./score-config")
-    (bind (((x-score speed-score boosts-score lizards-score) (eval (read f))))
-      (setf (fdefinition 'global-score)
-            #'(lambda (absolute-x speed boosts lizards)
-                (+ (* x-score       absolute-x)
-                   (* speed-score   speed)
-                   (* boosts-score  boosts)
-                   (* lizards-score lizards)))))))
+(defun global-score (absolute-x speed boosts lizards)
+  "Score the position described by ABSOLUTE-X SPEED BOOSTS LIZARDS."
+  (bind (((x-score speed-score boosts-score lizards-score) *heuristic-coeficients*))
+    (+ (* x-score       absolute-x)
+       (* speed-score   speed)
+       (* boosts-score  boosts)
+       (* lizards-score lizards))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
   "All the moves which I can make.")
