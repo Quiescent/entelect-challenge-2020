@@ -23,6 +23,7 @@ function build_bot_if_not_cached() {
         git checkout "$VERSION"
         make
         cp bot "$BOT_DIRECTORY"
+        cp -f score-config "$BOT_DIRECTORY"
     fi
 }
 
