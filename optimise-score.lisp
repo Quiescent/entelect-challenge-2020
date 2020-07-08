@@ -21,8 +21,13 @@
 ;; NOTE: You must setup the bots to run as do-nothing and to-optimise!!!
 (defun optimise ()
   "Use differential evolution to find good score weights for the bot."
+  (progn
+    (seed-results-file)
+    (iter-optimise)))
+
+(defun iter-optimise ()
+  "Iteratively improve on the current generation."
   (iter
-    (initially (seed-results-file))
     (for i from 0 below generations)
     (evolve-one-generation)))
 
@@ -31,20 +36,22 @@
   (bind ((individuals (seed-population))
          (scores      (mapcar #'fitness individuals))
          (zipped      (mapcar #'cons scores individuals)))
-    (write-generation zipped)))
+    (write-generation (apply #'vector zipped))))
 
-(defconstant f-coefficient 0.8
+(defconstant f-coefficient (/ 8 10)
   "Controls how much b and c contribute to the new coefficient.")
 
-(defconstant cr-coefficient 0.9
+(defconstant cr-coefficient (/ 9 10)
   "The chance that we cross-over at a given value.")
 
 (defun evolve-one-generation ()
   "Use the current results file to evolve a new generation and write the new file there."
   (bind ((current-generation (read-current-generation))
          (population-size    (length current-generation)))
+    (format t "Working on a new generation~%")
     (iter
       (for i-idx from 0 below population-size)
+      (format t "==========[~a/~a]==========~%" i-idx population-size)
       (for (current-score . i-vector) = (aref current-generation i-idx))
       (for a-idx = (iter
                      (for result = (random population-size))
@@ -67,11 +74,11 @@
       (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
       (for new-score  = (fitness new-vector))
       (when (< new-score current-score)
-        (setf (aref current-generation i-idx) new-vector)))
+        (setf (aref current-generation i-idx) (cons new-score new-vector))))
     (write-generation current-generation)))
 
 (defun write-generation (generation)
-  "Write GENERATION to the results file."
+  "Write the vector GENERATION to the results file."
   (with-open-file (f (make-pathname :directory
                                     (list :absolute
                                           *directory-of-bot-to-optimise*)
@@ -79,7 +86,7 @@
                      :if-exists :supersede
                      :if-does-not-exist :create
                      :direction :output)
-    (format f "'~A" (apply #'vector generation))))
+    (format f "'~A" generation)))
 
 (defun cross-over (i-vector a-vector b-vector c-vector)
   "Produce the result of crossing I-VECTOR with A-VECTOR B-VECTOR and C-VECTOR."
