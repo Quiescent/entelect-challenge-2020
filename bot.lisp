@@ -453,6 +453,8 @@ Seventh is my damage."
             (pop paths-to-explore)))
       (when (or (gethash path explored)
                 (> (length path) 3))
+        (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage)
+                 found-paths)
         (next-iteration))
       (if (end-state current-pos game-map)
           (progn
@@ -664,7 +666,7 @@ Produce the new new position, etc. as values."
          (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
          (truck-x          (hit-a-truck game-map x new-x new-y))
          (new-pos          (cons (if truck-x (1- truck-x) new-x) new-y))
-         (new-damage       (+ damage muds-hit (* 2 walls-hit) (if truck-x 2 0)))
+         (new-damage       (if (eq move 'fix) (max 0 (- damage 2)) (+ damage muds-hit (* 2 walls-hit) (if truck-x 2 0))))
          (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit (min new-speed (maximum-speed damage))))))
     (values new-pos final-speed new-boosts new-lizards new-trucks new-damage)))
 
