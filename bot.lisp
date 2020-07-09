@@ -658,7 +658,7 @@ Produce the new new position, etc. as values."
          (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
          (truck-x          (hit-a-truck game-map x new-x new-y))
          (new-pos          (cons (if truck-x (1- truck-x) new-x) new-y))
-         (new-damage       (+ damage muds-hit walls-hit))
+         (new-damage       (+ damage muds-hit (* 2 walls-hit) (if truck-x 2 0)))
          (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit new-speed))))
     (values new-pos final-speed new-boosts new-lizards new-trucks new-damage)))
 
