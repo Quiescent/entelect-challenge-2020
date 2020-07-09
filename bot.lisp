@@ -573,9 +573,11 @@ When going at SPEED from X, Y on GAME-MAP."
     "Produce the maximum speed that your car can go at when at DAMAGE level."
     (case damage
       (0 15)
-      (1 8)
-      (2 6)
-      (3 3)
+      (1 9)
+      (2 8)
+      (3 5)
+      (4 6)
+      (5 3)
       (t 0)))
 
   (defun increase-speed (speed damage)
