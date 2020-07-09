@@ -9,7 +9,7 @@
 
 (define-poclo player (id (map-position "position" map-position) 
                          (player-speed "speed" ()) state powerups 
-                         boosting boost-counter)
+                         boosting boost-counter damage)
   camel-case)
 
 (define-poclo map-position (x y) camel-case)
