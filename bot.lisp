@@ -350,7 +350,7 @@ board."
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _) state))
+      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _ _) state))
                                          (global-score (+ my-abs-x (car pos-2))
                                                        speed-2
                                                        boosts-2
