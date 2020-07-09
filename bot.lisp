@@ -609,7 +609,7 @@ Limit the maximum speed by the amount of damage taken."
   `(case ,move
      (accelerate (increase-speed ,speed ,damage))
      (decelerate (decrease-speed ,speed))
-     (use_boost  (if (/= 0 ,damage) (maximum-speed ,damage) 15))
+     (use_boost  15)
      (otherwise  ,speed)))
 
 (defmacro new-x (x move speed)
@@ -659,7 +659,7 @@ Produce the new new position, etc. as values."
          (truck-x          (hit-a-truck game-map x new-x new-y))
          (new-pos          (cons (if truck-x (1- truck-x) new-x) new-y))
          (new-damage       (+ damage muds-hit (* 2 walls-hit) (if truck-x 2 0)))
-         (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit new-speed))))
+         (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit (min new-speed (maximum-speed damage))))))
     (values new-pos final-speed new-boosts new-lizards new-trucks new-damage)))
 
 (defun hit-a-truck (game-map start-x end-x new-y)
