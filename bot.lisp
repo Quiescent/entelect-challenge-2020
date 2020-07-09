@@ -569,15 +569,27 @@ When going at SPEED from X, Y on GAME-MAP."
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
-  (defun increase-speed (speed)
-    "Produce the speed which is one faster than SPEED."
-    (case speed
-      (0 3)
-      (3 6)
-      (5 6)
-      (6 8)
-      (8 9)
-      (t speed)))
+  (defun maximum-speed (damage)
+    "Produce the maximum speed that your car can go at when at DAMAGE level."
+    (case damage
+      (0 15)
+      (1 8)
+      (2 6)
+      (3 3)
+      (t 0)))
+
+  (defun increase-speed (speed damage)
+    "Produce the speed which is one faster than SPEED.
+
+Limit the maximum speed by DAMAGE."
+    (min (case speed
+           (0 3)
+           (3 6)
+           (5 6)
+           (6 8)
+           (8 9)
+           (t speed))
+         (maximum-speed damage)))
 
   (defun decrease-speed (speed)
     "Produce the speed which is one slower than SPEED."
@@ -590,12 +602,14 @@ When going at SPEED from X, Y on GAME-MAP."
       (15 9)
       (t speed))))
 
-(defmacro new-speed (move speed)
-  "Produce the speed which MOVE will change SPEED to."
+(defmacro new-speed (move speed damage)
+  "Produce the speed which MOVE will change SPEED to.
+
+Limit the maximum speed by the amount of damage taken."
   `(case ,move
-     (accelerate (increase-speed ,speed))
+     (accelerate (increase-speed ,speed ,damage))
      (decelerate (decrease-speed ,speed))
-     (use_boost  15)
+     (use_boost  (if (/= 0 ,damage) (maximum-speed ,damage) 15))
      (otherwise  ,speed)))
 
 (defmacro new-x (x move speed)
@@ -633,7 +647,7 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (bind ((new-speed        (new-speed move speed))
+  (bind ((new-speed        (new-speed move speed damage))
          ((x . y)          position)
          (new-x            (new-x x move new-speed))
          (new-y            (new-y y move))
@@ -644,8 +658,9 @@ Produce the new new position, etc. as values."
          (new-trucks       (accumulating-powerups trucks  move tweet  new-speed game-map position))
          (truck-x          (hit-a-truck game-map x new-x new-y))
          (new-pos          (cons (if truck-x (1- truck-x) new-x) new-y))
+         (new-damage       (+ damage muds-hit walls-hit))
          (final-speed      (if (or (> walls-hit 0) truck-x) 3 (decrease-speed-by muds-hit new-speed))))
-    (values new-pos final-speed new-boosts new-lizards new-trucks damage)))
+    (values new-pos final-speed new-boosts new-lizards new-trucks new-damage)))
 
 (defun hit-a-truck (game-map start-x end-x new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
@@ -946,7 +961,7 @@ after my move and the OPPONENT-POS after his/her move."
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
     (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-           ((:values new-relative-pos new-speed new-boosts new-damage)
+           ((:values new-relative-pos new-speed new-boosts new-lizards new-trucks new-damage)
             (make-move current-move
                        (rows current-state)
                        (car (positions current-state))
@@ -979,11 +994,15 @@ after my move and the OPPONENT-POS after his/her move."
            (initial    (list (my-abs-pos current-state)
                              (my-speed current-state)
                              (my-boosts current-state)
+                             (my-lizards current-state)
+                             (my-trucks current-state)
                              (my-damage current-state)))
-           (computed   (list resolved-pos new-speed new-boosts new-damage))
+           (computed   (list resolved-pos new-speed new-boosts new-lizards new-trucks new-damage))
            (actual     (list (my-abs-pos next-state)
                              (my-speed next-state)
                              (my-boosts next-state)
+                             (my-lizards next-state)
+                             (my-trucks next-state)
                              (my-damage next-state))))
       (when (not (equal computed actual))
         (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
