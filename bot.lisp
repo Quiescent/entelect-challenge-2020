@@ -533,8 +533,8 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                                (down  (car ,pos))
                                (ahead (1+ (car ,pos)))))))
          (adj-y     `(ecase ,direction
-                       (up    (1- (cdr ,pos)))
-                       (down  (1+ (cdr ,pos)))
+                       (up    (if (= 0 (cdr ,pos)) (cdr ,pos) (1- (cdr ,pos))))
+                       (down  (if (= 3 (cdr ,pos)) (cdr ,pos) (1+ (cdr ,pos))))
                        (ahead (cdr ,pos)))))
     `(aif (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
           (aref it ,index)
