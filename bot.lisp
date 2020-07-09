@@ -524,10 +524,12 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                        (otherwise  'ahead)))
          (adj-x     `(if (eq ,move 'use_lizard)
                          (+ ,speed (car ,pos))
-                         (ecase ,direction
-                           (up    (car ,pos))
-                           (down  (car ,pos))
-                           (ahead (1+ (car ,pos))))))
+                         (if (eq ,move 'fix)
+                             (car ,pos)
+                             (ecase ,direction
+                               (up    (car ,pos))
+                               (down  (car ,pos))
+                               (ahead (1+ (car ,pos)))))))
          (adj-y     `(ecase ,direction
                        (up    (1- (cdr ,pos)))
                        (down  (1+ (cdr ,pos)))
@@ -619,6 +621,7 @@ Limit the maximum speed by the amount of damage taken."
   `(case ,move
      (turn_left  (move-car up    ,speed ,x))
      (turn_right (move-car down  ,speed ,x))
+     (fix        ,x)
      (otherwise  (move-car ahead ,speed ,x))))
 
 (defmacro new-y (y move)
@@ -639,9 +642,10 @@ Limit the maximum speed by the amount of damage taken."
 
 Use the state transitions which occur when MOVE is made, finding
 powerups of TYPE on the GAME-MAP starting from POSITION."
-  `(+ ,count-name
-      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
-      (ahead-of ,move ,type ,speed ,game-map ,position)))
+  `(if (eq ,move 'fix) ,count-name
+       (+ ,count-name
+          (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
+          (ahead-of ,move ,type ,speed ,game-map ,position))))
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
