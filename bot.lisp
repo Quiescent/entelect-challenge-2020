@@ -224,7 +224,7 @@ with OP-BOOSTS at OP-SPEED."
        (* boosts-score  boosts)
        (* lizards-score lizards))))
 
-(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard)
+(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
   "All the moves which I can make.")
 
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
