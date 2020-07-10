@@ -524,7 +524,8 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (wall   2)
                       (tweet  3)
                       (lizard 4)))
-         (adj-speed `(if (eq ,move 'use_lizard)
+         (adj-speed `(if (or (eq ,move 'use_lizard)
+                             (eq ,move 'fix))
                          0
                          (1- ,speed)))
          (direction `(case ,move
@@ -681,7 +682,8 @@ Produce the new new position, etc. as values."
          (new-damage       (min 6 (max 0 (+ (if (eq move 'fix) -2 0)
                                             damage
                                             muds-hit
-                                            (* 2 walls-hit) (if truck-x 2 0)))))
+                                            (* 2 walls-hit)
+                                            (if truck-x 2 0)))))
          (final-speed      (min (maximum-speed new-damage)
                                 (if (or (> walls-hit 0) truck-x)
                                     3
