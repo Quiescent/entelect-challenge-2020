@@ -586,8 +586,8 @@ When going at SPEED from X, Y on GAME-MAP."
       (0 15)
       (1 9)
       (2 8)
-      (3 5)
-      (4 6)
+      (3 6)
+      (4 5)
       (5 3)
       (t 0)))
 
