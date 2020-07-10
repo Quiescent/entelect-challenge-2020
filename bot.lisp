@@ -625,20 +625,26 @@ Limit the maximum speed by the amount of damage taken."
      (use_boost  15)
      (otherwise  ,speed)))
 
-(defmacro new-x (x move speed)
+(defmacro new-x (x move speed damage)
   "Produce the new value of X when MOVE is made at SPEED."
-  `(case ,move
-     (turn_left  (move-car up    ,speed ,x))
-     (turn_right (move-car down  ,speed ,x))
-     (fix        ,x)
-     (otherwise  (move-car ahead ,speed ,x))))
+  `(if (or (= 0 (maximum-speed ,damage))
+           (= 0 ,speed))
+       ,x
+       (case ,move
+         (turn_left  (move-car up    ,speed ,x))
+         (turn_right (move-car down  ,speed ,x))
+         (fix        ,x)
+         (otherwise  (move-car ahead ,speed ,x)))))
 
-(defmacro new-y (y move)
+(defmacro new-y (y move speed damage)
   "Produce the new value of Y when MOVE is made."
-  `(case ,move
-     (turn_left  (move-lat up    ,y))
-     (turn_right (move-lat down  ,y))
-     (otherwise  (move-lat ahead ,y))))
+  `(if (or (= 0 (maximum-speed ,damage))
+           (= 0 ,speed))
+       ,y
+       (case ,move
+         (turn_left  (move-lat up    ,y))
+         (turn_right (move-lat down  ,y))
+         (otherwise  (move-lat ahead ,y)))))
 
 (defun manual-decelerate (speed)
   "Decelerate from SPEED as an action."
@@ -651,10 +657,9 @@ Limit the maximum speed by the amount of damage taken."
 
 Use the state transitions which occur when MOVE is made, finding
 powerups of TYPE on the GAME-MAP starting from POSITION."
-  `(if (eq ,move 'fix) ,count-name
-       (+ ,count-name
-          (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
-          (ahead-of ,move ,type ,speed ,game-map ,position))))
+  `(+ ,count-name
+      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
+      (ahead-of ,move ,type ,speed ,game-map ,position)))
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
@@ -664,8 +669,8 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
 Produce the new new position, etc. as values."
   (bind ((new-speed        (new-speed move speed damage))
          ((x . y)          position)
-         (new-x            (new-x x move new-speed))
-         (new-y            (new-y y move))
+         (new-x            (new-x x move new-speed damage))
+         (new-y            (new-y y move new-speed damage))
          (muds-hit         (ahead-of                      move mud    new-speed game-map position))
          (walls-hit        (ahead-of                      move wall   new-speed game-map position))
          (new-boosts       (accumulating-powerups boosts  move boost  new-speed game-map position))
