@@ -347,6 +347,7 @@ board."
       (remove-fixing-at-full-health damage)
       (trim-to-two-moves game-map my-pos boosts lizards trucks speed damage)
       (boosting-results-in-two-rounds-at-15 game-map my-pos boosts lizards trucks speed damage)
+      (removing-no-net-change game-map my-pos boosts lizards trucks speed damage)
       copy-seq
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
@@ -356,6 +357,19 @@ board."
                                                        speed-2
                                                        boosts-2
                                                        lizards-2)))))))
+
+(defun removing-no-net-change (end-states game-map pos boosts lizards trucks speed damage)
+  "Remove END-STATES which didn't have a net change after the first move was made."
+  (remove-if (lambda (end-state)
+               (bind ((first-move (-> (car end-state) last car))
+                      ((:values pos-1 speed-1 boosts-1 lizards-1 trucks-1 damage-1)
+                       (make-move first-move game-map pos speed boosts lizards trucks damage)))
+                 (declare (ignore boosts-1 lizards-1))
+                 (and (equal pos     pos-1)
+                      (eq    speed   speed-1)
+                      (eq    trucks  trucks-1)
+                      (eq    damage  damage-1))))
+             end-states))
 
 (defun remove-fixing-at-full-health (end-states damage)
   "Remove paths beginning 'FIX in END-STATES if I have zero DAMAGE."
