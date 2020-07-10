@@ -344,6 +344,7 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-from game-map my-pos speed boosts lizards trucks damage)
+      (remove-fixing-at-full-health damage)
       (trim-to-two-moves game-map my-pos boosts lizards trucks speed damage)
       (boosting-results-in-two-rounds-at-15 game-map my-pos boosts lizards trucks speed damage)
       copy-seq
@@ -355,6 +356,12 @@ board."
                                                        speed-2
                                                        boosts-2
                                                        lizards-2)))))))
+
+(defun remove-fixing-at-full-health (end-states damage)
+  "Remove paths beginning 'FIX in END-STATES if I have zero DAMAGE."
+  (if (= damage 0)
+      (remove-if (lambda (end-state) (eq 'fix (-> (car end-state) last car))) end-states)
+      end-states))
 
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
