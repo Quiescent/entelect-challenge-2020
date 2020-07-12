@@ -232,13 +232,14 @@ with OP-BOOSTS at OP-SPEED."
                                    op-damage
                                    maximax-depth))))
 
-(defun global-score (absolute-x speed boosts lizards)
+(defun global-score (absolute-x speed boosts lizards damage)
   "Score the position described by ABSOLUTE-X SPEED BOOSTS LIZARDS."
-  (bind (((x-score speed-score boosts-score lizards-score) *heuristic-coeficients*))
+  (bind (((x-score speed-score boosts-score lizards-score damage-score) *heuristic-coeficients*))
     (+ (* x-score       absolute-x)
        (* speed-score   speed)
        (* boosts-score  boosts)
-       (* lizards-score lizards))))
+       (* lizards-score lizards)
+       (* damage-score  damage))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
   "All the moves which I can make.")
@@ -288,11 +289,13 @@ with OP-BOOSTS at OP-SPEED."
                                      (list (global-score my-abs-x-2
                                                          my-speed-2
                                                          my-boosts-2
-                                                         my-lizards-2)
+                                                         my-lizards-2
+                                                         my-damage-2)
                                            (global-score op-abs-x-2
                                                          op-speed-2
                                                          op-boosts-2
-                                                         op-lizards-2)
+                                                         op-lizards-2
+                                                         op-damage-2)
                                            nil)
                                      (make-opposed-move-iter game-map
                                                              my-abs-x-2
@@ -352,11 +355,12 @@ board."
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _ _) state))
+      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _ damage-2) state))
                                          (global-score (+ my-abs-x (car pos-2))
                                                        speed-2
                                                        boosts-2
-                                                       lizards-2)))))))
+                                                       lizards-2
+                                                       damage-2)))))))
 
 (defun removing-no-net-change (end-states game-map pos boosts lizards trucks speed damage)
   "Remove END-STATES which didn't have a net change after the first move was made."
