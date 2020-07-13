@@ -118,6 +118,7 @@
     (collecting (list (/ (random 1000) 1000)
                       (/ (random 1000) 1000)
                       (/ (random 1000) 1000)
+                      (/ (random 1000) 1000)
                       (/ (random 1000) 1000)))))
 
 (defun fitness (optimisation-vector)
