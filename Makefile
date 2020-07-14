@@ -13,7 +13,7 @@ package:
 	cp *.lisp target/
 	cp *.asd target/
 	cp bot.json target/
-	cp score-config target/
+	cp -f score-config target/
 	cp Makefile target/
 	cp Dockerfile target/
 	cd target/ && zip bot.zip *
