@@ -45,5 +45,6 @@ function build_bots() {
 
 if [ "$1" == "main" ]; then
     VERSIONS_TO_BUILD=$(git tag | sort -n)
+    echo "Building $VERSIONS_TO_BUILD..."
     build_bots "$VERSIONS_TO_BUILD"
 fi
