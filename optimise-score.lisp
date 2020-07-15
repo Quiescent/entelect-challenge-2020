@@ -82,11 +82,13 @@
   (with-open-file (f (make-pathname :directory
                                     (list :absolute
                                           *directory-of-bot-to-optimise*)
-                                    :name "results")
+                                    :name "current-generation")
                      :if-exists :supersede
                      :if-does-not-exist :create
                      :direction :output)
-    (format f "'~A" generation)))
+    (iter
+      (for member in generation)
+      (format f "'~A~%" member))))
 
 (defun cross-over (i-vector a-vector b-vector c-vector)
   "Produce the result of crossing I-VECTOR with A-VECTOR B-VECTOR and C-VECTOR."
@@ -108,8 +110,11 @@
   (with-open-file (f (make-pathname :directory
                                     (list :absolute
                                           *directory-of-bot-to-optimise*)
-                                    :name "results"))
-    (eval (read f))))
+                                    :name "current-generation"))
+    (iter
+      (for next-member = (eval (ignore-errors (read f))))
+      (while next-member)
+      (collecting next-member))))
 
 (defun seed-population ()
   "Create a population of vectors for coefficients for the global scare heuristic."
