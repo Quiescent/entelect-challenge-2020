@@ -62,7 +62,7 @@
                                             :if-does-not-exist :create
                                             :direction :output)
       (iter
-        (for i-idx from 0 below population-size)
+        (for i-idx from (length next-generation) below population-size)
         (format t "==========[~a/~a]==========~%" i-idx population-size)
         (for (current-score . i-vector) = (aref current-generation i-idx))
         (for a-idx = (iter
