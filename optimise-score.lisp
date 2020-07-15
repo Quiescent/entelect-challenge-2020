@@ -88,7 +88,8 @@
         (if (< new-score current-score)
             (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
                    (format next-generation-stream "'~A~%" (cons new-score new-vector)))
-            (format next-generation-stream "'~A~%" (cons current-score i-vector)))))
+            (format next-generation-stream "'~A~%" (cons current-score i-vector)))
+        (finish-output next-generation-stream)))
     (write-generation current-generation)
     (format t "Average score for new generation: ~a~%~%" (apply #'+ (mapcar #'car current-generation)))))
 
