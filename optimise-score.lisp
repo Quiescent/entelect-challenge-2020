@@ -89,7 +89,8 @@
             (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
                    (format next-generation-stream "'~A~%" (cons new-score new-vector)))
             (format next-generation-stream "'~A~%" (cons current-score i-vector)))))
-    (write-generation current-generation)))
+    (write-generation current-generation)
+    (format t "Average score for new generation: ~a~%~%" (apply #'+ (mapcar #'car current-generation)))))
 
 (defun combine-generations (next-generation previous-generation population-size)
   "Produce a current, working generation.
