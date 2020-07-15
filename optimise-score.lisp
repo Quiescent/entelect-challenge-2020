@@ -36,7 +36,7 @@
   (bind ((individuals (seed-population))
          (scores      (mapcar #'fitness individuals))
          (zipped      (mapcar #'cons scores individuals)))
-    (write-generation (apply #'vector zipped))))
+    (write-generation zipped)))
 
 (defconstant f-coefficient (/ 8 10)
   "Controls how much b and c contribute to the new coefficient.")
@@ -46,36 +46,61 @@
 
 (defun evolve-one-generation ()
   "Use the current results file to evolve a new generation and write the new file there."
-  (bind ((current-generation (read-current-generation))
-         (population-size    (length current-generation)))
+  (bind ((previous-generation (read-current-generation))
+         (next-generation     (read-next-generation))
+         (population-size     (length previous-generation))
+         (current-generation  (apply #'vector
+                                     (combine-generations next-generation
+                                                          previous-generation
+                                                          population-size))))
     (format t "Working on a new generation~%")
-    (iter
-      (for i-idx from 0 below population-size)
-      (format t "==========[~a/~a]==========~%" i-idx population-size)
-      (for (current-score . i-vector) = (aref current-generation i-idx))
-      (for a-idx = (iter
-                     (for result = (random population-size))
-                     (when (/= result i-idx)
-                       (return result))))
-      (for (a-score . a-vector) = (aref current-generation a-idx))
-      (for b-idx = (iter
-                     (for result = (random population-size))
-                     (when (and (/= result i-idx)
-                                (/= result a-idx))
-                       (return result))))
-      (for (b-score . b-vector) = (aref current-generation b-idx))
-      (for c-idx = (iter
-                     (for result = (random population-size))
-                     (when (and (/= result i-idx)
-                                (/= result a-idx)
-                                (/= result b-idx))
-                       (return result))))
-      (for (c-score . c-vector) = (aref current-generation c-idx))
-      (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
-      (for new-score  = (fitness new-vector))
-      (when (< new-score current-score)
-        (setf (aref current-generation i-idx) (cons new-score new-vector))))
+    (with-open-file (next-generation-stream (make-pathname :directory
+                                                           (list :absolute
+                                                                 *directory-of-bot-to-optimise*)
+                                                           :name "next-generation")
+                                            :if-exists :supersede
+                                            :if-does-not-exist :create
+                                            :direction :output)
+      (iter
+        (for i-idx from 0 below population-size)
+        (format t "==========[~a/~a]==========~%" i-idx population-size)
+        (for (current-score . i-vector) = (aref current-generation i-idx))
+        (for a-idx = (iter
+                       (for result = (random population-size))
+                       (when (/= result i-idx)
+                         (return result))))
+        (for (a-score . a-vector) = (aref current-generation a-idx))
+        (for b-idx = (iter
+                       (for result = (random population-size))
+                       (when (and (/= result i-idx)
+                                  (/= result a-idx))
+                         (return result))))
+        (for (b-score . b-vector) = (aref current-generation b-idx))
+        (for c-idx = (iter
+                       (for result = (random population-size))
+                       (when (and (/= result i-idx)
+                                  (/= result a-idx)
+                                  (/= result b-idx))
+                         (return result))))
+        (for (c-score . c-vector) = (aref current-generation c-idx))
+        (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
+        (for new-score  = (fitness new-vector))
+        (if (< new-score current-score)
+            (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
+                   (format next-generation-stream "'~A~%" (cons new-score new-vector)))
+            (format next-generation-stream "'~A~%" (cons current-score i-vector)))))
     (write-generation current-generation)))
+
+(defun combine-generations (next-generation previous-generation population-size)
+  "Produce a current, working generation.
+
+It contains NEXT-GENERATION, then the PREVIOUS-GENERATION filling in
+up to POPULATION-SIZE."
+  (bind ((working-generation (concatenate 'list
+                                          next-generation
+                                          (subseq previous-generation (length next-generation)))))
+    (assert (eq (length working-generation) population-size))
+    working-generation))
 
 (defun write-generation (generation)
   "Write the vector GENERATION to the results file."
@@ -104,6 +129,18 @@
             (< (random 1.0) cr-coefficient))
         (collecting (+ a (* f-coefficient (- b c))))
         (collecting i))))
+
+(defun read-next-generation ()
+  "Read the next generation from the results file."
+  (ignore-errors
+   (with-open-file (f (make-pathname :directory
+                                     (list :absolute
+                                           *directory-of-bot-to-optimise*)
+                                     :name "next-generation"))
+     (iter
+       (for next-member = (eval (ignore-errors (read f))))
+       (while next-member)
+       (collecting next-member)))))
 
 (defun read-current-generation ()
   "Read the current generation from the results file."
