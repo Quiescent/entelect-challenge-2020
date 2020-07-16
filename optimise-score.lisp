@@ -91,7 +91,7 @@
             (format next-generation-stream "'~A~%" (cons current-score i-vector)))
         (finish-output next-generation-stream)))
     (write-generation (map 'list #'identity current-generation))
-    (format t "Average score for new generation: ~a~%~%" (apply #'+ (mapcar #'car current-generation)))))
+    (format t "Average score for new generation: ~a~%~%" (apply #'+ (map 'list #'car current-generation)))))
 
 (defun combine-generations (next-generation previous-generation population-size)
   "Produce a current, working generation.
