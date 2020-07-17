@@ -6,7 +6,7 @@
 
 (in-package :optimise-bot)
 
-(defvar population-size 100
+(defvar population-size 20
   "The number of solutions in the population.")
 
 (defvar *directory-of-bot-to-optimise* "home/edward/wip/entelect-challenge-2020/bots/to-optimise"
@@ -117,6 +117,9 @@ up to POPULATION-SIZE."
       (for member in generation)
       (format f "'~A~%" member))))
 
+(defvar *negative-coefficient-start* 4
+  "The start of negative coefficients in the optimisation vector.")
+
 (defun cross-over (i-vector a-vector b-vector c-vector)
   "Produce the result of crossing I-VECTOR with A-VECTOR B-VECTOR and C-VECTOR."
   (iter
@@ -129,7 +132,9 @@ up to POPULATION-SIZE."
     (for crossing-point = (random vector-length))
     (if (or (= j crossing-point)
             (< (random 1.0) cr-coefficient))
-        (collecting (+ a (* f-coefficient (- b c))))
+        (collecting (if (< j *negative-coefficient-start*)
+                        (abs (+ a (* f-coefficient (- b c))))
+                        (- 0 (abs (+ a (* f-coefficient (- b c)))))))
         (collecting i))))
 
 (defun read-next-generation ()
