@@ -25,6 +25,20 @@
     (seed-results-file)
     (iter-optimise)))
 
+(defun re-seed ()
+  "Re-compute the score of each member of the current generation."
+  (bind ((current-generation (apply #'vector (read-current-generation)))
+         (population-size    (length current-generation)))
+    (iter
+      (for i-idx from 0 below population-size)
+      (format t "==========[~a/~a]==========~%" i-idx population-size)
+      (for (current-score . i-vector) = (aref current-generation i-idx))
+      (for new-score  = (fitness i-vector))
+      (format t "Old score: ~a, New Score: ~a~%" current-score new-score)
+      (setf (aref current-generation i-idx) (cons new-score i-vector)))
+    ;; (write-generation (map 'list #'identity current-generation))
+    (format t "Average score for new generation: ~a~%~%" (/ (apply #'+ (map 'list #'car current-generation)) population-size))))
+
 (defun iter-optimise ()
   "Iteratively improve on the current generation."
   (iter
