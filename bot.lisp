@@ -293,8 +293,18 @@ with OP-BOOSTS at OP-SPEED."
                                  (if (or (/= turns-to-end -1)
                                          (/= op-turns-to-end -1)
                                          (= count 1))
-                                     (list (- my-abs-x op-abs-x)
-                                           (- op-abs-x my-abs-x)
+                                     (list (minimax-score my-abs-x
+                                                          op-abs-x
+                                                          my-damage-2
+                                                          (aref-game-map-with-default game-map
+                                                                                      (cdr my-pos-2)
+                                                                                      (car my-pos-2)))
+                                           (minimax-score op-abs-x
+                                                          my-abs-x
+                                                          op-damage-2
+                                                          (aref-game-map-with-default game-map
+                                                                                      (cdr op-pos-2)
+                                                                                      (car op-pos-2)))
                                            nil
                                            nil)
                                      (make-opposed-move-iter game-map
@@ -317,6 +327,16 @@ with OP-BOOSTS at OP-SPEED."
                                     minimizing my-score)))))))
     (for cell in cells)
     (finding cell maximizing (car cell))))
+
+(defun minimax-score (my-abs-x op-abs-x my-damage my-final-square)
+  "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X.
+
+If MY-DAMAGE is such that I'm stuck on MY-FINAL-SQUARE then massively
+penalise that state."
+  (if (and (eq my-final-square 'wall)
+           (eq my-damage 6))
+      most-negative-fixnum
+      (- my-abs-x op-abs-x)))
 
 (defun game-map-y-dim (game-map)
   "Produce the number of squares in the y dimension of GAME-MAP."
@@ -761,6 +781,14 @@ coming!"
 (defun aref-game-map (game-map y x)
   "Produce the value in GAME-MAP at coordinate Y, X."
   (aref (car game-map) y x))
+
+(defun aref-game-map-with-default (game-map y x &optional default)
+  "Produce the value in GAME-MAP at coordinate Y, X.
+
+If X, Y is OOB then produce DEFAULT."
+  (if (end-state (cons x y) game-map)
+      default
+      (aref (car game-map) y x)))
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
