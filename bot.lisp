@@ -288,20 +288,14 @@ with OP-BOOSTS at OP-SPEED."
                                 (op-abs-x-2          (+ op-abs-x (- (car op-pos-2) (car op-pos))))
                                 ((my-score
                                   op-score
+                                  _
                                   _)
                                  (if (or (/= turns-to-end -1)
                                          (/= op-turns-to-end -1)
                                          (= count 1))
-                                     (list (global-score my-abs-x-2
-                                                         my-speed-2
-                                                         my-boosts-2
-                                                         my-lizards-2
-                                                         my-damage-2)
-                                           (global-score op-abs-x-2
-                                                         op-speed-2
-                                                         op-boosts-2
-                                                         op-lizards-2
-                                                         op-damage-2)
+                                     (list (- my-abs-x op-abs-x)
+                                           (- op-abs-x my-abs-x)
+                                           nil
                                            nil)
                                      (make-opposed-move-iter game-map
                                                              my-abs-x-2
@@ -319,7 +313,7 @@ with OP-BOOSTS at OP-SPEED."
                                                              op-speed-2
                                                              op-damage-2
                                                              (1- count)))))
-                           (finding (list my-score op-score my-move)
+                           (finding (list my-score op-score my-move op-move)
                                     minimizing my-score)))))))
     (for cell in cells)
     (finding cell maximizing (car cell))))
