@@ -132,14 +132,8 @@ MY-ABS-X position on the board."
                         1
                         0
                         opponent-speed))
-    ((close-to-end my-abs-x)
-     (make-finishing-move game-map my-pos boosts lizards trucks speed damage))
     (t
      (make-speed-move my-abs-x game-map my-pos boosts lizards trucks speed damage))))
-
-(defun close-to-end (absolute-x)
-  "Produce T if ABSOLUTE-X is close to the edge of the map."
-  (> absolute-x 1470))
 
 (defvar *ahead-of-cache* nil
     "A cache of obstacles ahead of certain points.
@@ -331,17 +325,6 @@ with OP-BOOSTS at OP-SPEED."
 (defun game-map-x-dim (game-map)
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
-
-(defun make-finishing-move (game-map my-pos boosts lizards trucks speed damage)
-  "Optimise for finishing and forget everything else."
-  (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (states-from game-map my-pos speed boosts lizards trucks damage)
-      copy-seq
-      (sort #'> :key (lambda (state) (car (nth 1 state))))
-      (stable-sort #'< :key (lambda (state) (length (car state))))
-      caar
-      last
-      car)))
 
 (defun make-speed-move (game-map my-abs-x my-pos boosts lizards trucks speed damage)
   "Produce the best speed move to make on GAME-MAP.
