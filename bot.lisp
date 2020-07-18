@@ -234,12 +234,14 @@ with OP-BOOSTS at OP-SPEED."
 
 (defun global-score (absolute-x speed boosts lizards damage)
   "Score the position described by ABSOLUTE-X SPEED BOOSTS LIZARDS."
-  (bind (((x-score speed-score boosts-score lizards-score damage-score) *heuristic-coeficients*))
-    (+ (* x-score       absolute-x)
-       (* speed-score   speed)
-       (* boosts-score  boosts)
-       (* lizards-score lizards)
-       (* damage-score  damage))))
+  (if (>= absolute-x 1499)
+      most-positive-fixnum
+      (bind (((x-score speed-score boosts-score lizards-score damage-score) *heuristic-coeficients*))
+        (+ (* x-score       absolute-x)
+           (* speed-score   speed)
+           (* boosts-score  boosts)
+           (* lizards-score lizards)
+           (* damage-score  damage)))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
   "All the moves which I can make.")
