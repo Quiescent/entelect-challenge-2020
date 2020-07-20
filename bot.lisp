@@ -1,6 +1,6 @@
 (in-package :bot)
 
-(defvar *heuristic-coeficients* '(1 1 1 1)
+(defvar *heuristic-coeficients* '(1 1 1 1 1 1)
   "The coefficients to use when computing the score of a position.")
 
 ;; Previous state is list of:
@@ -293,14 +293,23 @@ with OP-BOOSTS at OP-SPEED."
                                    op-damage
                                    maximax-depth))))
 
-(defun global-score (absolute-x speed boosts lizards damage)
+(defun global-score (absolute-x speed boosts lizards y boost-counter damage)
   "Score the position described by ABSOLUTE-X SPEED BOOSTS LIZARDS."
-  (bind (((x-score speed-score boosts-score lizards-score damage-score) *heuristic-coeficients*))
-    (+ (* x-score       absolute-x)
-       (* speed-score   speed)
-       (* boosts-score  boosts)
-       (* lizards-score lizards)
-       (* damage-score  damage))))
+  (bind (((x-score
+           speed-score
+           boosts-score
+           lizards-score
+           y-score
+           boost-counter-score
+           damage-score)
+          *heuristic-coeficients*))
+    (+ (* x-score             absolute-x)
+       (* speed-score         speed)
+       (* boosts-score        boosts)
+       (* lizards-score       lizards)
+       (* y-score             y)
+       (* boost-counter-score boost-counter)
+       (* damage-score        damage))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
   "All the moves which I can make.")
@@ -446,11 +455,13 @@ board."
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _ damage-2 _) state))
+      (stable-sort #'> :key (lambda (state) (bind (((_ pos-2 speed-2 boosts-2 lizards-2 _ damage-2 boost-counter-2) state))
                                          (global-score (+ my-abs-x (car pos-2))
                                                        speed-2
                                                        boosts-2
                                                        lizards-2
+                                                       (cdr pos-2)
+                                                       boost-counter-2
                                                        damage-2)))))))
 
 (defun removing-no-net-change (end-states game-map pos boosts lizards trucks speed damage boost-counter)
