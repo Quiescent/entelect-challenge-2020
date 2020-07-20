@@ -721,7 +721,7 @@ Limit the maximum speed by the amount of damage taken."
   `(case ,move
      (accelerate (increase-speed ,speed ,damage))
      (decelerate (decrease-speed ,speed))
-     (use_boost  15)
+     (use_boost  (min 15 (maximum-speed ,damage)))
      (otherwise  ,speed)))
 
 (defmacro new-x (x move speed damage)
