@@ -1,6 +1,6 @@
 (in-package :bot)
 
-(defvar *heuristic-coeficients* '(1 1 1 1 1 1)
+(defvar *heuristic-coeficients* '(1 1 1 1 1 1 1)
   "The coefficients to use when computing the score of a position.")
 
 ;; Previous state is list of:
@@ -302,12 +302,16 @@ with OP-BOOSTS at OP-SPEED."
            y-score
            boost-counter-score
            damage-score)
-          *heuristic-coeficients*))
+          *heuristic-coeficients*)
+         (is-middle-two (if (or (= y 1)
+                                (= y 2))
+                            1
+                            0)))
     (+ (* x-score             absolute-x)
        (* speed-score         speed)
        (* boosts-score        boosts)
        (* lizards-score       lizards)
-       (* y-score             y)
+       (* y-score             is-middle-two)
        (* boost-counter-score boost-counter)
        (* damage-score        damage))))
 
