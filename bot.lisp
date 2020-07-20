@@ -3,6 +3,18 @@
 (defvar *heuristic-coeficients* '(1 1 1 1)
   "The coefficients to use when computing the score of a position.")
 
+;; Previous state is list of:
+;;  - map,
+;;  - pos,
+;;  - boosts,
+;;  - lizards,
+;;  - trucks,
+;;  - speed,
+;;  - damage,
+;;  - abs-x, and
+;;  - move.
+(defvar *previous-state* '())
+
 (defun main ()
   (iter
     (while t)
@@ -34,20 +46,31 @@
          (speed             (my-speed state))
          (damage            (my-damage state))
          (op-boosts         1)
-         (op-speed          (opponent-speed state)))
-    (determine-move map
-                    my-pos
-                    boosting
-                    boosts
-                    lizards
-                    trucks
-                    speed
-                    damage
-                    my-abs-x
-                    opponent-abs-x
-                    op-pos
-                    op-boosts
-                    op-speed)))
+         (op-speed          (opponent-speed state))
+         (move              (determine-move map
+                                            my-pos
+                                            boosting
+                                            boosts
+                                            lizards
+                                            trucks
+                                            speed
+                                            damage
+                                            my-abs-x
+                                            opponent-abs-x
+                                            op-pos
+                                            op-boosts
+                                            op-speed)))
+    (setf *previous-state*
+          (list map
+                my-pos
+                boosts
+                lizards
+                trucks
+                speed
+                damage
+                my-abs-x
+                move))
+    move))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
