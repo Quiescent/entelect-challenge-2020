@@ -74,6 +74,8 @@
                                             op-pos
                                             op-boosts
                                             op-speed)))
+    (when *banned-move*
+      (format *error-output* "Banning: ~a~%" *banned-move*))
     (setf *previous-state* current-state)
     move))
 
