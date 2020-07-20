@@ -361,18 +361,8 @@ with OP-BOOSTS at OP-SPEED."
                                  (if (or (/= turns-to-end -1)
                                          (/= op-turns-to-end -1)
                                          (= count 1))
-                                     (list (minimax-score my-abs-x
-                                                          op-abs-x
-                                                          my-damage-2
-                                                          (aref-game-map-with-default game-map
-                                                                                      (cdr my-pos-2)
-                                                                                      (car my-pos-2)))
-                                           (minimax-score op-abs-x
-                                                          my-abs-x
-                                                          op-damage-2
-                                                          (aref-game-map-with-default game-map
-                                                                                      (cdr op-pos-2)
-                                                                                      (car op-pos-2)))
+                                     (list (minimax-score my-abs-x op-abs-x)
+                                           (minimax-score op-abs-x my-abs-x)
                                            nil
                                            nil)
                                      (make-opposed-move-iter game-map
@@ -397,15 +387,9 @@ with OP-BOOSTS at OP-SPEED."
     (for cell in cells)
     (finding cell maximizing (car cell))))
 
-(defun minimax-score (my-abs-x op-abs-x my-damage my-final-square)
-  "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X.
-
-If MY-DAMAGE is such that I'm stuck on MY-FINAL-SQUARE then massively
-penalise that state."
-  (if (and (eq my-final-square 'wall)
-           (eq my-damage 6))
-      most-negative-fixnum
-      (- my-abs-x op-abs-x)))
+(defun minimax-score (my-abs-x op-abs-x)
+  "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X."
+  (- my-abs-x op-abs-x))
 
 (defun game-map-y-dim (game-map)
   "Produce the number of squares in the y dimension of GAME-MAP."
