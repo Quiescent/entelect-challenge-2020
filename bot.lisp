@@ -136,20 +136,20 @@ MY-ABS-X position on the board."
     ((and (> trucks 0)
           (> opponent-speed 3)
           (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+     ;; TODO: don't place the truck on parts of the map that I can't see!!
      (place-cyber-truck game-map
                         opponent-pos
                         1
                         1
                         1
-                        0
                         opponent-speed
+                        0
                         my-pos
                         boosts
                         lizards
                         trucks
                         speed
                         damage
-                        boost-counter
                         opponent-abs-x
                         my-abs-x))
     ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
@@ -167,12 +167,27 @@ MY-ABS-X position on the board."
                         opponent-boosts
                         1
                         1
-                        0
-                        opponent-speed))
+                        opponent-speed
+                        0))
     ((close-to-end my-abs-x)
-     (make-finishing-move game-map my-pos boosts lizards trucks speed damage boost-counter))
+     (make-finishing-move game-map
+                          my-pos
+                          boosts
+                          lizards
+                          trucks
+                          speed
+                          damage
+                          boost-counter))
     (t
-     (make-speed-move my-abs-x game-map my-pos boosts lizards trucks speed damage boost-counter))))
+     (make-speed-move game-map
+                      my-abs-x
+                      my-pos
+                      boosts
+                      lizards
+                      trucks
+                      speed
+                      damage
+                      boost-counter))))
 
 (defun close-to-end (absolute-x)
   "Produce T if ABSOLUTE-X is close to the edge of the map."
@@ -198,7 +213,6 @@ Value is [muds boosts walls tweets lizards].")
                           my-trucks
                           my-speed
                           my-damage
-                          my-boost-counter
                           opponent-abs-x
                           my-abs-x)
   "Place the truck in front of my opponents best move.
@@ -220,14 +234,14 @@ The opponent is at the _absolute_ coordinate:
                                      op-trucks
                                      op-speed
                                      op-damage
+                                     5
                                      my-abs-x
                                      my-pos
                                      my-boosts
                                      my-lizards
                                      my-trucks
                                      my-speed
-                                     my-damage
-                                     my-boost-counter))
+                                     my-damage))
          (*ahead-of-cache* (make-hash-table :test #'equal))
          ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
           (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed op-damage 2)))
@@ -411,7 +425,7 @@ left, the SPEED at which I'm going, MY-ABS-X position on the board and
 the BOOSTS, LIZARDS and TRUCKS I have left as well as the DAMAGE I've
 taken."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (rank-order-all-moves my-abs-x game-map my-pos boosts lizards trucks speed damage boost-counter)
+    (-> (rank-order-all-moves game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter)
       caar
       last
       car)))
