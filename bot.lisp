@@ -4,16 +4,20 @@
   "The coefficients to use when computing the score of a position.")
 
 ;; Previous state is list of:
+;;  - move,
 ;;  - map,
 ;;  - pos,
 ;;  - boosts,
 ;;  - lizards,
 ;;  - trucks,
 ;;  - speed,
-;;  - damage,
-;;  - abs-x, and
-;;  - move.
-(defvar *previous-state* '())
+;;  - damage, and
+;;  - abs-x.
+(defvar *previous-state* '()
+  "The state which the player was in last turn.")
+
+(defvar *banned-move* nil
+  "A move which is not allowed, because the state didn't change when it was made.")
 
 (defun main ()
   (iter
@@ -47,6 +51,16 @@
          (damage            (my-damage state))
          (op-boosts         1)
          (op-speed          (opponent-speed state))
+         (current-state     (list map
+                                  my-pos
+                                  boosts
+                                  lizards
+                                  trucks
+                                  speed
+                                  damage
+                                  my-abs-x))
+         ;; TODO: Check whether we were EMP'd
+         (*banned-move*     (when (equal (cdr *previous-state*) (cdr current-state)) (car *previous-state*)))
          (move              (determine-move map
                                             my-pos
                                             boosting
@@ -60,16 +74,7 @@
                                             op-pos
                                             op-boosts
                                             op-speed)))
-    (setf *previous-state*
-          (list map
-                my-pos
-                boosts
-                lizards
-                trucks
-                speed
-                damage
-                my-abs-x
-                move))
+    (setf *previous-state* current-state)
     move))
 
 (defmacro deep-accessor (object &rest nested-slots)
