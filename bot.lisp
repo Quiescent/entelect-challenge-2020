@@ -60,7 +60,7 @@
                                   damage
                                   my-abs-x))
          ;; TODO: Check whether we were EMP'd
-         (*banned-move*     (when (equal (cdr *previous-state*) (cdr current-state)) (car *previous-state*)))
+         (*banned-move*     (when (equal (cdr *previous-state*) current-state) (car *previous-state*)))
          (move              (determine-move map
                                             my-pos
                                             boosting
@@ -76,7 +76,7 @@
                                             op-speed)))
     (when *banned-move*
       (format *error-output* "Banning: ~a~%" *banned-move*))
-    (setf *previous-state* current-state)
+    (setf *previous-state* (cons move current-state))
     move))
 
 (defmacro deep-accessor (object &rest nested-slots)
@@ -289,6 +289,9 @@ with OP-BOOSTS at OP-SPEED."
   (iter
     (with cells = (iter
                     (for my-move in (remove-impossible-moves boosts lizards trucks my-pos all-makeable-moves))
+                    (when (and (eq count maximax-depth)
+                               (eq my-move *banned-move*))
+                      (next-iteration))
                     (collecting
                      (bind (((:values my-pos-2 my-speed-2 my-boosts-2 my-lizards-2 my-trucks-2 my-damage-2)
                              (make-move my-move game-map my-pos speed boosts trucks speed damage)))
@@ -540,20 +543,22 @@ Seventh is my damage."
       (when (or (gethash path explored)
                 (> (length path) 3))
         (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage)
-                 found-paths)
+              found-paths)
         (next-iteration))
       (if (end-state current-pos game-map)
           (progn
             (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage)
-                 found-paths))
+                  found-paths))
           (iter
             (for move in (remove-impossible-moves current-boosts
                                                   current-lizards
                                                   current-trucks
                                                   current-pos
                                                   all-makeable-moves))
-            (when (and (member move all-straight-moves)
-                       (truck-infront-of current-pos game-map))
+            (when (or (and (null path)
+                           (eq move *banned-move*))
+                      (and (member move all-straight-moves)
+                           (truck-infront-of current-pos game-map)))
               (next-iteration))
             (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks new-damage)
                     (make-move move game-map current-pos current-speed current-boosts current-lizards current-trucks current-damage)))
