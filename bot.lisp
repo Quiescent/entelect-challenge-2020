@@ -652,15 +652,17 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
   "Produce a count of all types of powerups and obstacles.
 
 When going at SPEED from X, Y on GAME-MAP."
-  (iter
-    (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
-    (for tile = (aref-game-map game-map y i))
-    (counting (eq 'mud tile)    into muds)
-    (counting (eq 'wall tile)   into walls)
-    (counting (eq 'boost tile)  into boosts)
-    (counting (eq 'lizard tile) into lizards)
-    (counting (eq 'tweet tile)  into tweets)
-    (finally (return (vector muds boosts walls tweets lizards)))))
+  (if (= speed 0)
+      (vector 0 0 0 0 0)
+      (iter
+        (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
+        (for tile = (aref-game-map game-map y i))
+        (counting (eq 'mud tile)    into muds)
+        (counting (eq 'wall tile)   into walls)
+        (counting (eq 'boost tile)  into boosts)
+        (counting (eq 'lizard tile) into lizards)
+        (counting (eq 'tweet tile)  into tweets)
+        (finally (return (vector muds boosts walls tweets lizards))))))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
