@@ -141,42 +141,42 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (cond
-    ((and (> trucks 0)
-          (> opponent-speed 3)
-          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
-     ;; TODO: don't place the truck on parts of the map that I can't see!!
-     (place-cyber-truck game-map
-                        opponent-pos
-                        1
-                        1
-                        1
-                        opponent-speed
-                        0
-                        my-pos
-                        boosts
-                        lizards
-                        trucks
-                        speed
-                        damage
-                        opponent-abs-x
-                        my-abs-x))
-    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-     (make-opposed-move game-map
-                        my-abs-x
-                        my-pos
-                        boosts
-                        lizards
-                        trucks
-                        speed
-                        damage
-                        boost-counter
-                        opponent-abs-x
-                        opponent-pos
-                        opponent-boosts
-                        1
-                        1
-                        opponent-speed
-                        0))
+    ;; ((and (> trucks 0)
+    ;;       (> opponent-speed 3)
+    ;;       (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+    ;;  ;; TODO: don't place the truck on parts of the map that I can't see!!
+    ;;  (place-cyber-truck game-map
+    ;;                     opponent-pos
+    ;;                     1
+    ;;                     1
+    ;;                     1
+    ;;                     opponent-speed
+    ;;                     0
+    ;;                     my-pos
+    ;;                     boosts
+    ;;                     lizards
+    ;;                     trucks
+    ;;                     speed
+    ;;                     damage
+    ;;                     opponent-abs-x
+    ;;                     my-abs-x))
+    ;; ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
+    ;;  (make-opposed-move game-map
+    ;;                     my-abs-x
+    ;;                     my-pos
+    ;;                     boosts
+    ;;                     lizards
+    ;;                     trucks
+    ;;                     speed
+    ;;                     damage
+    ;;                     boost-counter
+    ;;                     opponent-abs-x
+    ;;                     opponent-pos
+    ;;                     opponent-boosts
+    ;;                     1
+    ;;                     1
+    ;;                     opponent-speed
+    ;;                     0))
     ((close-to-end my-abs-x)
      (make-finishing-move game-map
                           my-pos
