@@ -19,10 +19,18 @@
 (defvar *banned-move* nil
   "A move which is not allowed, because the state didn't change when it was made.")
 
+(defun read-weights ()
+  "Read all scores from the score config file."
+  (with-open-file (f "./score-config")
+    (iter
+      (for next-member = (eval (ignore-errors (read f))))
+      (while next-member)
+      (collecting next-member))))
+
 (defun main ()
   (iter
     (while t)
-    (with-open-file (f "./score-config") (setf *heuristic-coeficients* (eval (read f))))
+    (initially (setf *heuristic-coeficients* (read-weights)))
     (for round-number = (read-line))
     (for move = (move-for-round round-number))
     (format t "C;~a;~a~%" round-number (move-to-string move))))
@@ -295,25 +303,25 @@ with OP-BOOSTS at OP-SPEED."
 
 (defun global-score (absolute-x speed boosts lizards y boost-counter damage)
   "Score the position described by ABSOLUTE-X SPEED BOOSTS LIZARDS."
-  (bind (((x-score
-           speed-score
-           boosts-score
-           lizards-score
-           y-score
-           boost-counter-score
-           damage-score)
-          *heuristic-coeficients*)
-         (is-middle-two (if (or (= y 1)
+  (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1
                             0)))
-    (+ (* x-score             absolute-x)
-       (* speed-score         speed)
-       (* boosts-score        boosts)
-       (* lizards-score       lizards)
-       (* y-score             is-middle-two)
-       (* boost-counter-score boost-counter)
-       (* damage-score        damage))))
+    (iter (for coefficients in *heuristic-coeficients*)
+      (bind (((x-score
+               speed-score
+               boosts-score
+               lizards-score
+               y-score
+               boost-counter-score
+               damage-score) coefficients))
+        (maximizing (+ (* x-score             absolute-x)
+                       (* speed-score         speed)
+                       (* boosts-score        boosts)
+                       (* lizards-score       lizards)
+                       (* y-score             is-middle-two)
+                       (* boost-counter-score boost-counter)
+                       (* damage-score        damage)))))))
 
 (defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
   "All the moves which I can make.")
