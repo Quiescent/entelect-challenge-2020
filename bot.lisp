@@ -373,8 +373,20 @@ with OP-BOOSTS at OP-SPEED."
                                  (if (or (/= turns-to-end -1)
                                          (/= op-turns-to-end -1)
                                          (= count 1))
-                                     (list (minimax-score my-abs-x op-abs-x)
-                                           (minimax-score op-abs-x my-abs-x)
+                                     (list (global-score my-abs-x-2
+                                                         my-speed-2
+                                                         my-boosts-2
+                                                         my-lizards-2
+                                                         (cdr my-pos-2)
+                                                         my-boost-counter-2
+                                                         my-damage-2)
+                                           (global-score op-abs-x-2
+                                                         op-speed-2
+                                                         op-boosts-2
+                                                         op-lizards-2
+                                                         (cdr op-pos-2)
+                                                         2
+                                                         op-damage-2)
                                            nil
                                            nil)
                                      (make-opposed-move-iter game-map
