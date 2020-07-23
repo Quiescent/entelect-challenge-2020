@@ -268,7 +268,7 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
 
-(defconstant maximax-depth 3
+(defconstant maximax-depth 2
   "The depth that we should search the game tree.")
 
 (defun make-opposed-move (game-map my-abs-x my-pos
