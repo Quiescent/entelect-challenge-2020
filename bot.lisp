@@ -1,6 +1,6 @@
 (in-package :bot)
 
-(defvar *heuristic-coeficients* '(1 1 1 1 1 1 1)
+(defvar *heuristic-coeficients* '((1 1 1 1 1 1 1 1))
   "The coefficients to use when computing the score of a position.")
 
 ;; Previous state is list of:
@@ -100,6 +100,8 @@
       (format *error-output* "Banning: ~a~%" *banned-move*))
     (incf *my-total-speed* speed)
     (incf *op-total-speed* op-speed)
+    (format *error-output* "My total/average speed: ~a/~a~%" *my-total-speed* (/ *my-total-speed* *current-turn*))
+    (format *error-output* "Op total/average speed: ~a/~a~%" *op-total-speed* (/ *op-total-speed* *current-turn*))
     (setf *previous-state* (cons move current-state))
     move))
 
