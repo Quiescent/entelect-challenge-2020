@@ -43,7 +43,7 @@
       (while t)
       (initially (setf *heuristic-coeficients* (read-weights)))
       (for round-number = (read-line))
-      (bind ((*current-turn* round-number))
+      (bind ((*current-turn* (read-from-string round-number)))
         (for move = (move-for-round round-number)))
       (format t "C;~a;~a~%" round-number (move-to-string move)))))
 
