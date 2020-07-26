@@ -357,6 +357,84 @@ with OP-BOOSTS at OP-SPEED."
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
   "All moves which will result in going straight without jumping.")
 
+(defmacro with-initial-state (initial-state &rest body)
+  "Conveniently advance INITIAL-STATE via BODY.
+
+Use `with' to bind values.
+
+Use `making-moves' to make a move and an opponent move.
+
+Unused values will be ignored."
+  (progn
+    (when (not (assoc 'player initial-state))
+      (error "Player initial state not specified"))
+    (when (not (assoc 'opponent initial-state))
+      (error "Opponent initial state not specified"))
+    (bind ((player-state   (cdr (assoc 'player   initial-state)))
+           (opponent-state (cdr (assoc 'opponent initial-state))))
+      (labels ((player-not-defined (symbol)
+                 (when (not (assoc symbol player-state))
+                   (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
+               (opponent-not-defined (symbol)
+                 (when (not (assoc symbol opponent-state))
+                   (error (concatenate 'string "Opponentn " (symbol-name symbol) " not defined")))))
+        (player-not-defined 'absolute-x)
+        (player-not-defined 'position)
+        (player-not-defined 'boosts)
+        (player-not-defined 'lizards)
+        (player-not-defined 'trucks)
+        (player-not-defined 'speed)
+        (player-not-defined 'damage)
+        (player-not-defined 'boost-counter)
+
+        (opponent-not-defined 'absolute-x)
+        (opponent-not-defined 'position)
+        (opponent-not-defined 'boosts)
+        (opponent-not-defined 'lizards)
+        (opponent-not-defined 'trucks)
+        (opponent-not-defined 'speed)
+        (opponent-not-defined 'damage)
+        (opponent-not-defined 'boost-counter)
+        `(bind ((player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
+                (player-position      ,@(cdr (assoc 'position      player-state)))
+                (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
+                (player-lizards       ,@(cdr (assoc 'lizards       player-state)))
+                (player-trucks        ,@(cdr (assoc 'trucks        player-state)))
+                (player-speed         ,@(cdr (assoc 'speed         player-state)))
+                (player-damage        ,@(cdr (assoc 'damage        player-state)))
+                (player-boost-counter ,@(cdr (assoc 'boost-counter player-state)))
+
+                (opponent-absolute-x    ,@(cdr (assoc 'absolute-x    opponent-state)))
+                (opponent-position      ,@(cdr (assoc 'position      opponent-state)))
+                (opponent-boosts        ,@(cdr (assoc 'boosts        opponent-state)))
+                (opponent-lizards       ,@(cdr (assoc 'lizards       opponent-state)))
+                (opponent-trucks        ,@(cdr (assoc 'trucks        opponent-state)))
+                (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
+                (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
+                (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state))))
+           (macrolet ((opponent (symbol) (values (intern (mkstr 'opponent '- symbol))))
+                      (player   (symbol) (values (intern (mkstr 'player   '- symbol)))))
+             (progn ,@body)))))))
+
+#+nil
+(with-initial-state ((player (absolute-x 1)
+                             (position 2)
+                             (boosts 3)
+                             (lizards 4)
+                             (trucks 5)
+                             (speed 6)
+                             (damage 7)
+                             (boost-counter 8))
+                     (opponent (absolute-x 9)
+                               (position 10)
+                               (boosts 11)
+                               (lizards 12)
+                               (trucks 13)
+                               (speed 14)
+                               (damage 15)
+                               (boost-counter 16)))
+  (+ 2 (player speed)))
+
 (defun make-opposed-move-iter (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter my-total-speed
                                op-abs-x op-pos op-boosts op-lizards op-trucks op-speed op-damage op-total-speed count)
   "Find a good move against the opponent which gets me out ahead of him."
