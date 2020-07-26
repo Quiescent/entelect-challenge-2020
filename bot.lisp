@@ -366,12 +366,14 @@ Use `making-moves' to make a move and an opponent move.
 
 Unused values will be ignored."
   (progn
+    (when (not (assoc 'game-map initial-state))
+      (error "Game map not specified"))
     (when (not (assoc 'player initial-state))
       (error "Player initial state not specified"))
     (when (not (assoc 'opponent initial-state))
       (error "Opponent initial state not specified"))
-    (bind ((player-state   (cdr (assoc 'player   initial-state)))
-           (opponent-state (cdr (assoc 'opponent initial-state))))
+    (bind ((player-state     (cdr (assoc 'player   initial-state)))
+           (opponent-state   (cdr (assoc 'opponent initial-state))))
       (labels ((player-not-defined (symbol)
                  (when (not (assoc symbol player-state))
                    (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
@@ -395,7 +397,9 @@ Unused values will be ignored."
         (opponent-not-defined 'speed)
         (opponent-not-defined 'damage)
         (opponent-not-defined 'boost-counter)
-        `(bind ((player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
+        `(bind ((current-game-map ,@(cdr (assoc 'game-map initial-state)))
+
+                (player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
                 (player-position      ,@(cdr (assoc 'position      player-state)))
                 (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
                 (player-lizards       ,@(cdr (assoc 'lizards       player-state)))
@@ -412,28 +416,84 @@ Unused values will be ignored."
                 (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
                 (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
                 (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state))))
-           (macrolet ((opponent (symbol) (values (intern (mkstr 'opponent '- symbol))))
-                      (player   (symbol) (values (intern (mkstr 'player   '- symbol)))))
+           (macrolet ((make-moves (player-move opponent-move &rest subsequent)
+                        `(bind (((:values player-position-2
+                                          player-speed-2
+                                          player-boosts-2
+                                          player-lizards-2
+                                          player-trucks-2
+                                          player-damage-2
+                                          player-boost-counter-2)
+                                 (make-move ,player-move
+                                            current-game-map
+                                            player-position
+                                            player-speed
+                                            player-boosts
+                                            player-lizards
+                                            player-trucks
+                                            player-damage
+                                            player-boost-counter))
+                                (player-absolute-x-2 0)
+                                ((:values opponent-position-2
+                                          opponent-speed-2
+                                          opponent-boosts-2
+                                          opponent-lizards-2
+                                          opponent-trucks-2
+                                          opponent-damage-2
+                                          opponent-boost-counter-2)
+                                 (make-move ,opponent-move
+                                            current-game-map
+                                            opponent-position
+                                            opponent-speed
+                                            opponent-boosts
+                                            opponent-lizards
+                                            opponent-trucks
+                                            opponent-damage
+                                            opponent-boost-counter))
+                                (opponent-absolute-x-2 0))
+                           (with-initial-state ((game-map current-game-map)
+                                                 (player (absolute-x    player-absolute-x-2)
+                                                         (position      player-position-2)
+                                                         (boosts        player-boosts-2)
+                                                         (lizards       player-lizards-2)
+                                                         (trucks        player-trucks-2)
+                                                         (speed         player-speed-2)
+                                                         (damage        player-damage-2)
+                                                         (boost-counter player-boost-counter-2))
+                                                 (opponent (absolute-x    opponent-absolute-x-2)
+                                                           (position      opponent-position-2)
+                                                           (boosts        opponent-boosts-2)
+                                                           (lizards       opponent-lizards-2)
+                                                           (trucks        opponent-trucks-2)
+                                                           (speed         opponent-speed-2)
+                                                           (damage        opponent-damage-2)
+                                                           (boost-counter opponent-boost-counter-2)))
+                              (progn ,@subsequent))))
+                      (opponent   (symbol) (values (intern (mkstr 'opponent '- symbol))))
+                      (player     (symbol) (values (intern (mkstr 'player   '- symbol)))))
              (progn ,@body)))))))
 
 #+nil
-(with-initial-state ((player (absolute-x 1)
-                             (position 2)
-                             (boosts 3)
-                             (lizards 4)
-                             (trucks 5)
-                             (speed 6)
-                             (damage 7)
-                             (boost-counter 8))
-                     (opponent (absolute-x 9)
-                               (position 10)
-                               (boosts 11)
-                               (lizards 12)
-                               (trucks 13)
-                               (speed 14)
-                               (damage 15)
-                               (boost-counter 16)))
-  (+ 2 (player speed)))
+(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  (with-initial-state ((game-map empty-game-map)
+                       (player (absolute-x 1)
+                               (position (cons 2 1))
+                               (boosts 3)
+                               (lizards 4)
+                               (trucks 5)
+                               (speed 5)
+                               (damage 0)
+                               (boost-counter 8))
+                       (opponent (absolute-x 9)
+                                 (position (cons 10 3))
+                                 (boosts 11)
+                                 (lizards 12)
+                                 (trucks 13)
+                                 (speed 14)
+                                 (damage 0)
+                                 (boost-counter 16)))
+    (make-moves 'accelerate 'accelerate
+                (player speed))))
 
 (defun make-opposed-move-iter (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter my-total-speed
                                op-abs-x op-pos op-boosts op-lizards op-trucks op-speed op-damage op-total-speed count)
