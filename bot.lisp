@@ -495,7 +495,8 @@ Unused values will be ignored."
                                  (damage 0)
                                  (boost-counter 16)))
     (make-moves 'accelerate 'accelerate
-                (player absolute-x))))
+                (make-moves 'accelerate 'nothing
+                            (player speed)))))
 
 (defun make-opposed-move-iter (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter my-total-speed
                                op-abs-x op-pos op-boosts op-lizards op-trucks op-speed op-damage op-total-speed count)
