@@ -417,7 +417,7 @@ Unused values will be ignored."
                 (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
                 (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state))))
            (macrolet ((make-moves (player-move opponent-move &rest subsequent)
-                        `(bind (((:values player-position-2
+                        `(bind (((:values player-position-2-staged
                                           player-speed-2
                                           player-boosts-2
                                           player-lizards-2
@@ -433,9 +433,7 @@ Unused values will be ignored."
                                             player-trucks
                                             player-damage
                                             player-boost-counter))
-                                (player-absolute-x-2 (+ (- (car player-position-2) (car player-position))
-                                                        player-absolute-x))
-                                ((:values opponent-position-2
+                                ((:values opponent-position-2-staged
                                           opponent-speed-2
                                           opponent-boosts-2
                                           opponent-lizards-2
@@ -451,8 +449,18 @@ Unused values will be ignored."
                                             opponent-trucks
                                             opponent-damage
                                             opponent-boost-counter))
+                                (player-position-2 (resolve-collisions player-position
+                                                                       opponent-position
+                                                                       player-position-2-staged
+                                                                       opponent-position-2-staged))
+                                (opponent-position-2 (resolve-collisions opponent-position
+                                                                         player-position
+                                                                         opponent-position-2-staged
+                                                                         player-position-2-staged))
                                 (opponent-absolute-x-2 (+ (- (car opponent-position-2) (car opponent-position))
-                                                          opponent-absolute-x)))
+                                                          opponent-absolute-x))
+                                (player-absolute-x-2 (+ (- (car player-position-2) (car player-position))
+                                                        player-absolute-x)))
                            (with-initial-state ((game-map current-game-map)
                                                  (player (absolute-x    player-absolute-x-2)
                                                          (position      player-position-2)
