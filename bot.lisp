@@ -433,7 +433,8 @@ Unused values will be ignored."
                                             player-trucks
                                             player-damage
                                             player-boost-counter))
-                                (player-absolute-x-2 0)
+                                (player-absolute-x-2 (+ (- (car player-position-2) (car player-position))
+                                                        player-absolute-x))
                                 ((:values opponent-position-2
                                           opponent-speed-2
                                           opponent-boosts-2
@@ -450,7 +451,8 @@ Unused values will be ignored."
                                             opponent-trucks
                                             opponent-damage
                                             opponent-boost-counter))
-                                (opponent-absolute-x-2 0))
+                                (opponent-absolute-x-2 (+ (- (car opponent-position-2) (car opponent-position))
+                                                          opponent-absolute-x)))
                            (with-initial-state ((game-map current-game-map)
                                                  (player (absolute-x    player-absolute-x-2)
                                                          (position      player-position-2)
@@ -493,7 +495,7 @@ Unused values will be ignored."
                                  (damage 0)
                                  (boost-counter 16)))
     (make-moves 'accelerate 'accelerate
-                (player speed))))
+                (player absolute-x))))
 
 (defun make-opposed-move-iter (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter my-total-speed
                                op-abs-x op-pos op-boosts op-lizards op-trucks op-speed op-damage op-total-speed count)
