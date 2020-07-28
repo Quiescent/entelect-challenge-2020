@@ -183,6 +183,7 @@ The opponent is at the _absolute_ coordinate:
 (defconstant maximax-depth 3
   "The depth that we should search the game tree.")
 
+;; The moves being made here don't make sense!
 (defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
