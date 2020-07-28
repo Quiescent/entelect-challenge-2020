@@ -476,7 +476,7 @@ Unused values will be ignored."
                                                                 opponent-trucks
                                                                 opponent-position
                                                                 all-makeable-moves))
-                                                       (intern (mkstr 'opponent  '- symbol)))))
+                                                       (t (intern (mkstr 'opponent  '- symbol))))))
                       (player     (symbol) (values   (case symbol
                                                        (x '(car player-position))
                                                        (y '(cdr player-position))
