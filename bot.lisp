@@ -288,14 +288,14 @@ POS."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
-         (for current-turn = (+ *current-turn* (- maximax-depth count)))
+         (for current-turn = (+ *current-turn* (- maximax-depth (iteration count))))
          (with cells =
                (iter
-                 (for my-move in (player moves))
+                 (for player-move in (player moves))
                  (iter
                    (for opponent-move in (opponent moves))
                    (make-moves
-                    my-move
+                    player-move
                     opponent-move
                     (bind (((player-score
                              opponent-score
@@ -310,9 +310,9 @@ POS."
                                       nil))))
                       (recur (1- (iteration count)))
                       (finding (list player-score opponent-score player-move opponent-move)
-                               minimizing player-score)))))))
-       (for cell in cells)
-       (finding cell maximizing (car cell)))))
+                               minimizing player-score))))))
+         (for cell in cells)
+         (finding cell maximizing (car cell))))))
 
 ;; TODO: remove boost-counter
 (defun global-score (absolute-x current-turn boosts lizards y boost-counter damage)
