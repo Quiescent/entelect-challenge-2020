@@ -494,18 +494,18 @@ Unused values will be ignored."
                              (progn ,@subsequent))))
                       (opponent   (symbol) (values   (case
                                                          (score (global-score opponent-absolute-x
-                                                                        game-turn
-                                                                        opponent-boosts
-                                                                        opponent-lizards
-                                                                        (cdr (opponent-position))
-                                                                        opponent-boost-counter
-                                                                        opponent-damage))
+                                                                              game-turn
+                                                                              opponent-boosts
+                                                                              opponent-lizards
+                                                                              (cdr (opponent-position))
+                                                                              opponent-boost-counter
+                                                                              opponent-damage))
                                                        (moves (remove-impossible-moves opponent-boosts
                                                                                        opponent-lizards
                                                                                        opponent-trucks
                                                                                        opponent-position
                                                                                        all-makeable-moves))
-                                                         (intern (mkstr 'opponent  '- symbol)))))
+                                                       (intern (mkstr 'opponent  '- symbol)))))
                       (player     (symbol) (values   (case symbol
                                                        (score (global-score player-absolute-x
                                                                             game-turn
