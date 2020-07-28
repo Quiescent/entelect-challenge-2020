@@ -398,14 +398,19 @@ Unused values will be ignored."
       (error "Player initial state not specified"))
     (when (not (assoc 'opponent initial-state))
       (error "Opponent initial state not specified"))
-    (bind ((player-state     (cdr (assoc 'player   initial-state)))
-           (opponent-state   (cdr (assoc 'opponent initial-state))))
+    (bind ((player-state     (cdr (assoc 'player    initial-state)))
+           (opponent-state   (cdr (assoc 'opponent  initial-state)))
+           (iteration-state  (when (assoc 'iteration initial-state)
+                               (cdr (assoc 'iteration initial-state)))))
       (labels ((player-not-defined (symbol)
                  (when (not (assoc symbol player-state))
                    (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
                (opponent-not-defined (symbol)
                  (when (not (assoc symbol opponent-state))
-                   (error (concatenate 'string "Opponentn " (symbol-name symbol) " not defined")))))
+                   (error (concatenate 'string "Opponent " (symbol-name symbol) " not defined"))))
+               (iteration-is-not-defined (symbol)
+                 (when (not (assoc symbol iteration-state))
+                   (error (concatenate 'string "Iteration " (symbol-name symbol) " not defined")))))
         (player-not-defined 'absolute-x)
         (player-not-defined 'position)
         (player-not-defined 'boosts)
@@ -423,6 +428,10 @@ Unused values will be ignored."
         (opponent-not-defined 'speed)
         (opponent-not-defined 'damage)
         (opponent-not-defined 'boost-counter)
+
+        (when iteration-state
+          (iteration-is-not-defined 'count))
+
         `(bind ((current-game-map ,@(cdr (assoc 'game-map initial-state)))
 
                 (player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
@@ -441,7 +450,9 @@ Unused values will be ignored."
                 (opponent-trucks        ,@(cdr (assoc 'trucks        opponent-state)))
                 (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
                 (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
-                (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state))))
+                (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state)))
+
+                (iteration-count        ,@(and iteration-state (cdr (assoc 'count iteration-state)))))
            (macrolet ((make-moves (player-move opponent-move &rest subsequent)
                         `(bind (((:values player-position-2-staged
                                           player-speed-2
@@ -507,25 +518,27 @@ Unused values will be ignored."
                                   (opponent-damage        opponent-damage-2)
                                   (opponent-boost-counter opponent-boost-counter-2))
                              (progn ,@subsequent))))
-                      (opponent   (symbol) (values (intern (mkstr 'opponent '- symbol))))
-                      (player     (symbol) (values (intern (mkstr 'player   '- symbol))))
-                      (recur      ()       `(recur-inner current-game-map
-                                                         player-absolute-x
-                                                         player-position
-                                                         player-boosts
-                                                         player-lizards
-                                                         player-trucks
-                                                         player-speed
-                                                         player-damage
-                                                         player-boost-counter
-                                                         opponent-absolute-x
-                                                         opponent-position
-                                                         opponent-boosts
-                                                         opponent-lizards
-                                                         opponent-trucks
-                                                         opponent-speed
-                                                         opponent-damage
-                                                         opponent-boost-counter)))
+                      (opponent   (symbol) (values   (intern (mkstr 'opponent  '- symbol))))
+                      (player     (symbol) (values   (intern (mkstr 'player    '- symbol))))
+                      (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
+                      (recur      (iteration-count) `(recur-inner current-game-map
+                                                                  player-absolute-x
+                                                                  player-position
+                                                                  player-boosts
+                                                                  player-lizards
+                                                                  player-trucks
+                                                                  player-speed
+                                                                  player-damage
+                                                                  player-boost-counter
+                                                                  opponent-absolute-x
+                                                                  opponent-position
+                                                                  opponent-boosts
+                                                                  opponent-lizards
+                                                                  opponent-trucks
+                                                                  opponent-speed
+                                                                  opponent-damage
+                                                                  opponent-boost-counter
+                                                                  ,iteration-count)))
              (labels ((recur-inner (current-game-map
                                     player-absolute-x
                                     player-position
@@ -542,14 +555,15 @@ Unused values will be ignored."
                                     opponent-trucks
                                     opponent-speed
                                     opponent-damage
-                                    opponent-boost-counter)
+                                    opponent-boost-counter
+                                    iteration-count)
                         (progn ,@body)))
-               (recur))))))))
+               (recur iteration-count))))))))
 
 #+nil
-(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-       (count            1))
-  (with-initial-state ((game-map empty-game-map)
+(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  (with-initial-state ((iteration (count 3))
+                       (game-map empty-game-map)
                        (player (absolute-x 1)
                                (position (cons 2 1))
                                (boosts 3)
@@ -567,13 +581,12 @@ Unused values will be ignored."
                                  (damage 0)
                                  (boost-counter 16)))
     (format t "~a~%" (player speed))
-    (if (> count 0)
+    (if (> (iteration count) 0)
         (progn
-          (incf count -1)
-          (format t "Count: ~a~%" count)
+          (format t "Count: ~a~%" (iteration count))
           (make-moves 'accelerate 'accelerate
                       (format t "Speed: ~a~%" (player speed))
-                      (recur)))
+                      (recur (1- (iteration count)))))
         (progn (format t "Speed: ~a~%" (player speed))
                (format t "done!~%")))))
 
