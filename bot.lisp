@@ -492,14 +492,14 @@ Unused values will be ignored."
 
                                   (game-turn (1+ game-turn)))
                              (progn ,@subsequent))))
-                      (opponent   (symbol) (values   (case
-                                                         (score (global-score opponent-absolute-x
-                                                                              game-turn
-                                                                              opponent-boosts
-                                                                              opponent-lizards
-                                                                              (cdr (opponent-position))
-                                                                              opponent-boost-counter
-                                                                              opponent-damage))
+                      (opponent   (symbol) (values   (case symbol
+                                                       (score (global-score opponent-absolute-x
+                                                                            game-turn
+                                                                            opponent-boosts
+                                                                            opponent-lizards
+                                                                            (cdr (opponent-position))
+                                                                            opponent-boost-counter
+                                                                            opponent-damage))
                                                        (moves (remove-impossible-moves opponent-boosts
                                                                                        opponent-lizards
                                                                                        opponent-trucks
