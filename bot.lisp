@@ -216,21 +216,7 @@ Key is (speed x y).
 
 Value is [muds boosts walls tweets lizards].")
 
-(defun place-cyber-truck (game-map
-                          op-pos
-                          op-boosts
-                          op-lizards
-                          op-trucks
-                          op-speed
-                          op-damage
-                          my-pos
-                          my-boosts
-                          my-lizards
-                          my-trucks
-                          my-speed
-                          my-damage
-                          opponent-abs-x
-                          my-abs-x)
+(defmacro place-cyber-truck (game-state)
   "Place the truck in front of my opponents best move.
 
 Run minimax from my opponents perspective to find his best move.
@@ -242,32 +228,12 @@ my bot running from MY-POS with MY-BOOSTS at MY-SPEED.
 The opponent is at the _absolute_ coordinate:
 (OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
-  nil
-  ;; (bind ((op-move (make-opposed-move game-map
-  ;;                                    opponent-abs-x
-  ;;                                    op-pos
-  ;;                                    op-boosts
-  ;;                                    op-lizards
-  ;;                                    op-trucks
-  ;;                                    op-speed
-  ;;                                    op-damage
-  ;;                                    5
-  ;;                                    *op-total-speed*
-  ;;                                    my-abs-x
-  ;;                                    my-pos
-  ;;                                    my-boosts
-  ;;                                    my-lizards
-  ;;                                    my-trucks
-  ;;                                    my-speed
-  ;;                                    my-damage
-  ;;                                    *my-total-speed*))
-  ;;        (*ahead-of-cache* (make-hash-table :test #'equal))
-  ;;        ((:values op-pos-2 op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2)
-  ;;         (make-move op-move game-map op-pos op-speed op-boosts op-trucks op-speed op-damage 2)))
-  ;;   (declare (ignore op-speed-2 op-boosts-2 op-lizards-2 op-trucks-2))
-  ;;   ;; Offset by one so that the opponent doesn't land *on* the truck
-  ;;   (cons 'use_tweet (cons (+ 1 (- (car op-pos-2) (car op-pos)) opponent-abs-x) (1+ (cdr op-pos-2)))))
-  )
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+          (op-move (make-opposed-move ,game-state)))
+     (with-initial-state ,game-state
+       ;; Offset by one so that the opponent doesn't land *on* the truck
+       (make-moves op-move 'nothing
+                   (cons 'use_tweet (cons (+ 1 (opponent absolute-x)) (1+ (opponent y))))))))
 
 (defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
