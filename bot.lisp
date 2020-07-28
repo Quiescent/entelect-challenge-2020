@@ -147,44 +147,47 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (cond
-    ;; ((and (> trucks 0)
-    ;;       (> opponent-speed 3)
-    ;;       (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
-    ;;  ;; TODO: don't place the truck on parts of the map that I can't see!!
-    ;;  (place-cyber-truck game-map
-    ;;                     opponent-pos
-    ;;                     1
-    ;;                     1
-    ;;                     1
-    ;;                     opponent-speed
-    ;;                     0
-    ;;                     my-pos
-    ;;                     boosts
-    ;;                     lizards
-    ;;                     trucks
-    ;;                     speed
-    ;;                     damage
-    ;;                     opponent-abs-x
-    ;;                     my-abs-x))
-    ;; ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-    ;;  (make-opposed-move game-map
-    ;;                     my-abs-x
-    ;;                     my-pos
-    ;;                     boosts
-    ;;                     lizards
-    ;;                     trucks
-    ;;                     speed
-    ;;                     damage
-    ;;                     boost-counter
-    ;;                     *my-total-speed*
-    ;;                     opponent-abs-x
-    ;;                     opponent-pos
-    ;;                     opponent-boosts
-    ;;                     1
-    ;;                     1
-    ;;                     opponent-speed
-    ;;                     0
-    ;;                     *op-total-speed*))
+    ((and (> trucks 0)
+          (> opponent-speed 3)
+          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+     ;; TODO: don't place the truck on parts of the map that I can't see!!
+     (place-cyber-truck ((game (turn *current-turn*))
+                         (game-map game-map)
+                         (player (absolute-x opponent-abs-x)
+                                 (position opponent-pos)
+                                 (boosts 1)
+                                 (lizards 1)
+                                 (trucks 1)
+                                 (speed opponent-speed)
+                                 (damage opponent-damage)
+                                 (boost-counter 0))
+                         (opponent (absolute-x my-abs-x)
+                                   (position my-pos)
+                                   (boosts boosts)
+                                   (lizards lizards)
+                                   (trucks trucks)
+                                   (speed speed)
+                                   (damage damage)
+                                   (boost-counter boost-counter)))))
+    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
+     (make-opposed-move ((game (turn *current-turn*))
+                         (game-map game-map)
+                         (player (absolute-x my-abs-x)
+                                 (position my-pos)
+                                 (boosts boosts)
+                                 (lizards lizards)
+                                 (trucks trucks)
+                                 (speed speed)
+                                 (damage damage)
+                                 (boost-counter boost-counter))
+                         (opponent (absolute-x opponent-abs-x)
+                                   (position opponent-pos)
+                                   (boosts opponent-boosts)
+                                   (lizards 1)
+                                   (trucks 1)
+                                   (speed opponent-speed)
+                                   (damage 0)
+                                   (boost-counter 0)))))
     ((close-to-end my-abs-x)
      (make-finishing-move game-map
                           my-pos
