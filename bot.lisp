@@ -493,32 +493,36 @@ Unused values will be ignored."
                                   (game-turn (1+ game-turn)))
                              (progn ,@subsequent))))
                       (opponent   (symbol) (values   (case symbol
-                                                       (score (global-score opponent-absolute-x
-                                                                            game-turn
-                                                                            opponent-boosts
-                                                                            opponent-lizards
-                                                                            (cdr (opponent-position))
-                                                                            opponent-boost-counter
-                                                                            opponent-damage))
-                                                       (moves (remove-impossible-moves opponent-boosts
-                                                                                       opponent-lizards
-                                                                                       opponent-trucks
-                                                                                       opponent-position
-                                                                                       all-makeable-moves))
+                                                       (x '(car opponent-position))
+                                                       (y '(cdr opponent-position))
+                                                       (score '(global-score opponent-absolute-x
+                                                                game-turn
+                                                                opponent-boosts
+                                                                opponent-lizards
+                                                                (cdr opponent-position)
+                                                                opponent-boost-counter
+                                                                opponent-damage))
+                                                       (moves '(remove-impossible-moves opponent-boosts
+                                                                opponent-lizards
+                                                                opponent-trucks
+                                                                opponent-position
+                                                                all-makeable-moves))
                                                        (intern (mkstr 'opponent  '- symbol)))))
                       (player     (symbol) (values   (case symbol
-                                                       (score (global-score player-absolute-x
-                                                                            game-turn
-                                                                            player-boosts
-                                                                            player-lizards
-                                                                            (cdr (player-position))
-                                                                            player-boost-counter
-                                                                            player-damage))
-                                                       (moves (remove-impossible-moves player-boosts
-                                                                                       player-lizards
-                                                                                       player-trucks
-                                                                                       player-position
-                                                                                       all-makeable-moves))
+                                                       (x '(car player-position))
+                                                       (y '(cdr player-position))
+                                                       (score '(global-score player-absolute-x
+                                                                game-turn
+                                                                player-boosts
+                                                                player-lizards
+                                                                (cdr player-position)
+                                                                player-boost-counter
+                                                                player-damage))
+                                                       (moves '(remove-impossible-moves player-boosts
+                                                                player-lizards
+                                                                player-trucks
+                                                                player-position
+                                                                all-makeable-moves))
                                                        (t (intern (mkstr 'player    '- symbol))))))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
                       (recur      (iteration-count) `(recur-inner current-game-map
