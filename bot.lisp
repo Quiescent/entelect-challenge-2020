@@ -296,59 +296,58 @@ POS."
 
 (defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-          (count            maximax-depth))
-     (with-initial-state ,game-state
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+     (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
          (for current-turn = (+ *current-turn* (- maximax-depth count)))
          (with cells =
-               (for my-move in (remove-impossible-moves (player boosts)
-                                                        (player lizards)
-                                                        (player trucks)
-                                                        (player position)
-                                                        all-makeable-moves))
                (iter
-                 (for opponent-move in (remove-impossible-moves (opponent boosts)
-                                                                (opponent lizards)
-                                                                (opponent trucks)
-                                                                (opponent position)
-                                                                all-makeable-moves))
-                 (make-moves
-                  my-move
-                  opponent-move
-                  (bind ((player-turns-to-end      (if (end-state (player position)   game-map) count -1))
-                         (opponent-turns-to-end    (if (end-state (opponent position) game-map) count -1))
-                         (player-new-total-speed   (+ my-total-speed my-speed-2))
-                         (opponent-new-total-speed (+ op-total-speed op-speed-2))
-                         ((player-score
-                           opponent-score
-                           _
-                           _)
-                          (if (or (/= player-turns-to-end -1)
-                                  (/= opponent-turns-to-end -1)
-                                  (= count 1))
-                              (list (global-score (player absolute-x)
-                                                  current-turn
-                                                  player-new-total-speed
-                                                  (player boosts)
-                                                  (player-lizards)
-                                                  (cdr (player position))
-                                                  (player boost-counter)
-                                                  (player damage))
-                                    (global-score (opponent absolute-x)
-                                                  current-turn
-                                                  opponent-new-total-speed
-                                                  (opponent boosts)
-                                                  (opponent lizards)
-                                                  (cdr (opponent position))
-                                                  (opponent boost-counter)
-                                                  (opponent damage))
-                                    nil
-                                    nil)))
-                         (progn (incf count -1)
-                                (recur)))
-                    (finding (list player-score opponent-score player-move opponent-move)
-                             minimizing player-score))))))
+                 (for my-move in (remove-impossible-moves (player boosts)
+                                                          (player lizards)
+                                                          (player trucks)
+                                                          (player position)
+                                                          all-makeable-moves))
+                 (iter
+                   (for opponent-move in (remove-impossible-moves (opponent boosts)
+                                                                  (opponent lizards)
+                                                                  (opponent trucks)
+                                                                  (opponent position)
+                                                                  all-makeable-moves))
+                   (make-moves
+                    my-move
+                    opponent-move
+                    (bind ((player-turns-to-end      (if (end-state (player position)   game-map) count -1))
+                           (opponent-turns-to-end    (if (end-state (opponent position) game-map) count -1))
+                           (player-new-total-speed   (+ my-total-speed my-speed-2))
+                           (opponent-new-total-speed (+ op-total-speed op-speed-2))
+                           ((player-score
+                             opponent-score
+                             _
+                             _)
+                            (if (or (/= player-turns-to-end -1)
+                                    (/= opponent-turns-to-end -1)
+                                    (= (iteration count) 1))
+                                (list (global-score (player absolute-x)
+                                                    current-turn
+                                                    player-new-total-speed
+                                                    (player boosts)
+                                                    (player-lizards)
+                                                    (cdr (player position))
+                                                    (player boost-counter)
+                                                    (player damage))
+                                      (global-score (opponent absolute-x)
+                                                    current-turn
+                                                    opponent-new-total-speed
+                                                    (opponent boosts)
+                                                    (opponent lizards)
+                                                    (cdr (opponent position))
+                                                    (opponent boost-counter)
+                                                    (opponent damage))
+                                      nil
+                                      nil))))
+                      (recur (1- (iteration count)))
+                      (finding (list player-score opponent-score player-move opponent-move)
+                               minimizing player-score)))))))
        (for cell in cells)
        (finding cell maximizing (car cell)))))
 
