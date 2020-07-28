@@ -509,7 +509,7 @@ Unused values will be ignored."
                                                                        opponent-boost-counter
                                                                        opponent-damage)
                                                          (intern (mkstr 'opponent  '- symbol)))))
-                      (player     (symbol) (values   (if (eq symbol 'scor)
+                      (player     (symbol) (values   (if (eq symbol 'score)
                                                          (global-score player-absolute-x
                                                                        game-turn
                                                                        player-boosts
