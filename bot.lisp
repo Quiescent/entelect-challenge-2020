@@ -90,8 +90,8 @@
                                             op-speed)))
     (when *banned-move*
       (format *error-output* "Banning: ~a~%" *banned-move*))
-    (format *error-output* "My total/average speed: ~a - ~a~%" my-abs-x            (/ my-abs-x *current-turn*))
-    (format *error-output* "Op total/average speed: ~a - ~a~%" opponent-absolute-x (/ opponent-absolute-x *current-turn*))
+    (format *error-output* "My total/average speed: ~a - ~a~%" my-abs-x       (/ my-abs-x *current-turn*))
+    (format *error-output* "Op total/average speed: ~a - ~a~%" opponent-abs-x (/ opponent-abs-x *current-turn*))
     (setf *previous-state* (cons move current-state))
     move))
 
