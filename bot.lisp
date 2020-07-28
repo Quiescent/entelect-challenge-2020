@@ -136,88 +136,30 @@
   "Produce the speed which the opponent is going in THIS state."
   (deep-accessor this 'opponent 'player-speed))
 
-(defun determine-move (game-map my-pos boosting boosts
-                       lizards trucks speed damage
-                       boost-counter my-abs-x opponent-abs-x
-                       opponent-pos opponent-boosts opponent-speed)
-  "Produce the best move for GAME-MAP.
-
-Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
-LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
-MY-ABS-X position on the board."
-  (declare (ignore boosting))
-  (cond
-    ((and (> trucks 0)
-          (> opponent-speed 3)
-          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
-     ;; TODO: don't place the truck on parts of the map that I can't see!!
-     (place-cyber-truck ((game (turn *current-turn*))
-                         (game-map game-map)
-                         (player (absolute-x opponent-abs-x)
-                                 (position opponent-pos)
-                                 (boosts 1)
-                                 (lizards 1)
-                                 (trucks 1)
-                                 (speed opponent-speed)
-                                 (damage 0)
-                                 (boost-counter 0))
-                         (opponent (absolute-x my-abs-x)
-                                   (position my-pos)
-                                   (boosts boosts)
-                                   (lizards lizards)
-                                   (trucks trucks)
-                                   (speed speed)
-                                   (damage damage)
-                                   (boost-counter boost-counter)))))
-    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-     (make-opposed-move ((game (turn *current-turn*))
-                         (game-map game-map)
-                         (player (absolute-x my-abs-x)
-                                 (position my-pos)
-                                 (boosts boosts)
-                                 (lizards lizards)
-                                 (trucks trucks)
-                                 (speed speed)
-                                 (damage damage)
-                                 (boost-counter boost-counter))
-                         (opponent (absolute-x opponent-abs-x)
-                                   (position opponent-pos)
-                                   (boosts opponent-boosts)
-                                   (lizards 1)
-                                   (trucks 1)
-                                   (speed opponent-speed)
-                                   (damage 0)
-                                   (boost-counter 0)))))
-    ((close-to-end my-abs-x)
-     (make-finishing-move game-map
-                          my-pos
-                          boosts
-                          lizards
-                          trucks
-                          speed
-                          damage
-                          boost-counter))
-    (t
-     (make-speed-move game-map
-                      my-abs-x
-                      my-pos
-                      boosts
-                      lizards
-                      trucks
-                      speed
-                      damage
-                      boost-counter))))
-
-(defun close-to-end (absolute-x)
-  "Produce T if ABSOLUTE-X is close to the edge of the map."
-  (> absolute-x 1480))
-
 (defvar *ahead-of-cache* nil
     "A cache of obstacles ahead of certain points.
 
 Key is (speed x y).
 
 Value is [muds boosts walls tweets lizards].")
+
+;; Paul Graham: On Lisp
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+
+  (defun mkstr (&rest args)
+    (with-output-to-string (s)
+      (dolist (a args) (princ a s))))
+
+  (defun symb (&rest args)
+    (values (intern (apply #'mkstr args)))))
+
+(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
+  "All the moves which I can make.")
+
+(defvar all-straight-moves '(accelerate use_boost nothing decelerate)
+  "All moves which will result in going straight without jumping.")
 
 (defmacro place-cyber-truck (game-state)
   "Place the truck in front of my opponents best move.
@@ -237,17 +179,6 @@ The opponent is at the _absolute_ coordinate:
        ;; Offset by one so that the opponent doesn't land *on* the truck
        (make-moves op-move 'nothing
                    (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))
-
-(defmacro cannot-make-move (boosts lizards trucks pos)
-  "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
-  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos)))))
-
-(defun remove-impossible-moves (boosts lizards trucks pos all-makeable-moves)
-  "Remove impossible moves from ALL-MOVES.
-
-Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
-POS."
-  (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
 
 (defconstant maximax-depth 2
   "The depth that we should search the game tree.")
@@ -282,37 +213,6 @@ POS."
                                minimizing player-score))))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
-
-;; TODO: remove boost-counter
-(defun global-score (absolute-x current-turn boosts lizards y boost-counter damage)
-  "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
-  (bind ((is-middle-two (if (or (= y 1)
-                                (= y 2))
-                            1
-                            0)))
-    (iter (for coefficients in *heuristic-coeficients*)
-      (bind (((x-score
-               average-speed-score
-               boosts-score
-               lizards-score
-               y-score
-               boost-counter-score
-               damage-score
-               current-turn-score) coefficients))
-        (maximizing (+ (* x-score             absolute-x)
-                       (* average-speed-score (/ absolute-x current-turn))
-                       (* boosts-score        boosts)
-                       (* lizards-score       lizards)
-                       (* y-score             is-middle-two)
-                       (* boost-counter-score boost-counter)
-                       (* damage-score        damage)
-                       (* current-turn-score  current-turn)))))))
-
-(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
-  "All the moves which I can make.")
-
-(defvar all-straight-moves '(accelerate use_boost nothing decelerate)
-  "All moves which will result in going straight without jumping.")
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
@@ -566,6 +466,118 @@ Unused values will be ignored."
         (progn (format t "Speed: ~a~%" (player speed))
                (format t "done!~%")))))
 
+(defun determine-move (game-map my-pos boosting boosts
+                       lizards trucks speed damage
+                       boost-counter my-abs-x opponent-abs-x
+                       opponent-pos opponent-boosts opponent-speed)
+  "Produce the best move for GAME-MAP.
+
+Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
+LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
+MY-ABS-X position on the board."
+  (declare (ignore boosting))
+  (cond
+    ((and (> trucks 0)
+          (> opponent-speed 3)
+          (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
+     ;; TODO: don't place the truck on parts of the map that I can't see!!
+     (place-cyber-truck ((game (turn *current-turn*))
+                         (game-map game-map)
+                         (player (absolute-x opponent-abs-x)
+                                 (position opponent-pos)
+                                 (boosts 1)
+                                 (lizards 1)
+                                 (trucks 1)
+                                 (speed opponent-speed)
+                                 (damage 0)
+                                 (boost-counter 0))
+                         (opponent (absolute-x my-abs-x)
+                                   (position my-pos)
+                                   (boosts boosts)
+                                   (lizards lizards)
+                                   (trucks trucks)
+                                   (speed speed)
+                                   (damage damage)
+                                   (boost-counter boost-counter)))))
+    ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
+     (make-opposed-move ((game (turn *current-turn*))
+                         (game-map game-map)
+                         (player (absolute-x my-abs-x)
+                                 (position my-pos)
+                                 (boosts boosts)
+                                 (lizards lizards)
+                                 (trucks trucks)
+                                 (speed speed)
+                                 (damage damage)
+                                 (boost-counter boost-counter))
+                         (opponent (absolute-x opponent-abs-x)
+                                   (position opponent-pos)
+                                   (boosts opponent-boosts)
+                                   (lizards 1)
+                                   (trucks 1)
+                                   (speed opponent-speed)
+                                   (damage 0)
+                                   (boost-counter 0)))))
+    ((close-to-end my-abs-x)
+     (make-finishing-move game-map
+                          my-pos
+                          boosts
+                          lizards
+                          trucks
+                          speed
+                          damage
+                          boost-counter))
+    (t
+     (make-speed-move game-map
+                      my-abs-x
+                      my-pos
+                      boosts
+                      lizards
+                      trucks
+                      speed
+                      damage
+                      boost-counter))))
+
+(defun close-to-end (absolute-x)
+  "Produce T if ABSOLUTE-X is close to the edge of the map."
+  (> absolute-x 1480))
+
+(defmacro cannot-make-move (boosts lizards trucks pos)
+  "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
+  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos)))))
+
+(defun remove-impossible-moves (boosts lizards trucks pos all-makeable-moves)
+  "Remove impossible moves from ALL-MOVES.
+
+Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
+POS."
+  (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
+
+;; TODO: remove boost-counter
+(defun global-score (absolute-x current-turn boosts lizards y boost-counter damage)
+  "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
+  (bind ((is-middle-two (if (or (= y 1)
+                                (= y 2))
+                            1
+                            0)))
+    (iter (for coefficients in *heuristic-coeficients*)
+      (bind (((x-score
+               average-speed-score
+               boosts-score
+               lizards-score
+               y-score
+               boost-counter-score
+               damage-score
+               current-turn-score) coefficients))
+        (maximizing (+ (* x-score             absolute-x)
+                       (* average-speed-score (/ absolute-x current-turn))
+                       (* boosts-score        boosts)
+                       (* lizards-score       lizards)
+                       (* y-score             is-middle-two)
+                       (* boost-counter-score boost-counter)
+                       (* damage-score        damage)
+                       (* current-turn-score  current-turn)))))))
+
 (defun minimax-score (my-abs-x op-abs-x)
   "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X."
   (- my-abs-x op-abs-x))
@@ -793,18 +805,6 @@ Eighth is my boost counter."
       (for (x-truck . y-truck) in trucks)
       (thereis (and (eq y-truck y)
                     (eq x (1- x-truck)))))))
-
-;; Paul Graham: On Lisp
-(eval-when (:compile-toplevel
-            :load-toplevel
-            :execute)
-
-  (defun mkstr (&rest args)
-    (with-output-to-string (s)
-      (dolist (a args) (princ a s))))
-
-  (defun symb (&rest args)
-    (values (intern (apply #'mkstr args)))))
 
 (defmacro ahead-of (move type speed game-map pos)
   "Produce the appropriate `ahead-of' form.
