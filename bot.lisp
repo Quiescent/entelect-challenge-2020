@@ -236,7 +236,7 @@ The opponent is at the _absolute_ coordinate:
      (with-initial-state ,game-state
        ;; Offset by one so that the opponent doesn't land *on* the truck
        (make-moves op-move 'nothing
-                   (cons 'use_tweet (cons (+ 1 (opponent absolute-x)) (1+ (opponent y))))))))
+                   (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))
 
 (defmacro cannot-make-move (boosts lizards trucks pos)
   "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
