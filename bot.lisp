@@ -291,17 +291,9 @@ POS."
          (for current-turn = (+ *current-turn* (- maximax-depth count)))
          (with cells =
                (iter
-                 (for my-move in (remove-impossible-moves (player boosts)
-                                                          (player lizards)
-                                                          (player trucks)
-                                                          (player position)
-                                                          all-makeable-moves))
+                 (for my-move in (player moves))
                  (iter
-                   (for opponent-move in (remove-impossible-moves (opponent boosts)
-                                                                  (opponent lizards)
-                                                                  (opponent trucks)
-                                                                  (opponent position)
-                                                                  all-makeable-moves))
+                   (for opponent-move in (opponent moves))
                    (make-moves
                     my-move
                     opponent-move
@@ -500,24 +492,34 @@ Unused values will be ignored."
 
                                   (game-turn (1+ game-turn)))
                              (progn ,@subsequent))))
-                      (opponent   (symbol) (values   (if (eq symbol 'score)
-                                                         (global-score opponent-absolute-x
-                                                                       game-turn
-                                                                       opponent-boosts
-                                                                       opponent-lizards
-                                                                       (cdr (opponent-position))
-                                                                       opponent-boost-counter
-                                                                       opponent-damage)
+                      (opponent   (symbol) (values   (case
+                                                         (score (global-score opponent-absolute-x
+                                                                        game-turn
+                                                                        opponent-boosts
+                                                                        opponent-lizards
+                                                                        (cdr (opponent-position))
+                                                                        opponent-boost-counter
+                                                                        opponent-damage))
+                                                       (moves (remove-impossible-moves opponent-boosts
+                                                                                       opponent-lizards
+                                                                                       opponent-trucks
+                                                                                       opponent-position
+                                                                                       all-makeable-moves))
                                                          (intern (mkstr 'opponent  '- symbol)))))
-                      (player     (symbol) (values   (if (eq symbol 'score)
-                                                         (global-score player-absolute-x
-                                                                       game-turn
-                                                                       player-boosts
-                                                                       player-lizards
-                                                                       (cdr (player-position))
-                                                                       player-boost-counter
-                                                                       player-damage)
-                                                         (intern (mkstr 'player    '- symbol)))))
+                      (player     (symbol) (values   (case symbol
+                                                       (score (global-score player-absolute-x
+                                                                            game-turn
+                                                                            player-boosts
+                                                                            player-lizards
+                                                                            (cdr (player-position))
+                                                                            player-boost-counter
+                                                                            player-damage))
+                                                       (moves (remove-impossible-moves player-boosts
+                                                                                       player-lizards
+                                                                                       player-trucks
+                                                                                       player-position
+                                                                                       all-makeable-moves))
+                                                       (t (intern (mkstr 'player    '- symbol))))))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
                       (recur      (iteration-count) `(recur-inner current-game-map
                                                                   player-absolute-x
