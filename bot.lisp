@@ -159,7 +159,7 @@ MY-ABS-X position on the board."
                                  (lizards 1)
                                  (trucks 1)
                                  (speed opponent-speed)
-                                 (damage opponent-damage)
+                                 (damage 0)
                                  (boost-counter 0))
                          (opponent (absolute-x my-abs-x)
                                    (position my-pos)
