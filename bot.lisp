@@ -137,7 +137,7 @@
   (deep-accessor this 'opponent 'player-speed))
 
 (defvar *ahead-of-cache* nil
-    "A cache of obstacles ahead of certain points.
+  "A cache of obstacles ahead of certain points.
 
 Key is (speed x y).
 
@@ -174,7 +174,7 @@ The opponent is at the _absolute_ coordinate:
 (OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-          (op-move (make-opposed-move ,game-state)))
+          (op-move (nth 3 (make-opposed-move ,game-state))))
      (with-initial-state ,game-state
        ;; Offset by one so that the opponent doesn't land *on* the truck
        (make-moves op-move 'nothing
@@ -192,25 +192,26 @@ The opponent is at the _absolute_ coordinate:
          (with cells =
                (iter
                  (for player-move in (player moves))
-                 (iter
-                   (for opponent-move in (opponent moves))
-                   (make-moves
-                    player-move
-                    opponent-move
-                    (bind (((player-score
-                             opponent-score
-                             _
-                             _)
-                            (if (or (end-state (player position)   game-map)
-                                    (end-state (opponent position) game-map)
-                                    (= (iteration count) 1))
-                                (list (player score)
-                                      (opponent score)
-                                      nil
-                                      nil))))
-                      (recur (1- (iteration count)))
-                      (finding (list player-score opponent-score player-move opponent-move)
-                               minimizing player-score))))))
+                 (collecting
+                  (iter
+                    (for opponent-move in (opponent moves))
+                    (make-moves
+                     player-move
+                     opponent-move
+                     (bind (((player-score
+                              opponent-score
+                              _
+                              _)
+                             (if (or (end-state (player position)   game-map)
+                                     (end-state (opponent position) game-map)
+                                     (= (iteration count) 1))
+                                 (list (player score)
+                                       (opponent score)
+                                       nil
+                                       nil)
+                                 (recur (1- (iteration count))))))
+                       (finding (list player-score opponent-score player-move opponent-move)
+                                minimizing player-score)))))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
 
@@ -500,24 +501,24 @@ MY-ABS-X position on the board."
                                    (damage damage)
                                    (boost-counter boost-counter)))))
     ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-     (make-opposed-move ((game (turn *current-turn*))
-                         (game-map game-map)
-                         (player (absolute-x my-abs-x)
-                                 (position my-pos)
-                                 (boosts boosts)
-                                 (lizards lizards)
-                                 (trucks trucks)
-                                 (speed speed)
-                                 (damage damage)
-                                 (boost-counter boost-counter))
-                         (opponent (absolute-x opponent-abs-x)
-                                   (position opponent-pos)
-                                   (boosts opponent-boosts)
-                                   (lizards 1)
-                                   (trucks 1)
-                                   (speed opponent-speed)
-                                   (damage 0)
-                                   (boost-counter 0)))))
+     (nth 3 (make-opposed-move ((game (turn *current-turn*))
+                                (game-map game-map)
+                                (player (absolute-x my-abs-x)
+                                        (position my-pos)
+                                        (boosts boosts)
+                                        (lizards lizards)
+                                        (trucks trucks)
+                                        (speed speed)
+                                        (damage damage)
+                                        (boost-counter boost-counter))
+                                (opponent (absolute-x opponent-abs-x)
+                                          (position opponent-pos)
+                                          (boosts opponent-boosts)
+                                          (lizards 1)
+                                          (trucks 1)
+                                          (speed opponent-speed)
+                                          (damage 0)
+                                          (boost-counter 0))))))
     ((close-to-end my-abs-x)
      (make-finishing-move game-map
                           my-pos
@@ -632,13 +633,13 @@ board."
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
       (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 boost-counter-2) state))
-                                         (global-score (+ my-abs-x (car pos-2))
-                                                       (+ *current-turn* (length path))
-                                                       boosts-2
-                                                       lizards-2
-                                                       (cdr pos-2)
-                                                       boost-counter-2
-                                                       damage-2)))))))
+                                              (global-score (+ my-abs-x (car pos-2))
+                                                            (+ *current-turn* (length path))
+                                                            boosts-2
+                                                            lizards-2
+                                                            (cdr pos-2)
+                                                            boost-counter-2
+                                                            damage-2)))))))
 
 (defun removing-no-net-change (end-states game-map pos boosts lizards trucks speed damage boost-counter)
   "Remove END-STATES which didn't have a net change after the first move was made."
