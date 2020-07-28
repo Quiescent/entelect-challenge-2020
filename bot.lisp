@@ -16,12 +16,6 @@
 (defvar *previous-state* '()
   "The state which the player was in last turn.")
 
-(defvar *my-total-speed* 0
-  "The sum of speeds across all turns for my bot.")
-
-(defvar *op-total-speed* 0
-  "The sum of speeds across all turns for the opponents bot.")
-
 (defvar *current-turn* 1
   "The turn of the game that we're on.")
 
@@ -37,15 +31,13 @@
       (collecting next-member))))
 
 (defun main ()
-  (bind ((*my-total-speed* 0)
-         (*op-total-speed* 0))
-    (iter
-      (while t)
-      (initially (setf *heuristic-coeficients* (read-weights)))
-      (for round-number = (read-line))
-      (bind ((*current-turn* (read-from-string round-number)))
-        (for move = (move-for-round round-number)))
-      (format t "C;~a;~a~%" round-number (move-to-string move)))))
+  (iter
+    (while t)
+    (initially (setf *heuristic-coeficients* (read-weights)))
+    (for round-number = (read-line))
+    (bind ((*current-turn* (read-from-string round-number)))
+      (for move = (move-for-round round-number)))
+    (format t "C;~a;~a~%" round-number (move-to-string move))))
 
 (defun move-to-string (move)
   "Produce a string representation of MOVE."
@@ -98,10 +90,8 @@
                                             op-speed)))
     (when *banned-move*
       (format *error-output* "Banning: ~a~%" *banned-move*))
-    (incf *my-total-speed* speed)
-    (incf *op-total-speed* op-speed)
-    (format *error-output* "My total/average speed: ~a - ~a~%" *my-total-speed* (/ *my-total-speed* *current-turn*))
-    (format *error-output* "Op total/average speed: ~a - ~a~%" *op-total-speed* (/ *op-total-speed* *current-turn*))
+    (format *error-output* "My total/average speed: ~a - ~a~%" my-abs-x            (/ my-abs-x *current-turn*))
+    (format *error-output* "Op total/average speed: ~a - ~a~%" opponent-absolute-x (/ opponent-absolute-x *current-turn*))
     (setf *previous-state* (cons move current-state))
     move))
 
@@ -213,8 +203,7 @@ MY-ABS-X position on the board."
                       trucks
                       speed
                       damage
-                      boost-counter
-                      *my-total-speed*))))
+                      boost-counter))))
 
 (defun close-to-end (absolute-x)
   "Produce T if ABSOLUTE-X is close to the edge of the map."
@@ -316,33 +305,15 @@ POS."
                    (make-moves
                     my-move
                     opponent-move
-                    (bind ((player-turns-to-end      (if (end-state (player position)   game-map) count -1))
-                           (opponent-turns-to-end    (if (end-state (opponent position) game-map) count -1))
-                           (player-new-total-speed   (+ my-total-speed my-speed-2))
-                           (opponent-new-total-speed (+ op-total-speed op-speed-2))
-                           ((player-score
+                    (bind (((player-score
                              opponent-score
                              _
                              _)
-                            (if (or (/= player-turns-to-end -1)
-                                    (/= opponent-turns-to-end -1)
+                            (if (or (end-state (player position)   game-map)
+                                    (end-state (opponent position) game-map)
                                     (= (iteration count) 1))
-                                (list (global-score (player absolute-x)
-                                                    current-turn
-                                                    player-new-total-speed
-                                                    (player boosts)
-                                                    (player-lizards)
-                                                    (cdr (player position))
-                                                    (player boost-counter)
-                                                    (player damage))
-                                      (global-score (opponent absolute-x)
-                                                    current-turn
-                                                    opponent-new-total-speed
-                                                    (opponent boosts)
-                                                    (opponent lizards)
-                                                    (cdr (opponent position))
-                                                    (opponent boost-counter)
-                                                    (opponent damage))
+                                (list (player score)
+                                      (opponent score)
                                       nil
                                       nil))))
                       (recur (1- (iteration count)))
@@ -352,8 +323,8 @@ POS."
        (finding cell maximizing (car cell)))))
 
 ;; TODO: remove boost-counter
-(defun global-score (absolute-x current-turn total-speed boosts lizards y boost-counter damage)
-  "Score the position described by ABSOLUTE-X TOTAL-SPEED BOOSTS LIZARDS."
+(defun global-score (absolute-x current-turn boosts lizards y boost-counter damage)
+  "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1
@@ -368,7 +339,7 @@ POS."
                damage-score
                current-turn-score) coefficients))
         (maximizing (+ (* x-score             absolute-x)
-                       (* average-speed-score (/ total-speed current-turn))
+                       (* average-speed-score (/ absolute-x current-turn))
                        (* boosts-score        boosts)
                        (* lizards-score       lizards)
                        (* y-score             is-middle-two)
@@ -397,8 +368,11 @@ Unused values will be ignored."
       (error "Player initial state not specified"))
     (when (not (assoc 'opponent initial-state))
       (error "Opponent initial state not specified"))
+    (when (not (assoc 'game initial-state))
+      (error "Game initial state not specified"))
     (bind ((player-state     (cdr (assoc 'player    initial-state)))
            (opponent-state   (cdr (assoc 'opponent  initial-state)))
+           (game-state       (cdr (assoc 'game  initial-state)))
            (iteration-state  (when (assoc 'iteration initial-state)
                                (cdr (assoc 'iteration initial-state)))))
       (labels ((player-not-defined (symbol)
@@ -407,6 +381,9 @@ Unused values will be ignored."
                (opponent-not-defined (symbol)
                  (when (not (assoc symbol opponent-state))
                    (error (concatenate 'string "Opponent " (symbol-name symbol) " not defined"))))
+               (game-not-defined (symbol)
+                 (when (not (assoc symbol game-state))
+                   (error (concatenate 'string "Game " (symbol-name symbol) " not defined"))))
                (iteration-is-not-defined (symbol)
                  (when (not (assoc symbol iteration-state))
                    (error (concatenate 'string "Iteration " (symbol-name symbol) " not defined")))))
@@ -431,6 +408,8 @@ Unused values will be ignored."
         (when iteration-state
           (iteration-is-not-defined 'count))
 
+        (game-not-defined 'turn)
+
         `(bind ((current-game-map ,@(cdr (assoc 'game-map initial-state)))
 
                 (player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
@@ -450,6 +429,8 @@ Unused values will be ignored."
                 (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
                 (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
                 (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state)))
+
+                (game-turn              ,@(cdr (assoc 'turn game-state)))
 
                 (iteration-count        ,@(and iteration-state (cdr (assoc 'count iteration-state)))))
            (macrolet ((make-moves (player-move opponent-move &rest subsequent)
@@ -515,10 +496,28 @@ Unused values will be ignored."
                                   (opponent-trucks        opponent-trucks-2)
                                   (opponent-speed         opponent-speed-2)
                                   (opponent-damage        opponent-damage-2)
-                                  (opponent-boost-counter opponent-boost-counter-2))
+                                  (opponent-boost-counter opponent-boost-counter-2)
+
+                                  (game-turn (1+ game-turn)))
                              (progn ,@subsequent))))
-                      (opponent   (symbol) (values   (intern (mkstr 'opponent  '- symbol))))
-                      (player     (symbol) (values   (intern (mkstr 'player    '- symbol))))
+                      (opponent   (symbol) (values   (if (eq symbol 'score)
+                                                         (global-score opponent-absolute-x
+                                                                       game-turn
+                                                                       opponent-boosts
+                                                                       opponent-lizards
+                                                                       (cdr (opponent-position))
+                                                                       opponent-boost-counter
+                                                                       opponent-damage)
+                                                         (intern (mkstr 'opponent  '- symbol)))))
+                      (player     (symbol) (values   (if (eq symbol 'scor)
+                                                         (global-score player-absolute-x
+                                                                       game-turn
+                                                                       player-boosts
+                                                                       player-lizards
+                                                                       (cdr (player-position))
+                                                                       player-boost-counter
+                                                                       player-damage)
+                                                         (intern (mkstr 'player    '- symbol)))))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
                       (recur      (iteration-count) `(recur-inner current-game-map
                                                                   player-absolute-x
@@ -537,6 +536,7 @@ Unused values will be ignored."
                                                                   opponent-speed
                                                                   opponent-damage
                                                                   opponent-boost-counter
+                                                                  game-turn
                                                                   ,iteration-count)))
              (labels ((recur-inner (current-game-map
                                     player-absolute-x
@@ -555,13 +555,15 @@ Unused values will be ignored."
                                     opponent-speed
                                     opponent-damage
                                     opponent-boost-counter
+                                    game-turn
                                     iteration-count)
                         (progn ,@body)))
                (recur iteration-count))))))))
 
 #+nil
 (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-  (with-initial-state ((iteration (count 3))
+  (with-initial-state ((game (turn 10))
+                       (iteration (count 3))
                        (game-map empty-game-map)
                        (player (absolute-x 1)
                                (position (cons 2 1))
