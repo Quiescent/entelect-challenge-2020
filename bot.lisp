@@ -180,7 +180,7 @@ The opponent is at the _absolute_ coordinate:
        (make-moves op-move 'nothing
                    (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))
 
-(defconstant maximax-depth 2
+(defconstant maximax-depth 3
   "The depth that we should search the game tree.")
 
 (defmacro make-opposed-move (game-state)
