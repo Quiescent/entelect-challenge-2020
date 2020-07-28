@@ -616,7 +616,7 @@ Unused values will be ignored."
       last
       car)))
 
-(defun make-speed-move (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter total-speed)
+(defun make-speed-move (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter)
   "Produce the best speed move to make on GAME-MAP.
 
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
@@ -624,13 +624,13 @@ left, the SPEED at which I'm going, MY-ABS-X position on the board and
 the BOOSTS, LIZARDS and TRUCKS I have left as well as the DAMAGE I've
 taken."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (rank-order-all-moves game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter total-speed)
+    (-> (rank-order-all-moves game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter)
       caar
       last
       car)))
 
 ;; TODO: remove arbitrary constraints like boosting etc.
-(defun rank-order-all-moves (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter total-speed)
+(defun rank-order-all-moves (game-map my-abs-x my-pos boosts lizards trucks speed damage boost-counter)
   "Produce all the moves from GAME-MAP ordered by best placement on the global map.
 
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
@@ -639,17 +639,16 @@ board."
   (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
     (-> (states-from game-map my-pos speed boosts lizards trucks damage boost-counter)
       (remove-fixing-at-full-health damage)
-      (trim-to-two-moves game-map my-pos boosts lizards trucks speed damage boost-counter total-speed)
-      (boosting-results-in-two-rounds-at-15 game-map my-pos boosts lizards trucks speed damage boost-counter total-speed)
+      (trim-to-two-moves game-map my-pos boosts lizards trucks speed damage boost-counter)
+      (boosting-results-in-two-rounds-at-15 game-map my-pos boosts lizards trucks speed damage boost-counter)
       (removing-no-net-change game-map my-pos boosts lizards trucks speed damage boost-counter)
       copy-seq
       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-      (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 boost-counter-2 total-speed-2) state))
+      (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 boost-counter-2) state))
                                          (global-score (+ my-abs-x (car pos-2))
                                                        (+ *current-turn* (length path))
-                                                       total-speed-2
                                                        boosts-2
                                                        lizards-2
                                                        (cdr pos-2)
@@ -688,7 +687,7 @@ board."
        (>= opponent-y     (- my-y     1))
        (<= opponent-y     (+ my-y     1))))
 
-(defun trim-to-two-moves (end-states game-map pos boosts lizards trucks speed damage boost-counter total-speed)
+(defun trim-to-two-moves (end-states game-map pos boosts lizards trucks speed damage boost-counter)
   "Trim all end states to two moves deep.
 
 Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
@@ -711,10 +710,9 @@ the starting state."
                         lizards-2
                         trucks-2
                         damage-2
-                        boost-counter-2
-                        (+ total-speed speed-2 speed-2))))))
+                        boost-counter-2)))))
 
-(defun boosting-results-in-two-rounds-at-15 (end-states game-map pos boosts lizards trucks speed damage boost-counter total-speed)
+(defun boosting-results-in-two-rounds-at-15 (end-states game-map pos boosts lizards trucks speed damage boost-counter)
   "Only consider boost moves when we don't boost through mud.
 
 Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS, SPEED and DAMAGE to make moves from
@@ -744,8 +742,7 @@ the starting state."
                           lizards-2
                           trucks-2
                           damage-2
-                          boost-counter-2
-                          (+ total-speed speed-1 speed-2)))))))
+                          boost-counter-2))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
@@ -777,26 +774,25 @@ Fourth is my boosts left.
 Fifth is my lizards left.
 Sixth is my trucks left.
 Seventh is my damage.
-Eighth is my boost counter.
-Ninth is the new total speed."
+Eighth is my boost counter."
   (iter
     (with counter = 0)
-    (with paths-to-explore = (list (list nil my-pos speed boosts lizards trucks damage boost-counter *my-total-speed*)))
+    (with paths-to-explore = (list (list nil my-pos speed boosts lizards trucks damage boost-counter)))
     (with explored = (make-hash-table :test #'equal))
     (with found-paths)
     (while (and (not (null paths-to-explore))
                 (< counter 100000)))
-    (bind (((path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter current-total-speed)
+    (bind (((path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter)
             (pop paths-to-explore)))
       (when (> (length path) 3)
-        (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter current-total-speed)
+        (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter)
               found-paths)
         (next-iteration))
       (when (gethash path explored)
         (next-iteration))
       (if (end-state current-pos game-map)
           (progn
-            (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter current-total-speed)
+            (push (list path current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter)
                   found-paths))
           (iter
             (for move in (remove-impossible-moves current-boosts
@@ -811,7 +807,7 @@ Ninth is the new total speed."
               (next-iteration))
             (bind (((:values new-pos new-speed new-boosts new-lizards new-trucks new-damage new-boost-counter)
                     (make-move move game-map current-pos current-speed current-boosts current-lizards current-trucks current-damage current-boost-counter)))
-              (push (list (cons move path) new-pos new-speed new-boosts new-lizards new-trucks new-damage new-boost-counter (+ current-total-speed new-speed))
+              (push (list (cons move path) new-pos new-speed new-boosts new-lizards new-trucks new-damage new-boost-counter)
                     paths-to-explore)))))
     (incf counter)
     (finally (return found-paths))))
@@ -1274,67 +1270,62 @@ after my move and the OPPONENT-POS after his/her move."
 
 (defun compare-rankings-to-opponent-move (folder-path opponent-name opponent-player)
   "Compare my decisions to the opponents for each round in FOLDER-PATH."
-  (bind ((*my-total-speed* 0)
-         (*op-total-speed* 0))
-    (with-consecutive-states folder-path opponent-name opponent-player
-      (declare (ignore opponent-move next-state))
-      (format t "========================================~%")
-      (format t "==============Round: ~a=============~%~%" round)
-      (bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
-             (game-map           (rows current-state))
-             ((my-pos . op-pos)  (positions current-state))
-             (my-abs-x           (my-abs-x current-state))
-             (opponent-abs-x     (opponent-abs-x current-state))
-             (boosting           (im-boosting current-state))
-             (boosts             (my-boosts current-state))
-             (lizards            (my-lizards current-state))
-             (trucks             (my-trucks current-state))
-             (speed              (my-speed current-state))
-             (damage             (my-damage current-state))
-             (boost-counter      (my-boost-counter current-state))
-             (op-boosts          1)
-             (op-speed           (opponent-speed current-state))
-             (move-i-would-make  (determine-move game-map
-                                                 my-pos
-                                                 boosting
-                                                 boosts
-                                                 lizards
-                                                 trucks
-                                                 speed
-                                                 damage
-                                                 boost-counter
-                                                 my-abs-x
-                                                 opponent-abs-x
-                                                 op-pos
-                                                 op-boosts
-                                                 op-speed))
-             (ranked-speed-moves (rank-order-all-moves game-map
-                                                       my-abs-x
-                                                       my-pos
-                                                       boosts
-                                                       lizards
-                                                       trucks
-                                                       speed
-                                                       damage
-                                                       boost-counter
-                                                       *my-total-speed*)))
-        (incf *my-total-speed* speed)
-        (incf *op-total-speed* op-speed)
-        (format t "I'm making a ~a move.~%"
-                (cond
-                  ((and (> trucks 0)
-                        (> op-speed 3)
-                        (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos)))
-                   'cyber)
-                  ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos))
-                   'opposed)
-                  (t 'speed)))
-        (format t "I would make:  ~a~%"   move-i-would-make)
-        (format t "Op made:       ~a~%~%" current-move)
-        (format t
-                "How I rank speed moves:~% ~{~a~^~%~}~%"
-                ranked-speed-moves)
-        (format t "========================================~%")))))
+  (with-consecutive-states folder-path opponent-name opponent-player
+    (declare (ignore opponent-move next-state))
+    (format t "========================================~%")
+    (format t "==============Round: ~a=============~%~%" round)
+    (bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
+           (game-map           (rows current-state))
+           ((my-pos . op-pos)  (positions current-state))
+           (my-abs-x           (my-abs-x current-state))
+           (opponent-abs-x     (opponent-abs-x current-state))
+           (boosting           (im-boosting current-state))
+           (boosts             (my-boosts current-state))
+           (lizards            (my-lizards current-state))
+           (trucks             (my-trucks current-state))
+           (speed              (my-speed current-state))
+           (damage             (my-damage current-state))
+           (boost-counter      (my-boost-counter current-state))
+           (op-boosts          1)
+           (op-speed           (opponent-speed current-state))
+           (move-i-would-make  (determine-move game-map
+                                               my-pos
+                                               boosting
+                                               boosts
+                                               lizards
+                                               trucks
+                                               speed
+                                               damage
+                                               boost-counter
+                                               my-abs-x
+                                               opponent-abs-x
+                                               op-pos
+                                               op-boosts
+                                               op-speed))
+           (ranked-speed-moves (rank-order-all-moves game-map
+                                                     my-abs-x
+                                                     my-pos
+                                                     boosts
+                                                     lizards
+                                                     trucks
+                                                     speed
+                                                     damage
+                                                     boost-counter)))
+      (format t "I'm making a ~a move.~%"
+              (cond
+                ((and (> trucks 0)
+                      (> op-speed 3)
+                      (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos)))
+                 'cyber)
+                ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos))
+                 'opposed)
+                (t 'speed)))
+      (format t "I would make:  ~a~%"   move-i-would-make)
+      (format t "Op made:       ~a~%~%" current-move)
+      (format t
+              "How I rank speed moves:~% ~{~a~^~%~}~%"
+              ranked-speed-moves)
+      (format t "========================================~%"))))
 
 (defun replay-from-folder (folder-path)
   "Check that `make-move' produces the same result as the target engine."
