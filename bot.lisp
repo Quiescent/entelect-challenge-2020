@@ -538,6 +538,92 @@ the starting state."
                               (player damage)
                               (player boost-counter))))))))))
 
+(defmacro trim-to-two-moves (end-states game-state)
+  "Trim all end states to two moves deep.
+
+Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
+the starting state."
+  `(with-initial-state ,game-state
+     (iter
+       (for (path . rest) in ,end-states)
+       (when (< (length path) 2)
+         (collecting (cons path rest))
+         (next-iteration))
+       (for move-1 = (nth (- (length path) 1) path))
+       (for move-2 = (nth (- (length path) 2) path))
+       (make-moves
+        move-1
+        'nothing
+        (make-move
+         move-2
+         'nothing
+         (collecting (list (list move-2 move-1)
+                           (player position)
+                           (player speed)
+                           (player boosts)
+                           (player lizards)
+                           (player trucks)
+                           (player damage)
+                           (player boost-counter))))))))
+
+;; Speeds:
+;; MINIMUM_SPEED = 0
+;; SPEED_STATE_1 = 3
+;; INITIAL_SPEED = 5
+;; SPEED_STATE_2 = 6
+;; SPEED_STATE_3 = 8
+;; MAXIMUM_SPEED = 9
+;; BOOST_SPEED = 15
+;;
+;; Boost:
+;;  - boosting bosts for 5 turns;
+;;  - hitting something reduces speed to MAXIMUM_SPEED;
+;;
+;; Hitting Mud:
+;;  - decelerates the car;
+
+;; TODO: Check.  There's something wrong here...
+(defmacro states-from (game-state)
+  "Produce all possible states using GAME-STATE.
+
+First element of a path is the path taken.
+Second is my current position.
+Third is my speed.
+Fourth is my boosts left.
+Fifth is my lizards left.
+Sixth is my trucks left.
+Seventh is my damage.
+Eighth is my boost counter."
+  `(bind ((path     '())
+          (found    '())
+          (explored (make-hash-table :test #'equal)))
+     (with-initial-state ,(cons `(iteration-state (count 3)) game-state)
+       (when (null (gethash path explored))
+         (if (or (> (iteration count) 3)
+                 (end-state (player position) (game map)))
+             (push (list path
+                         (player position)
+                         (player speed)
+                         (player boosts)
+                         (player lizards)
+                         (player trucks)
+                         (player damage)
+                         (player boost-counter))
+                   found)
+             (iter
+               (for move in (player moves))
+               (when (or (and (null path)
+                              (eq move *banned-move*))
+                         (and (member move all-straight-moves)
+                              (truck-infront-of (player position) (game map))))
+                 (next-iteration))
+               (push move path)
+               (make-moves
+                move
+                'nothing
+                (recur (1- (iteration count))))
+               (setf path (cdr path))))))))
+
 ;; TODO: remove arbitrary constraints like boosting etc.
 (defmacro rank-order-all-moves (game-state)
   "Produce all the moves from GAME-MAP ordered by best placement on the global map.
@@ -730,92 +816,6 @@ POS."
        (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
        (>= opponent-y     (- my-y     1))
        (<= opponent-y     (+ my-y     1))))
-
-(defmacro trim-to-two-moves (end-states game-state)
-  "Trim all end states to two moves deep.
-
-Use GAME-MAP POS, BOOSTS LIZARDS TRUCKS and SPEED to make moves from
-the starting state."
-  `(with-initial-state ,game-state
-     (iter
-       (for (path . rest) in ,end-states)
-       (when (< (length path) 2)
-         (collecting (cons path rest))
-         (next-iteration))
-       (for move-1 = (nth (- (length path) 1) path))
-       (for move-2 = (nth (- (length path) 2) path))
-       (make-moves
-        move-1
-        'nothing
-        (make-move
-         move-2
-         'nothing
-         (collecting (list (list move-2 move-1)
-                           (player position)
-                           (player speed)
-                           (player boosts)
-                           (palyer lizards)
-                           (player trucks)
-                           (player damage)
-                           (player boost-counter))))))))
-
-;; Speeds:
-;; MINIMUM_SPEED = 0
-;; SPEED_STATE_1 = 3
-;; INITIAL_SPEED = 5
-;; SPEED_STATE_2 = 6
-;; SPEED_STATE_3 = 8
-;; MAXIMUM_SPEED = 9
-;; BOOST_SPEED = 15
-;;
-;; Boost:
-;;  - boosting bosts for 5 turns;
-;;  - hitting something reduces speed to MAXIMUM_SPEED;
-;;
-;; Hitting Mud:
-;;  - decelerates the car;
-
-;; TODO: Check.  There's something wrong here...
-(defmacro states-from (game-state)
-  "Produce all possible states using GAME-STATE.
-
-First element of a path is the path taken.
-Second is my current position.
-Third is my speed.
-Fourth is my boosts left.
-Fifth is my lizards left.
-Sixth is my trucks left.
-Seventh is my damage.
-Eighth is my boost counter."
-  `(bind ((path     '())
-          (found    '())
-          (explored (make-hash-table :test #'equal)))
-     (with-initial-state ,(cons `(iteration-state (count 3)) game-state)
-       (when (null (gethash path explored))
-         (if (or (> (iteration count) 3)
-                 (end-state (player position) (game map)))
-             (push (list path
-                         (player position)
-                         (player speed)
-                         (player boosts)
-                         (player lizards)
-                         (player trucks)
-                         (player damage)
-                         (player boost-counter))
-                   found)
-             (iter
-               (for move in (player moves))
-               (when (or (and (null path)
-                              (eq move *banned-move*))
-                         (and (member move all-straight-moves)
-                              (truck-infront-of (player position) (game map))))
-                 (next-iteration))
-               (push move path)
-               (make-moves
-                move
-                'nothing
-                (recur (1- (iteration count))))
-               (setf path (cdr path))))))))
 
 (defun truck-infront-of (current-pos game-map)
   "Produce t if there is a truck immediately in front of CURRENT-POS on GAME-MAP."
