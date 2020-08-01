@@ -177,8 +177,12 @@ The opponent is at the _absolute_ coordinate:
           (op-move (nth 3 (make-opposed-move ,game-state))))
      (with-initial-state ,game-state
        ;; Offset by one so that the opponent doesn't land *on* the truck
-       (make-moves op-move 'nothing
-                   (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))
+       (bind ((previous-player-score (player score)))
+        (make-moves op-move 'nothing
+                    (if (< (player score)
+                           previous-player-score)
+                        (make-speed-move ,game-state)
+                        (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))))
 
 (defconstant maximax-depth 3
   "The depth that we should search the game tree.")
