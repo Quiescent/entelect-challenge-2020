@@ -199,17 +199,11 @@ The opponent is at the _absolute_ coordinate:
                     (make-moves
                      player-move
                      opponent-move
-                     (bind (((player-score
-                              opponent-score
-                              _
-                              _)
+                     (bind (((player-score opponent-score _ _)
                              (if (or (end-state (player position)   game-map)
                                      (end-state (opponent position) game-map)
                                      (= (iteration count) 1))
-                                 (list (player score)
-                                       (opponent score)
-                                       nil
-                                       nil)
+                                 (list (player score) (opponent score) nil nil)
                                  (recur (1- (iteration count))))))
                        (finding (list player-score opponent-score player-move opponent-move)
                                 minimizing player-score)))))))
