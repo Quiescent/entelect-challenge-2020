@@ -210,7 +210,7 @@ The opponent is at the _absolute_ coordinate:
                                  (list (player score) (opponent score) nil nil)
                                  (recur (1- (iteration count))))))
                        (finding (list player-score opponent-score player-move opponent-move)
-                                minimizing player-score)))))))
+                                maximizing opponent-score)))))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
 
