@@ -554,7 +554,7 @@ the starting state."
        (make-moves
         move-1
         'nothing
-        (make-move
+        (make-moves
          move-2
          'nothing
          (collecting (list (list move-2 move-1)
@@ -597,9 +597,9 @@ Eighth is my boost counter."
   `(bind ((path     '())
           (found    '())
           (explored (make-hash-table :test #'equal)))
-     (with-initial-state ,(cons `(iteration-state (count 3)) game-state)
+     (with-initial-state ,(cons `(iteration (count 3)) game-state)
        (when (null (gethash path explored))
-         (if (or (> (iteration count) 3)
+         (if (or (<= (iteration count) 0)
                  (end-state (player position) (game map)))
              (push (list path
                          (player position)
@@ -622,7 +622,30 @@ Eighth is my boost counter."
                 move
                 'nothing
                 (recur (1- (iteration count))))
-               (setf path (cdr path))))))))
+               (setf path (cdr path))))))
+     found))
+
+#+nil
+(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  (states-from ((game (turn 10))
+                (iteration (count 3))
+                (game-map empty-game-map)
+                (player (absolute-x 1)
+                        (position (cons 2 1))
+                        (boosts 3)
+                        (lizards 4)
+                        (trucks 5)
+                        (speed 6)
+                        (damage 0)
+                        (boost-counter 8))
+                (opponent (absolute-x 9)
+                          (position (cons 10 3))
+                          (boosts 11)
+                          (lizards 12)
+                          (trucks 13)
+                          (speed 14)
+                          (damage 0)
+                          (boost-counter 16)))))
 
 ;; TODO: remove arbitrary constraints like boosting etc.
 (defmacro rank-order-all-moves (game-state)
@@ -1295,15 +1318,24 @@ after my move and the OPPONENT-POS after his/her move."
 ;;                                                op-pos
 ;;                                                op-boosts
 ;;                                                op-speed))
-;;            (ranked-speed-moves (rank-order-all-moves game-map
-;;                                                      my-abs-x
-;;                                                      my-pos
-;;                                                      boosts
-;;                                                      lizards
-;;                                                      trucks
-;;                                                      speed
-;;                                                      damage
-;;                                                      boost-counter)))
+;;            (ranked-speed-moves (rank-order-all-moves ((game (turn *current-turn*))
+;;                                                       (game-map game-map)
+;;                                                       (player (absolute-x my-abs-x)
+;;                                                               (position my-pos)
+;;                                                               (boosts boosts)
+;;                                                               (lizards lizards)
+;;                                                               (trucks trucks)
+;;                                                               (speed speed)
+;;                                                               (damage damage)
+;;                                                               (boost-counter boost-counter))
+;;                                                       (opponent (absolute-x opponent-abs-x)
+;;                                                                 (position op-pos)
+;;                                                                 (boosts op-boosts)
+;;                                                                 (lizards 1)
+;;                                                                 (trucks 1)
+;;                                                                 (speed 1)
+;;                                                                 (damage 0)
+;;                                                                 (boost-counter 0))))))
 ;;       (format t "I'm making a ~a move.~%"
 ;;               (cond
 ;;                 ((and (> trucks 0)
