@@ -184,7 +184,7 @@ The opponent is at the _absolute_ coordinate:
                         (make-speed-move ,game-state)
                         (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))))
 
-(defconstant maximax-depth 3
+(defconstant maximax-depth 2
   "The depth that we should search the game tree.")
 
 ;; The moves being made here don't make sense!
