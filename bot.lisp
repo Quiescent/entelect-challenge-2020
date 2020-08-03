@@ -203,14 +203,18 @@ The opponent is at the _absolute_ coordinate:
                     (make-moves
                      player-move
                      opponent-move
-                     (bind (((player-score opponent-score _ _)
+                     (bind (((player-score opponent-score _ _ _)
                              (if (or (end-state (player position)   game-map)
                                      (end-state (opponent position) game-map)
-                                     (= (iteration count) 1))
-                                 (list (player score) (opponent score) nil nil)
+                                     (< (iteration count) 1))
+                                 (list (player score) (opponent score) nil nil nil)
                                  (recur (1- (iteration count))))))
-                       (finding (list player-score opponent-score player-move opponent-move)
+                       (finding (list player-score opponent-score player-move opponent-move (- maximax-depth (iteration count)))
                                 maximizing opponent-score)))))))
+         ;; (initially
+         ;;  (when (eq maximax-depth (iteration count)) (format t "~a: ~{ ~a ~%~}~%"
+         ;;                                    (iteration count)
+         ;;                                    (mapcar (lambda (cell) (cons (coerce (car cell) 'float) (cons (coerce (cadr cell) 'float) (cddr cell)))) cells))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
 
