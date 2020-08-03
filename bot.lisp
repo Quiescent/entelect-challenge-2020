@@ -174,7 +174,7 @@ The opponent is at the _absolute_ coordinate:
 (OPPONENT-ABS-X, OPPONENT-ABS-Y)."
   ;; Add one to y because their coordinates are 1-based
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-          (op-move (nth 3 (make-opposed-move ,game-state))))
+          (op-move (nth 2 (make-opposed-move ,game-state))))
      (with-initial-state ,game-state
        ;; Offset by one so that the opponent doesn't land *on* the truck
        (bind ((previous-player-score (player score)))
