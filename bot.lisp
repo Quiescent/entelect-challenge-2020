@@ -1375,62 +1375,65 @@ after my move and the OPPONENT-POS after his/her move."
 ;;               ranked-speed-moves)
 ;;       (format t "========================================~%"))))
 
-(defun replay-from-folder (folder-path)
+(defun replay-from-folder (folder-path &rest rounds)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
-    (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-           ((:values new-relative-pos new-speed new-boosts new-lizards new-trucks new-damage)
-            (make-move current-move
-                       (rows current-state)
-                       (car (positions current-state))
-                       (my-speed current-state)
-                       (my-boosts current-state)
-                       (my-lizards current-state)
-                       (my-trucks current-state)
-                       (my-damage current-state)
-                       (my-boost-counter current-state)))
-           ((:values opponent-pos)
-            (make-move opponent-move
-                       (rows current-state)
-                       (cdr (positions current-state))
-                       (opponent-speed current-state)
-                       ;; I don't know how many boosts, lizards or
-                       ;; trucks my opponent has(!?)
-                       0
-                       0
-                       0
-                       0
-                       2))
-           ((my-orig-pos . opponent-orig-pos) (positions current-state))
-           (resolved-relative-pos
-            (resolve-collisions my-orig-pos
-                                opponent-orig-pos
-                                new-relative-pos
-                                opponent-pos))
-           (my-abs-pos (my-abs-pos current-state))
-           (resolved-pos   (cons (- (+ (car my-abs-pos) (car resolved-relative-pos))
-                                    (if (eq round 1) 0 5))
-                                 (cdr resolved-relative-pos)))
-           (initial    (list (my-abs-pos current-state)
-                             (my-speed current-state)
-                             (my-boosts current-state)
-                             (my-lizards current-state)
-                             (my-trucks current-state)
-                             (my-damage current-state)))
-           (computed   (list resolved-pos new-speed new-boosts new-lizards new-trucks new-damage))
-           (actual     (list (my-abs-pos next-state)
-                             (my-speed next-state)
-                             (my-boosts next-state)
-                             (my-lizards next-state)
-                             (my-trucks next-state)
-                             (my-damage next-state))))
-      (when (not (equal computed actual))
-        (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
-                round
-                initial
-                current-move
-                computed
-                actual)))))
+    (when (or (null rounds)
+              (and rounds
+                   (member round rounds)))
+      (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+             ((:values new-relative-pos new-speed new-boosts new-lizards new-trucks new-damage)
+              (make-move current-move
+                         (rows current-state)
+                         (car (positions current-state))
+                         (my-speed current-state)
+                         (my-boosts current-state)
+                         (my-lizards current-state)
+                         (my-trucks current-state)
+                         (my-damage current-state)
+                         (my-boost-counter current-state)))
+             ((:values opponent-pos)
+              (make-move opponent-move
+                         (rows current-state)
+                         (cdr (positions current-state))
+                         (opponent-speed current-state)
+                         ;; I don't know how many boosts, lizards or
+                         ;; trucks my opponent has(!?)
+                         0
+                         0
+                         0
+                         0
+                         2))
+             ((my-orig-pos . opponent-orig-pos) (positions current-state))
+             (resolved-relative-pos
+              (resolve-collisions my-orig-pos
+                                  opponent-orig-pos
+                                  new-relative-pos
+                                  opponent-pos))
+             (my-abs-pos (my-abs-pos current-state))
+             (resolved-pos   (cons (- (+ (car my-abs-pos) (car resolved-relative-pos))
+                                      (if (eq round 1) 0 5))
+                                   (cdr resolved-relative-pos)))
+             (initial    (list (my-abs-pos current-state)
+                               (my-speed current-state)
+                               (my-boosts current-state)
+                               (my-lizards current-state)
+                               (my-trucks current-state)
+                               (my-damage current-state)))
+             (computed   (list resolved-pos new-speed new-boosts new-lizards new-trucks new-damage))
+             (actual     (list (my-abs-pos next-state)
+                               (my-speed next-state)
+                               (my-boosts next-state)
+                               (my-lizards next-state)
+                               (my-trucks next-state)
+                               (my-damage next-state))))
+        (when (not (equal computed actual))
+          (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
+                  round
+                  initial
+                  current-move
+                  computed
+                  actual))))))
 
 #+nil
 (progn
