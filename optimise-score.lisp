@@ -182,8 +182,6 @@ up to POPULATION-SIZE."
                       (/ (random 1000) 1000)
                       (/ (random 1000) 1000)
                       (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
                       (- 0 (/ (random 1000) 1000))
                       (- 0 (/ (random 1000) 1000))))))
 
