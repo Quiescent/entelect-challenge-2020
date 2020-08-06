@@ -370,12 +370,12 @@ Unused values will be ignored."
                       (opponent   (symbol) (values   (case symbol
                                                        (x '(car opponent-position))
                                                        (y '(cdr opponent-position))
-                                                       (score '(global-score opponent-absolute-x
+                                                       (score '(global-score
+                                                                opponent-absolute-x
                                                                 game-turn
                                                                 opponent-boosts
                                                                 opponent-lizards
                                                                 (cdr opponent-position)
-                                                                opponent-boost-counter
                                                                 opponent-damage))
                                                        (moves '(remove-impossible-moves opponent-boosts
                                                                 opponent-lizards
@@ -388,14 +388,15 @@ Unused values will be ignored."
                       (player     (symbol) (values   (case symbol
                                                        (x '(car player-position))
                                                        (y '(cdr player-position))
-                                                       (score '(global-score player-absolute-x
+                                                       (score '(global-score
+                                                                player-absolute-x
                                                                 game-turn
                                                                 player-boosts
                                                                 player-lizards
                                                                 (cdr player-position)
-                                                                player-boost-counter
                                                                 player-damage))
-                                                       (moves '(remove-impossible-moves player-boosts
+                                                       (moves '(remove-impossible-moves
+                                                                player-boosts
                                                                 player-lizards
                                                                 player-trucks
                                                                 player-position
@@ -651,7 +652,6 @@ Eighth is my boost counter."
                           (damage 0)
                           (boost-counter 16)))))
 
-;; TODO: remove arbitrary constraints like boosting etc.
 (defmacro rank-order-all-moves (game-state)
   "Produce all the moves from GAME-MAP ordered by best placement on the global map.
 
@@ -660,22 +660,14 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (-> (states-from ,game-state)
-       (remove-fixing-at-full-health ,game-state)
-       (trim-to-two-moves ,game-state)
-       (boosting-results-in-two-rounds-at-15 ,game-state)
-       (removing-no-net-change ,game-state)
        copy-seq
-       (stable-sort #'> :key (lambda (state) (if (eq (-> state car last car) 'use_boost) 0 1)))
-       (stable-sort #'> :key (lambda (state) (car (nth 1 state))))
-       (stable-sort #'> :key (lambda (state) (nth 2 state)))
-       (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 boost-counter-2) state))
-                                               (global-score (+ my-abs-x (car pos-2))
-                                                             (+ *current-turn* (length path))
-                                                             boosts-2
-                                                             lizards-2
-                                                             (cdr pos-2)
-                                                             boost-counter-2
-                                                             damage-2)))))))
+       (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 _) state))
+                                        (global-score (+ my-abs-x (car pos-2))
+                                                      (+ *current-turn* (length path))
+                                                      boosts-2
+                                                      lizards-2
+                                                      (cdr pos-2)
+                                                      damage-2)))))))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
@@ -814,8 +806,7 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
 
-;; TODO: remove boost-counter
-(defun global-score (absolute-x current-turn boosts lizards y boost-counter damage)
+(defun global-score (absolute-x current-turn boosts lizards y damage)
   "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
@@ -823,19 +814,15 @@ POS."
                             0)))
     (iter (for coefficients in *heuristic-coeficients*)
       (bind (((x-score
-               average-speed-score
                boosts-score
                lizards-score
                y-score
-               boost-counter-score
                damage-score
                current-turn-score) coefficients))
         (maximizing (+ (* x-score             absolute-x)
-                       (* average-speed-score (/ absolute-x current-turn))
                        (* boosts-score        boosts)
                        (* lizards-score       lizards)
                        (* y-score             is-middle-two)
-                       (* boost-counter-score boost-counter)
                        (* damage-score        damage)
                        (* current-turn-score  current-turn)))))))
 
