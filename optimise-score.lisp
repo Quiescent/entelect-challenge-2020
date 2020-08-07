@@ -131,7 +131,7 @@ up to POPULATION-SIZE."
       (for member in generation)
       (format f "'~A~%" member))))
 
-(defvar *negative-coefficient-start* 6
+(defvar *negative-coefficient-start* 5
   "The start of negative coefficients in the optimisation vector.")
 
 (defun cross-over (i-vector a-vector b-vector c-vector)
