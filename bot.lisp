@@ -9,6 +9,9 @@
 (defvar *previous-move* nil
   "The move which was made last turn.")
 
+(defvar *full-game-map* nil
+  "The map as it's been discovered so far.")
+
 (defun read-weights ()
   "Read all scores from the score config file."
   (with-open-file (f "./score-config")
@@ -20,7 +23,9 @@
 (defun main ()
   (iter
     (while t)
-    (initially (setf *heuristic-coeficients* (read-weights)))
+    (initially
+     (setf *heuristic-coeficients* (read-weights))
+     (setf *full-game-map* (make-array '(4 150) :initial-element nil)))
     (for round-number = (read-line))
     (bind ((*current-turn* (read-from-string round-number)))
       (for move = (move-for-round round-number)))
@@ -604,6 +609,13 @@ MY-ABS-X position on the board."
                                                      (speed opponent-speed)
                                                      (damage 0)
                                                      (boost-counter 0))))))
+    (iter
+      (for x from 0 below (game-map-x-dim game-map))
+      (for absolute-x from (max 0 (- player-absolute-x 5)))
+      (iter
+        (for y from 0 below 4)
+        (setf (aref *full-game-map* absolute-x y)
+              (aref-game-map game-map x y))))
     (setf *previous-move* move)
     (format *error-output*
             "My total/average speed: ~a - ~a~%"
