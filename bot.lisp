@@ -544,7 +544,12 @@ MY-ABS-X position on the board."
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state))))
-            (*ahead-of-cache* (make-hash-table :test #'equal)))
+            (*ahead-of-cache* (make-hash-table :test #'equal))
+            (will-crash       (> (make-moves
+                                  'nothing
+                                  'nothing
+                                  (player damage))
+                                 (player damage))))
        (cond
          ((and (no-net-change move ,game-state)
                (< (opponent x) (player x))
@@ -554,7 +559,8 @@ MY-ABS-X position on the board."
          ((and (> (opponent x) (player x))
                (member (player y) '(1 2))
                (not (eq *previous-move* 'use_emp))
-               (> (player emps) 0))
+               (> (player emps) 0)
+               (not will-crash))
           'use_emp)
          (t move)))))
 
