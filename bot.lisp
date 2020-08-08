@@ -601,16 +601,17 @@ Eighth is my boost counter."
 Given that I'm at MY-POS, ow many BOOSTS, LIZARDS and TRUCKS I have
 left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-     (-> (states-from ,game-state)
-       copy-seq
-       (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 _) state))
-                                        (global-score (+ my-abs-x (car pos-2))
-                                                      (+ *current-turn* (length path))
-                                                      boosts-2
-                                                      lizards-2
-                                                      (cdr pos-2)
-                                                      damage-2)))))))
+  `(with-initial-state ,game-state
+     (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+      (-> (states-from ,game-state)
+        copy-seq
+        (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 _) state))
+                                    (global-score (+ (player absolute-x) (car pos-2))
+                                                  (+ *current-turn* (length path))
+                                                  boosts-2
+                                                  lizards-2
+                                                  (cdr pos-2)
+                                                  damage-2))))))))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
