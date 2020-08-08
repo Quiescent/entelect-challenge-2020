@@ -459,10 +459,8 @@ Eighth is my boost counter."
                    found)
              (iter
                (for move in (player moves))
-               (when (or (and (null path)
-                              (eq move *banned-move*))
-                         (and (member move all-straight-moves)
-                              (truck-infront-of (player position) (game map))))
+               (when (and (member move all-straight-moves)
+                          (truck-infront-of (player position) (game map)))
                  (next-iteration))
                (push move path)
                (make-moves
