@@ -888,6 +888,9 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
+;;
+;; TODO: deal with collision state in:
+;; "../EntelectChallenge-2020-Overdrive/game-runner/match-logs/2020.08.08.12.33.49"
 (defun make-move (move game-map position speed boosts lizards trucks emps damage boost-counter)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
