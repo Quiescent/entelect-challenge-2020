@@ -177,29 +177,6 @@ Value is [muds boosts walls tweets lizards].")
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
   "All moves which will result in going straight without jumping.")
 
-(defmacro place-cyber-truck (game-state)
-  "Place the truck in front of my opponents best move.
-
-Run minimax from my opponents perspective to find his best move.
-
-The optimiser is run with my the opponent bot at OP-POS, with
-OP-BOOSTS, OP-LIZARDS and OP-TRUCKS remaining running at OP-SPEED and
-my bot running from MY-POS with MY-BOOSTS at MY-SPEED.
-
-The opponent is at the _absolute_ coordinate:
-(OPPONENT-ABS-X, OPPONENT-ABS-Y)."
-  ;; Add one to y because their coordinates are 1-based
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-          (op-move (nth 2 (make-opposed-move ,game-state))))
-     (with-initial-state ,game-state
-       ;; Offset by one so that the opponent doesn't land *on* the truck
-       (bind ((previous-player-score (player score)))
-        (make-moves op-move 'nothing
-                    (if (< (player score)
-                           previous-player-score)
-                        (make-speed-move ,game-state)
-                        (cons 'use_tweet (cons (1+ (player absolute-x)) (1+ (player y))))))))))
-
 ;; Might want to try turning on optimsations for this to get to depth
 ;; three!
 (defconstant maximax-depth 2
@@ -676,28 +653,6 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   (declare (ignore boosting))
   (bind ((move (cond
-                 ;; ((and (> trucks 0)
-                 ;;       (> opponent-speed 3)
-                 ;;       (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos)))
-                 ;;  ;; TODO: don't place the truck on parts of the map that I can't see!!
-                 ;;  (place-cyber-truck ((game (turn *current-turn*))
-                 ;;                      (game-map game-map)
-                 ;;                      (player (absolute-x opponent-abs-x)
-                 ;;                              (position opponent-pos)
-                 ;;                              (boosts 1)
-                 ;;                              (lizards 1)
-                 ;;                              (trucks 1)
-                 ;;                              (speed opponent-speed)
-                 ;;                              (damage 0)
-                 ;;                              (boost-counter 0))
-                 ;;                      (opponent (absolute-x my-abs-x)
-                 ;;                                (position my-pos)
-                 ;;                                (boosts boosts)
-                 ;;                                (lizards lizards)
-                 ;;                                (trucks trucks)
-                 ;;                                (speed speed)
-                 ;;                                (damage damage)
-                 ;;                                (boost-counter boost-counter)))))
                  ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
                   (bind (((_ _ my-move _ depth) (make-opposed-move ((game (turn *current-turn*))
                                                                     (game-map game-map)
