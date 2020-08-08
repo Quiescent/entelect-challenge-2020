@@ -35,7 +35,7 @@ function run_in_backup() {
 function run_matches() {
     # Remove random and nothing from the list of bots and run against
     # the last five bots.
-    VERSIONS_TO_RUN=$(git tag | sort -n | tail -5 | grep -v 12 | grep -v 13 | grep -v 14)
+    VERSIONS_TO_RUN=$(git tag | sort -n | tail -6 | grep -v 12 | grep -v 13 | grep -v 14)
     build_bots $VERSIONS_TO_RUN
     python3 run-against-versions.py "$CURRENT_VERSION" $VERSIONS_TO_RUN
 }
