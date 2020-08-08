@@ -538,11 +538,16 @@ MY-ABS-X position on the board."
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state))))
             (*ahead-of-cache* (make-hash-table :test #'equal)))
-       (if (and (no-net-change move ,game-state)
-                (< (car (opponent position)) (car (player position)))
-                (> (player oils) 0))
-           'use_oil
-           move))))
+       (cond
+         ((and (no-net-change move ,game-state)
+               (< (car (opponent position)) (car (player position)))
+               (> (player oils) 0))
+          'use_oil)
+         ((and (> (car (opponent position)) (car (player position)))
+               (member (cdr (player position)) '(2 3))
+               (> (player emps) 0))
+          'use_emp)
+         (t move)))))
 
 (defun move-for-state (state)
   "Produce the move which my bot makes from STATE."
