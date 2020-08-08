@@ -191,7 +191,9 @@ Unused values will be ignored."
                                           player-damage-2
                                           player-boost-counter-2)
                                  (make-move ,player-move
+                                            ,opponent-move
                                             current-game-map
+                                            opponent-position
                                             player-position
                                             player-speed
                                             player-boosts
@@ -209,7 +211,9 @@ Unused values will be ignored."
                                           opponent-damage-2
                                           opponent-boost-counter-2)
                                  (make-move ,opponent-move
+                                            ,player-move
                                             current-game-map
+                                            player-position
                                             opponent-position
                                             opponent-speed
                                             opponent-boosts
@@ -891,32 +895,39 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
 ;;
 ;; TODO: deal with collision state in:
 ;; "../EntelectChallenge-2020-Overdrive/game-runner/match-logs/2020.08.08.12.33.49"
-(defun make-move (move game-map position speed boosts lizards trucks emps damage boost-counter)
+(defun make-move (move opponent-move game-map
+                  opponent-position position speed
+                  boosts lizards trucks
+                  emps damage boost-counter)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
-  (bind ((new-speed         (new-speed move (if (= 1 boost-counter) (min (maximum-speed damage) 9) speed) damage))
-         ((x . y)           position)
-         (new-x             (new-x x move new-speed damage))
-         (new-y             (new-y y move new-speed damage))
-         (muds-hit          (ahead-of                      move mud    new-speed game-map position))
-         (walls-hit         (ahead-of                      move wall   new-speed game-map position))
-         (new-boosts        (accumulating-powerups boosts  move boost  new-speed game-map position))
-         (new-lizards       (accumulating-powerups lizards move lizard new-speed game-map position))
-         (new-trucks        (accumulating-powerups trucks  move tweet  new-speed game-map position))
-         (new-emps          (accumulating-powerups emps    move emp    new-speed game-map position))
-         (truck-x           (hit-a-truck game-map x new-x new-y))
-         (new-pos           (cons (if truck-x (1- truck-x) new-x) new-y))
-         (new-boost-counter (if (or (eq move 'decelerate) (> walls-hit 0) (> muds-hit 0)) 0 (if (eq move 'use_boost) 5 (max 0 (1- boost-counter)))))
-         (new-damage        (min 6 (+ muds-hit
-                                      (* 2 walls-hit)
-                                      (if truck-x 2 0)
-                                      (max 0 (if (eq move 'fix) (- damage 2) damage)))))
-         (final-speed       (min (maximum-speed new-damage)
-                                 (if (or (> walls-hit 0) truck-x)
-                                     3
-                                     (decrease-speed-by muds-hit new-speed)))))
-    (values new-pos final-speed new-boosts new-lizards new-trucks new-emps new-damage new-boost-counter)))
+  (if (and (eq opponent-move 'use_emp)
+           (<= (abs (- (cdr position) (cdr opponent-position))) 1)
+           (< (car opponent-position) (car position)))
+      (values position 3 boosts lizards trucks emps damage 0)
+      (bind ((new-speed         (new-speed move (if (= 1 boost-counter) (min (maximum-speed damage) 9) speed) damage))
+             ((x . y)           position)
+             (new-x             (new-x x move new-speed damage))
+             (new-y             (new-y y move new-speed damage))
+             (muds-hit          (ahead-of                      move mud    new-speed game-map position))
+             (walls-hit         (ahead-of                      move wall   new-speed game-map position))
+             (new-boosts        (accumulating-powerups boosts  move boost  new-speed game-map position))
+             (new-lizards       (accumulating-powerups lizards move lizard new-speed game-map position))
+             (new-trucks        (accumulating-powerups trucks  move tweet  new-speed game-map position))
+             (new-emps          (accumulating-powerups emps    move emp    new-speed game-map position))
+             (truck-x           (hit-a-truck game-map x new-x new-y))
+             (new-pos           (cons (if truck-x (1- truck-x) new-x) new-y))
+             (new-boost-counter (if (or (eq move 'decelerate) (> walls-hit 0) (> muds-hit 0)) 0 (if (eq move 'use_boost) 5 (max 0 (1- boost-counter)))))
+             (new-damage        (min 6 (+ muds-hit
+                                          (* 2 walls-hit)
+                                          (if truck-x 2 0)
+                                          (max 0 (if (eq move 'fix) (- damage 2) damage)))))
+             (final-speed       (min (maximum-speed new-damage)
+                                     (if (or (> walls-hit 0) truck-x)
+                                         3
+                                         (decrease-speed-by muds-hit new-speed)))))
+        (values new-pos final-speed new-boosts new-lizards new-trucks new-emps new-damage new-boost-counter))))
 
 (defun hit-a-truck (game-map start-x end-x new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
@@ -1251,7 +1262,9 @@ after my move and the OPPONENT-POS after his/her move."
                        new-damage
                        new-boost-counter)
               (make-move current-move
+                         opponent-move
                          (rows current-state)
+                         (cdr (positions current-state))
                          (car (positions current-state))
                          (my-speed current-state)
                          (my-boosts current-state)
@@ -1262,7 +1275,9 @@ after my move and the OPPONENT-POS after his/her move."
                          (my-boost-counter current-state)))
              ((:values opponent-pos)
               (make-move opponent-move
+                         current-move
                          (rows current-state)
+                         (car (positions current-state))
                          (cdr (positions current-state))
                          (opponent-speed current-state)
                          ;; I don't know how many boosts, lizards or
