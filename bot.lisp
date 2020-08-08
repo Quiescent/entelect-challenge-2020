@@ -6,6 +6,9 @@
 (defvar *current-turn* 1
   "The turn of the game that we're on.")
 
+(defvar *previous-move* nil
+  "The move which was made last turn.")
+
 (defun read-weights ()
   "Read all scores from the score config file."
   (with-open-file (f "./score-config")
@@ -543,8 +546,10 @@ MY-ABS-X position on the board."
                (< (car (opponent position)) (car (player position)))
                (> (player oils) 0))
           'use_oil)
+         ;; TODO: check that we aren't going to crash into a wall! XD
          ((and (> (car (opponent position)) (car (player position)))
                (member (cdr (player position)) '(2 3))
+               (not (eq *previous-move* 'use_emp))
                (> (player emps) 0))
           'use_emp)
          (t move)))))
@@ -589,6 +594,7 @@ MY-ABS-X position on the board."
                                               (speed opponent-speed)
                                               (damage 0)
                                               (boost-counter 0))))))
+    (setf *previous-move* move)
     (format *error-output*
             "My total/average speed: ~a - ~a~%"
             player-absolute-x
