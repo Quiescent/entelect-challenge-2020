@@ -543,12 +543,12 @@ MY-ABS-X position on the board."
             (*ahead-of-cache* (make-hash-table :test #'equal)))
        (cond
          ((and (no-net-change move ,game-state)
-               (< (car (opponent position)) (car (player position)))
+               (< (opponent x) (player x))
                (> (player oils) 0))
           'use_oil)
          ;; TODO: check that we aren't going to crash into a wall! XD
-         ((and (> (car (opponent position)) (car (player position)))
-               (member (cdr (player position)) '(2 3))
+         ((and (> (opponent x) (player x))
+               (member (player y) '(2 3))
                (not (eq *previous-move* 'use_emp))
                (> (player emps) 0))
           'use_emp)
