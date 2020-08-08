@@ -3,24 +3,8 @@
 (defvar *heuristic-coeficients* '((1 1 1 1 1 1))
   "The coefficients to use when computing the score of a position.")
 
-;; Previous state is list of:
-;;  - move,
-;;  - map,
-;;  - pos,
-;;  - boosts,
-;;  - lizards,
-;;  - trucks,
-;;  - speed,
-;;  - damage, and
-;;  - abs-x.
-(defvar *previous-state* '()
-  "The state which the player was in last turn.")
-
 (defvar *current-turn* 1
   "The turn of the game that we're on.")
-
-(defvar *banned-move* nil
-  "A move which is not allowed, because the state didn't change when it was made.")
 
 (defun read-weights ()
   "Read all scores from the score config file."
@@ -51,54 +35,52 @@
 
 (defun move-for-state (state)
   "Produce the move which my bot makes from STATE."
-  (bind ((map               (rows state))
-         ((my-pos . op-pos) (positions state))
-         (my-abs-x          (my-abs-x state))
-         (opponent-abs-x    (opponent-abs-x state))
-         (boosting          (im-boosting state))
-         (boosts            (my-boosts state))
-         (boost-counter     (my-boost-counter state))
-         (lizards           (my-lizards state))
-         (trucks            (my-trucks state))
-         (emps              (my-emps state))
-         (oils              (my-oils state))
-         (speed             (my-speed state))
-         (damage            (my-damage state))
-         (op-boosts         1)
-         (op-emps           0) ; (TODO decide what's best here) Start off, assuming that he has none.
-         (op-speed          (opponent-speed state))
-         (current-state     (list map
-                                  my-pos
-                                  boosts
-                                  lizards
-                                  trucks
-                                  speed
-                                  damage
-                                  my-abs-x))
-         ;; TODO: Check whether we were EMP'd
-         (*banned-move*     (when (equal (cdr *previous-state*) current-state) (car *previous-state*)))
-         (move              (determine-move map
-                                            my-pos
-                                            boosting
-                                            boosts
-                                            lizards
-                                            trucks
-                                            emps
-                                            oils
-                                            speed
-                                            damage
-                                            boost-counter
-                                            my-abs-x
-                                            opponent-abs-x
-                                            op-pos
-                                            op-boosts
-                                            op-emps
-                                            op-speed)))
-    (when *banned-move*
-      (format *error-output* "Banning: ~a~%" *banned-move*))
-    (format *error-output* "My total/average speed: ~a - ~a~%" my-abs-x       (/ my-abs-x *current-turn*))
-    (format *error-output* "Op total/average speed: ~a - ~a~%" opponent-abs-x (/ opponent-abs-x *current-turn*))
-    (setf *previous-state* (cons move current-state))
+  (bind (((player-position . opponent-position) (positions state))
+
+         (game-map                 (rows state))
+         (player-absolute-x        (my-abs-x state))
+         (opponent-absolute-x      (opponent-abs-x state))
+         (player-boosts            (my-boosts state))
+         (player-boost-counter     (my-boost-counter state))
+         (player-lizards           (my-lizards state))
+         (player-trucks            (my-trucks state))
+         (player-emps              (my-emps state))
+         (player-oils              (my-oils state))
+         (player-speed             (my-speed state))
+         (player-damage            (my-damage state))
+         (opponent-boosts          1)
+         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
+         (opponent-speed           (opponent-speed state))
+         (move              (determine-move ((game (turn *current-turn*))
+                                             (game-map game-map)
+                                             (player
+                                              (absolute-x player-absolute-x)
+                                              (position player-position)
+                                              (boosts player-boosts)
+                                              (lizards player-lizards)
+                                              (trucks player-trucks)
+                                              (emps player-emps)
+                                              (speed player-speed)
+                                              (damage player-damage)
+                                              (boost-counter player-boost-counter))
+                                             (opponent
+                                              (absolute-x opponent-absolute-x)
+                                              (position opponent-position)
+                                              (boosts opponent-boosts)
+                                              (lizards 1)
+                                              (trucks 1)
+                                              (emps opponent-emps)
+                                              (speed opponent-speed)
+                                              (damage 0)
+                                              (boost-counter 0))))))
+    (format *error-output*
+            "My total/average speed: ~a - ~a~%"
+            player-absolute-x
+            (/ player-absolute-x *current-turn*))
+    (format *error-output*
+            "Op total/average speed: ~a - ~a~%"
+            opponent-absolute-x
+            (/ opponent-absolute-x *current-turn*))
     move))
 
 (defmacro deep-accessor (object &rest nested-slots)
@@ -641,128 +623,28 @@ board."
        last
        car)))
 
-(defun determine-move (game-map my-pos boosting boosts
-                       lizards trucks emps oils speed damage
-                       boost-counter my-abs-x opponent-abs-x
-                       opponent-pos opponent-boosts opponent-emps
-                       opponent-speed)
+(defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
-  (declare (ignore boosting))
-  (bind ((move (cond
-                 ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr opponent-pos))
-                  (bind (((_ _ my-move _ depth) (make-opposed-move ((game (turn *current-turn*))
-                                                                    (game-map game-map)
-                                                                    (player (absolute-x my-abs-x)
-                                                                            (position my-pos)
-                                                                            (boosts boosts)
-                                                                            (lizards lizards)
-                                                                            (trucks trucks)
-                                                                            (emps emps)
-                                                                            (speed speed)
-                                                                            (damage damage)
-                                                                            (boost-counter boost-counter))
-                                                                    (opponent (absolute-x opponent-abs-x)
-                                                                              (position opponent-pos)
-                                                                              (boosts opponent-boosts)
-                                                                              (lizards 1)
-                                                                              (trucks 1)
-                                                                              (emps opponent-emps)
-                                                                              (speed opponent-speed)
-                                                                              (damage 0)
-                                                                              (boost-counter 0))))))
-                    (if (= depth 0)
-                        (make-speed-move ((game (turn *current-turn*))
-                                          (game-map game-map)
-                                          (player (absolute-x my-abs-x)
-                                                  (position my-pos)
-                                                  (boosts boosts)
-                                                  (lizards lizards)
-                                                  (trucks trucks)
-                                                  (emps emps)
-                                                  (speed speed)
-                                                  (damage damage)
-                                                  (boost-counter boost-counter))
-                                          (opponent (absolute-x opponent-abs-x)
-                                                    (position opponent-pos)
-                                                    (boosts opponent-boosts)
-                                                    (lizards 1)
-                                                    (trucks 1)
-                                                    (emps opponent-emps)
-                                                    (speed opponent-speed)
-                                                    (damage 0)
-                                                    (boost-counter 0))))
-                        my-move)))
-                 ((close-to-end my-abs-x)
-                  (make-finishing-move ((game (turn *current-turn*))
-                                        (game-map game-map)
-                                        (player (absolute-x my-abs-x)
-                                                (position my-pos)
-                                                (boosts boosts)
-                                                (lizards lizards)
-                                                (trucks trucks)
-                                                (emps emps)
-                                                (speed speed)
-                                                (damage damage)
-                                                (boost-counter boost-counter))
-                                        (opponent (absolute-x opponent-abs-x)
-                                                  (position opponent-pos)
-                                                  (boosts opponent-boosts)
-                                                  (lizards 1)
-                                                  (trucks 1)
-                                                  (emps opponent-emps)
-                                                  (speed opponent-speed)
-                                                  (damage 0)
-                                                  (boost-counter 0)))))
-                 (t
-                  (make-speed-move ((game (turn *current-turn*))
-                                    (game-map game-map)
-                                    (player (absolute-x my-abs-x)
-                                            (position my-pos)
-                                            (boosts boosts)
-                                            (lizards lizards)
-                                            (trucks trucks)
-                                            (emps emps)
-                                            (speed speed)
-                                            (damage damage)
-                                            (boost-counter boost-counter))
-                                    (opponent (absolute-x opponent-abs-x)
-                                              (position opponent-pos)
-                                              (boosts opponent-boosts)
-                                              (lizards 1)
-                                              (trucks 1)
-                                              (emps opponent-emps)
-                                              (speed opponent-speed)
-                                              (damage 0)
-                                              (boost-counter 0)))))))
-         (*ahead-of-cache* (make-hash-table :test #'equal)))
-    (if (and (no-net-change move ((game (turn *current-turn*))
-                                  (game-map game-map)
-                                  (player (absolute-x my-abs-x)
-                                          (position my-pos)
-                                          (boosts boosts)
-                                          (lizards lizards)
-                                          (trucks trucks)
-                                          (emps emps)
-                                          (speed speed)
-                                          (damage damage)
-                                          (boost-counter boost-counter))
-                                  (opponent (absolute-x opponent-abs-x)
-                                            (position opponent-pos)
-                                            (boosts opponent-boosts)
-                                            (lizards 1)
-                                            (trucks 1)
-                                            (emps opponent-emps)
-                                            (speed opponent-speed)
-                                            (damage 0)
-                                            (boost-counter 0))))
-             (< (car opponent-pos) (car my-pos))
-             (> oils 0))
-        'use_oil
-        move)))
+  `(with-initial-state ,game-state
+     (bind ((move (cond
+                    ((opponent-is-close-by (player absolute-x)
+                                           (cdr (player position))
+                                           (opponent absolute-x)
+                                           (cdr (opponent position)))
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
+                       (if (= depth 0) (make-speed-move ,game-state) my-move)))
+                    ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
+                    (t (make-speed-move ,game-state))))
+            (*ahead-of-cache* (make-hash-table :test #'equal)))
+       (if (and (no-net-change move ,game-state)
+                (< (car (opponent position)) (car (player position)))
+                (> (player oils) 0))
+           'use_oil
+           move))))
 
 (defun close-to-end (absolute-x)
   "Produce T if ABSOLUTE-X is close to the edge of the map."
