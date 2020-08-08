@@ -1408,7 +1408,14 @@ after my move and the OPPONENT-POS after his/her move."
               (and rounds
                    (member round rounds)))
       (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-             ((:values new-relative-pos new-speed new-boosts new-lizards new-trucks new-damage)
+             ((:values new-relative-pos
+                       new-speed
+                       new-boosts
+                       new-lizards
+                       new-trucks
+                       new-emps
+                       new-damage
+                       new-boost-counter)
               (make-move current-move
                          (rows current-state)
                          (car (positions current-state))
@@ -1442,21 +1449,32 @@ after my move and the OPPONENT-POS after his/her move."
              (resolved-pos   (cons (- (+ (car my-abs-pos) (car resolved-relative-pos))
                                       (if (eq round 1) 0 5))
                                    (cdr resolved-relative-pos)))
-             (initial    (list (my-abs-pos current-state)
-                               (my-speed current-state)
-                               (my-boosts current-state)
-                               (my-lizards current-state)
-                               (my-trucks current-state)
-                               (my-damage current-state)))
-             (computed   (list resolved-pos new-speed new-boosts new-lizards new-trucks new-damage))
-             (actual     (list (my-abs-pos next-state)
-                               (my-speed next-state)
-                               (my-boosts next-state)
-                               (my-lizards next-state)
-                               (my-trucks next-state)
-                               (my-damage next-state))))
+             (initial    (list (my-abs-pos       current-state)
+                               (my-speed         current-state)
+                               (my-boosts        current-state)
+                               (my-lizards       current-state)
+                               (my-trucks        current-state)
+                               (my-emps          current-state)
+                               (my-damage        current-state)
+                               (my-boost-counter current-state)))
+             (computed   (list resolved-pos
+                               new-speed
+                               new-boosts
+                               new-lizards
+                               new-trucks
+                               new-emps
+                               new-damage
+                               new-boost-counter))
+             (actual     (list (my-abs-pos       next-state)
+                               (my-speed         next-state)
+                               (my-boosts        next-state)
+                               (my-lizards       next-state)
+                               (my-trucks        next-state)
+                               (my-emps          next-state)
+                               (my-damage        next-state)
+                               (my-boost-counter next-state))))
         (when (not (equal computed actual))
-          (format t "~s:~6T~a ~25T ~a ~40T~a /~65T~a~%"
+          (format t "~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
                   round
                   initial
                   current-move
