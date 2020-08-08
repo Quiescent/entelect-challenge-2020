@@ -62,7 +62,9 @@
          (trucks            (my-trucks state))
          (speed             (my-speed state))
          (damage            (my-damage state))
+         (emps              (my-emps state))
          (op-boosts         1)
+         (op-emps           0) ; (TODO decide what's best here) Start off, assuming that he has none.
          (op-speed          (opponent-speed state))
          (current-state     (list map
                                   my-pos
@@ -80,6 +82,7 @@
                                             boosts
                                             lizards
                                             trucks
+                                            emps
                                             speed
                                             damage
                                             boost-counter
@@ -87,6 +90,7 @@
                                             opponent-abs-x
                                             op-pos
                                             op-boosts
+                                            op-emps
                                             op-speed)))
     (when *banned-move*
       (format *error-output* "Banning: ~a~%" *banned-move*))
@@ -111,13 +115,18 @@
             (deep-accessor this 'player 'powerups)))
 
 (defmethod my-lizards ((this state))
-  "Produce the number of boosts which I have in THIS state."
+  "Produce the number of lizards which I have in THIS state."
   (count-if (lambda (x) (string-equal x "LIZARD"))
             (deep-accessor this 'player 'powerups)))
 
 (defmethod my-trucks ((this state))
-  "Produce the number of boosts which I have in THIS state."
+  "Produce the number of trucks which I have in THIS state."
   (count-if (lambda (x) (string-equal x "TWEET"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-emps ((this state))
+  "Produce the number of emps which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "EMP"))
             (deep-accessor this 'player 'powerups)))
 
 (defmethod my-boost-counter ((this state))
@@ -259,6 +268,7 @@ Unused values will be ignored."
         (player-not-defined 'boosts)
         (player-not-defined 'lizards)
         (player-not-defined 'trucks)
+        (player-not-defined 'emps)
         (player-not-defined 'speed)
         (player-not-defined 'damage)
         (player-not-defined 'boost-counter)
@@ -268,6 +278,7 @@ Unused values will be ignored."
         (opponent-not-defined 'boosts)
         (opponent-not-defined 'lizards)
         (opponent-not-defined 'trucks)
+        (opponent-not-defined 'emps)
         (opponent-not-defined 'speed)
         (opponent-not-defined 'damage)
         (opponent-not-defined 'boost-counter)
@@ -284,6 +295,7 @@ Unused values will be ignored."
                 (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
                 (player-lizards       ,@(cdr (assoc 'lizards       player-state)))
                 (player-trucks        ,@(cdr (assoc 'trucks        player-state)))
+                (player-emps          ,@(cdr (assoc 'emps          player-state)))
                 (player-speed         ,@(cdr (assoc 'speed         player-state)))
                 (player-damage        ,@(cdr (assoc 'damage        player-state)))
                 (player-boost-counter ,@(cdr (assoc 'boost-counter player-state)))
@@ -293,6 +305,7 @@ Unused values will be ignored."
                 (opponent-boosts        ,@(cdr (assoc 'boosts        opponent-state)))
                 (opponent-lizards       ,@(cdr (assoc 'lizards       opponent-state)))
                 (opponent-trucks        ,@(cdr (assoc 'trucks        opponent-state)))
+                (opponent-emps          ,@(cdr (assoc 'emps          opponent-state)))
                 (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
                 (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
                 (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state)))
@@ -306,6 +319,7 @@ Unused values will be ignored."
                                           player-boosts-2
                                           player-lizards-2
                                           player-trucks-2
+                                          player-emps-2
                                           player-damage-2
                                           player-boost-counter-2)
                                  (make-move ,player-move
@@ -315,6 +329,7 @@ Unused values will be ignored."
                                             player-boosts
                                             player-lizards
                                             player-trucks
+                                            player-emps
                                             player-damage
                                             player-boost-counter))
                                 ((:values opponent-position-2-staged
@@ -322,6 +337,7 @@ Unused values will be ignored."
                                           opponent-boosts-2
                                           opponent-lizards-2
                                           opponent-trucks-2
+                                          opponent-emps-2
                                           opponent-damage-2
                                           opponent-boost-counter-2)
                                  (make-move ,opponent-move
@@ -331,6 +347,7 @@ Unused values will be ignored."
                                             opponent-boosts
                                             opponent-lizards
                                             opponent-trucks
+                                            opponent-emps
                                             opponent-damage
                                             opponent-boost-counter))
                                 (player-position-2 (resolve-collisions player-position
@@ -352,6 +369,7 @@ Unused values will be ignored."
                                   (player-boosts        player-boosts-2)
                                   (player-lizards       player-lizards-2)
                                   (player-trucks        player-trucks-2)
+                                  (player-emps          player-emps-2)
                                   (player-speed         player-speed-2)
                                   (player-damage        player-damage-2)
                                   (player-boost-counter player-boost-counter-2)
@@ -361,6 +379,7 @@ Unused values will be ignored."
                                   (opponent-boosts        opponent-boosts-2)
                                   (opponent-lizards       opponent-lizards-2)
                                   (opponent-trucks        opponent-trucks-2)
+                                  (opponent-emps          opponent-emps-2)
                                   (opponent-speed         opponent-speed-2)
                                   (opponent-damage        opponent-damage-2)
                                   (opponent-boost-counter opponent-boost-counter-2)
@@ -381,6 +400,7 @@ Unused values will be ignored."
                                                                 opponent-lizards
                                                                 opponent-trucks
                                                                 opponent-position
+                                                                opponent-emps
                                                                 all-makeable-moves))
                                                        (t (intern (mkstr 'opponent  '- symbol))))))
                       (game       (symbol) (case symbol
@@ -400,6 +420,7 @@ Unused values will be ignored."
                                                                 player-lizards
                                                                 player-trucks
                                                                 player-position
+                                                                player-emps
                                                                 all-makeable-moves))
                                                        (t (intern (mkstr 'player    '- symbol))))))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
@@ -409,6 +430,7 @@ Unused values will be ignored."
                                                                   player-boosts
                                                                   player-lizards
                                                                   player-trucks
+                                                                  player-emps
                                                                   player-speed
                                                                   player-damage
                                                                   player-boost-counter
@@ -417,6 +439,7 @@ Unused values will be ignored."
                                                                   opponent-boosts
                                                                   opponent-lizards
                                                                   opponent-trucks
+                                                                  opponent-emps
                                                                   opponent-speed
                                                                   opponent-damage
                                                                   opponent-boost-counter
@@ -428,6 +451,7 @@ Unused values will be ignored."
                                     player-boosts
                                     player-lizards
                                     player-trucks
+                                    player-emps
                                     player-speed
                                     player-damage
                                     player-boost-counter
@@ -436,6 +460,7 @@ Unused values will be ignored."
                                     opponent-boosts
                                     opponent-lizards
                                     opponent-trucks
+                                    opponent-emps
                                     opponent-speed
                                     opponent-damage
                                     opponent-boost-counter
@@ -681,9 +706,10 @@ board."
        car)))
 
 (defun determine-move (game-map my-pos boosting boosts
-                       lizards trucks speed damage
+                       lizards trucks emps speed damage
                        boost-counter my-abs-x opponent-abs-x
-                       opponent-pos opponent-boosts opponent-speed)
+                       opponent-pos opponent-boosts opponent-emps
+                       opponent-speed)
   "Produce the best move for GAME-MAP.
 
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
@@ -721,6 +747,7 @@ MY-ABS-X position on the board."
                                                                (boosts boosts)
                                                                (lizards lizards)
                                                                (trucks trucks)
+                                                               (emps emps)
                                                                (speed speed)
                                                                (damage damage)
                                                                (boost-counter boost-counter))
@@ -729,6 +756,7 @@ MY-ABS-X position on the board."
                                                                  (boosts opponent-boosts)
                                                                  (lizards 1)
                                                                  (trucks 1)
+                                                                 (emps opponent-emps)
                                                                  (speed opponent-speed)
                                                                  (damage 0)
                                                                  (boost-counter 0))))))
@@ -740,6 +768,7 @@ MY-ABS-X position on the board."
                                      (boosts boosts)
                                      (lizards lizards)
                                      (trucks trucks)
+                                     (emps emps)
                                      (speed speed)
                                      (damage damage)
                                      (boost-counter boost-counter))
@@ -748,6 +777,7 @@ MY-ABS-X position on the board."
                                        (boosts opponent-boosts)
                                        (lizards 1)
                                        (trucks 1)
+                                       (emps opponent-emps)
                                        (speed opponent-speed)
                                        (damage 0)
                                        (boost-counter 0))))
@@ -760,6 +790,7 @@ MY-ABS-X position on the board."
                                    (boosts boosts)
                                    (lizards lizards)
                                    (trucks trucks)
+                                   (emps emps)
                                    (speed speed)
                                    (damage damage)
                                    (boost-counter boost-counter))
@@ -768,6 +799,7 @@ MY-ABS-X position on the board."
                                      (boosts opponent-boosts)
                                      (lizards 1)
                                      (trucks 1)
+                                     (emps opponent-emps)
                                      (speed opponent-speed)
                                      (damage 0)
                                      (boost-counter 0)))))
@@ -779,6 +811,7 @@ MY-ABS-X position on the board."
                                (boosts boosts)
                                (lizards lizards)
                                (trucks trucks)
+                               (emps emps)
                                (speed speed)
                                (damage damage)
                                (boost-counter boost-counter))
@@ -787,6 +820,7 @@ MY-ABS-X position on the board."
                                  (boosts opponent-boosts)
                                  (lizards 1)
                                  (trucks 1)
+                                 (emps opponent-emps)
                                  (speed opponent-speed)
                                  (damage 0)
                                  (boost-counter 0)))))))
@@ -795,16 +829,16 @@ MY-ABS-X position on the board."
   "Produce T if ABSOLUTE-X is close to the edge of the map."
   (> absolute-x 1480))
 
-(defmacro cannot-make-move (boosts lizards trucks pos)
-  "Produce a function which produces T if MOVE can't be made with BOOSTS from POS."
-  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos)))))
+(defmacro cannot-make-move (boosts lizards trucks pos emps)
+  "Produce a function which produces T if MOVE can't be made with BOOSTS, LIZARDS, TRUCKS and EMPS from POS."
+  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos) ,emps))))
 
-(defun remove-impossible-moves (boosts lizards trucks pos all-makeable-moves)
+(defun remove-impossible-moves (boosts lizards trucks pos emps all-makeable-moves)
   "Remove impossible moves from ALL-MOVES.
 
 Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
-  (remove-if (cannot-make-move boosts lizards trucks pos) all-makeable-moves))
+  (remove-if (cannot-make-move boosts lizards trucks pos emps) all-makeable-moves))
 
 (defun global-score (absolute-x current-turn boosts lizards y damage)
   "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
@@ -879,7 +913,8 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                       (boost  1)
                       (wall   2)
                       (tweet  3)
-                      (lizard 4)))
+                      (lizard 4)
+                      (emp    5)))
          (adj-speed `(case ,move
                        (use_lizard 0)
                        (fix        0)
@@ -919,7 +954,8 @@ When going at SPEED from X, Y on GAME-MAP."
     (counting (eq 'boost tile)  into boosts)
     (counting (eq 'lizard tile) into lizards)
     (counting (eq 'tweet tile)  into tweets)
-    (finally (return (vector muds boosts walls tweets lizards)))))
+    (counting (eq 'emp tile)    into emps)
+    (finally (return (vector muds boosts walls tweets lizards emps)))))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
@@ -1021,7 +1057,7 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
 
 ;; Known short cuts:
 ;;  - I don't take boost length into account;
-(defun make-move (move game-map position speed boosts lizards trucks damage boost-counter)
+(defun make-move (move game-map position speed boosts lizards trucks emps damage boost-counter)
   "Make MOVE across GAME-MAP from POSITION at SPEED with BOOSTS.
 
 Produce the new new position, etc. as values."
@@ -1034,6 +1070,7 @@ Produce the new new position, etc. as values."
          (new-boosts        (accumulating-powerups boosts  move boost  new-speed game-map position))
          (new-lizards       (accumulating-powerups lizards move lizard new-speed game-map position))
          (new-trucks        (accumulating-powerups trucks  move tweet  new-speed game-map position))
+         (new-emps          (accumulating-powerups emps    move emp    new-speed game-map position))
          (truck-x           (hit-a-truck game-map x new-x new-y))
          (new-pos           (cons (if truck-x (1- truck-x) new-x) new-y))
          (new-boost-counter (max 0 (1- boost-counter)))
@@ -1045,7 +1082,7 @@ Produce the new new position, etc. as values."
                                  (if (or (> walls-hit 0) truck-x)
                                      3
                                      (decrease-speed-by muds-hit new-speed)))))
-    (values new-pos final-speed new-boosts new-lizards new-trucks new-damage new-boost-counter)))
+    (values new-pos final-speed new-boosts new-lizards new-trucks new-emps new-damage new-boost-counter)))
 
 (defun hit-a-truck (game-map start-x end-x new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
@@ -1077,7 +1114,7 @@ Being at the edge of the map is best, because we don't know what's
 coming!"
   (>= (car position) (1- (game-map-x-dim game-map))))
 
-(defun move-can-be-made (move boosts lizards trucks y)
+(defun move-can-be-made (move boosts lizards trucks y emps)
   "Produce T if the MOVE can be made from Y coordinate."
   (case move
     (turn_right (< y 3))
@@ -1085,6 +1122,7 @@ coming!"
     (use_boost  (> boosts 0))
     (use_tweet  (> trucks 0))
     (use_lizard (> lizards 0))
+    (use_emp    (> emps 0))
     (t          t)))
 
 (defun aref-game-map (game-map y x)
@@ -1133,7 +1171,8 @@ If X, Y is OOB then produce DEFAULT."
               (5 'boost)
               (6 'wall)
               (7 'lizard)
-              (8 'tweet))))
+              (8 'tweet)
+              (9 'emp))))
     (finally (return (cons result trucks)))))
 
 (defmethod position-to-cons ((this map-position))
@@ -1377,6 +1416,7 @@ after my move and the OPPONENT-POS after his/her move."
                          (my-boosts current-state)
                          (my-lizards current-state)
                          (my-trucks current-state)
+                         (my-emps   current-state)
                          (my-damage current-state)
                          (my-boost-counter current-state)))
              ((:values opponent-pos)
@@ -1386,6 +1426,7 @@ after my move and the OPPONENT-POS after his/her move."
                          (opponent-speed current-state)
                          ;; I don't know how many boosts, lizards or
                          ;; trucks my opponent has(!?)
+                         0
                          0
                          0
                          0
