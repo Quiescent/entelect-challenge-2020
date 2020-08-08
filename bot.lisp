@@ -33,107 +33,6 @@
   "Produce a move which is appropriate for ROUND-NUMBER."
   (move-for-state (load-state-file round-number)))
 
-(defun move-for-state (state)
-  "Produce the move which my bot makes from STATE."
-  (bind (((player-position . opponent-position) (positions state))
-
-         (game-map                 (rows state))
-         (player-absolute-x        (my-abs-x state))
-         (opponent-absolute-x      (opponent-abs-x state))
-         (player-boosts            (my-boosts state))
-         (player-boost-counter     (my-boost-counter state))
-         (player-lizards           (my-lizards state))
-         (player-trucks            (my-trucks state))
-         (player-emps              (my-emps state))
-         (player-oils              (my-oils state))
-         (player-speed             (my-speed state))
-         (player-damage            (my-damage state))
-         (opponent-boosts          1)
-         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
-         (opponent-speed           (opponent-speed state))
-         (move              (determine-move ((game (turn *current-turn*))
-                                             (game-map game-map)
-                                             (player
-                                              (absolute-x player-absolute-x)
-                                              (position player-position)
-                                              (boosts player-boosts)
-                                              (lizards player-lizards)
-                                              (trucks player-trucks)
-                                              (emps player-emps)
-                                              (speed player-speed)
-                                              (damage player-damage)
-                                              (boost-counter player-boost-counter))
-                                             (opponent
-                                              (absolute-x opponent-absolute-x)
-                                              (position opponent-position)
-                                              (boosts opponent-boosts)
-                                              (lizards 1)
-                                              (trucks 1)
-                                              (emps opponent-emps)
-                                              (speed opponent-speed)
-                                              (damage 0)
-                                              (boost-counter 0))))))
-    (format *error-output*
-            "My total/average speed: ~a - ~a~%"
-            player-absolute-x
-            (/ player-absolute-x *current-turn*))
-    (format *error-output*
-            "Op total/average speed: ~a - ~a~%"
-            opponent-absolute-x
-            (/ opponent-absolute-x *current-turn*))
-    move))
-
-(defmacro deep-accessor (object &rest nested-slots)
-  "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
-  (reduce (lambda (result next-name) `(slot-value ,result ,next-name))
-          (reverse (cdr nested-slots))
-          :initial-value `(slot-value ,object ,(car nested-slots))))
-
-(defmethod im-boosting ((this state))
-  "Produce t if im currently boosting in THIS state."
-  (deep-accessor this 'player 'boosting))
-
-(defmethod my-boosts ((this state))
-  "Produce the number of boosts which I have in THIS state."
-  (count-if (lambda (x) (string-equal x "BOOST"))
-            (deep-accessor this 'player 'powerups)))
-
-(defmethod my-lizards ((this state))
-  "Produce the number of lizards which I have in THIS state."
-  (count-if (lambda (x) (string-equal x "LIZARD"))
-            (deep-accessor this 'player 'powerups)))
-
-(defmethod my-trucks ((this state))
-  "Produce the number of trucks which I have in THIS state."
-  (count-if (lambda (x) (string-equal x "TWEET"))
-            (deep-accessor this 'player 'powerups)))
-
-(defmethod my-emps ((this state))
-  "Produce the number of emps which I have in THIS state."
-  (count-if (lambda (x) (string-equal x "EMP"))
-            (deep-accessor this 'player 'powerups)))
-
-(defmethod my-oils ((this state))
-  "Produce the number of oils which I have in THIS state."
-  (count-if (lambda (x) (string-equal x "OIL"))
-            (deep-accessor this 'player 'powerups)))
-
-(defmethod my-boost-counter ((this state))
-  "Produce the number of boosts which I have in THIS state."
-  (deep-accessor this 'player 'boost-counter))
-
-(defmethod my-speed ((this state))
-  "Produce the speed which I'm going in THIS state."
-  (deep-accessor this 'player 'player-speed))
-
-(defmethod my-damage ((this state))
-  "Produce the damage which I've sustained in THIS state."
-  (deep-accessor this 'player 'damage))
-
-(defmethod opponent-speed ((this state))
-  "Produce the speed which the opponent is going in THIS state."
-  (deep-accessor this 'opponent 'player-speed))
-
 (defvar *ahead-of-cache* nil
   "A cache of obstacles ahead of certain points.
 
@@ -646,6 +545,107 @@ MY-ABS-X position on the board."
                 (> (player oils) 0))
            'use_oil
            move))))
+
+(defun move-for-state (state)
+  "Produce the move which my bot makes from STATE."
+  (bind (((player-position . opponent-position) (positions state))
+
+         (game-map                 (rows state))
+         (player-absolute-x        (my-abs-x state))
+         (opponent-absolute-x      (opponent-abs-x state))
+         (player-boosts            (my-boosts state))
+         (player-boost-counter     (my-boost-counter state))
+         (player-lizards           (my-lizards state))
+         (player-trucks            (my-trucks state))
+         (player-emps              (my-emps state))
+         (player-oils              (my-oils state))
+         (player-speed             (my-speed state))
+         (player-damage            (my-damage state))
+         (opponent-boosts          1)
+         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
+         (opponent-speed           (opponent-speed state))
+         (move              (determine-move ((game (turn *current-turn*))
+                                             (game-map game-map)
+                                             (player
+                                              (absolute-x player-absolute-x)
+                                              (position player-position)
+                                              (boosts player-boosts)
+                                              (lizards player-lizards)
+                                              (trucks player-trucks)
+                                              (emps player-emps)
+                                              (speed player-speed)
+                                              (damage player-damage)
+                                              (boost-counter player-boost-counter))
+                                             (opponent
+                                              (absolute-x opponent-absolute-x)
+                                              (position opponent-position)
+                                              (boosts opponent-boosts)
+                                              (lizards 1)
+                                              (trucks 1)
+                                              (emps opponent-emps)
+                                              (speed opponent-speed)
+                                              (damage 0)
+                                              (boost-counter 0))))))
+    (format *error-output*
+            "My total/average speed: ~a - ~a~%"
+            player-absolute-x
+            (/ player-absolute-x *current-turn*))
+    (format *error-output*
+            "Op total/average speed: ~a - ~a~%"
+            opponent-absolute-x
+            (/ opponent-absolute-x *current-turn*))
+    move))
+
+(defmacro deep-accessor (object &rest nested-slots)
+  "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
+  (reduce (lambda (result next-name) `(slot-value ,result ,next-name))
+          (reverse (cdr nested-slots))
+          :initial-value `(slot-value ,object ,(car nested-slots))))
+
+(defmethod im-boosting ((this state))
+  "Produce t if im currently boosting in THIS state."
+  (deep-accessor this 'player 'boosting))
+
+(defmethod my-boosts ((this state))
+  "Produce the number of boosts which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "BOOST"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-lizards ((this state))
+  "Produce the number of lizards which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "LIZARD"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-trucks ((this state))
+  "Produce the number of trucks which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "TWEET"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-emps ((this state))
+  "Produce the number of emps which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "EMP"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-oils ((this state))
+  "Produce the number of oils which I have in THIS state."
+  (count-if (lambda (x) (string-equal x "OIL"))
+            (deep-accessor this 'player 'powerups)))
+
+(defmethod my-boost-counter ((this state))
+  "Produce the number of boosts which I have in THIS state."
+  (deep-accessor this 'player 'boost-counter))
+
+(defmethod my-speed ((this state))
+  "Produce the speed which I'm going in THIS state."
+  (deep-accessor this 'player 'player-speed))
+
+(defmethod my-damage ((this state))
+  "Produce the damage which I've sustained in THIS state."
+  (deep-accessor this 'player 'damage))
+
+(defmethod opponent-speed ((this state))
+  "Produce the speed which the opponent is going in THIS state."
+  (deep-accessor this 'opponent 'player-speed))
 
 (defun close-to-end (absolute-x)
   "Produce T if ABSOLUTE-X is close to the edge of the map."
