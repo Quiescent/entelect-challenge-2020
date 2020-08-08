@@ -1073,7 +1073,7 @@ Produce the new new position, etc. as values."
          (new-emps          (accumulating-powerups emps    move emp    new-speed game-map position))
          (truck-x           (hit-a-truck game-map x new-x new-y))
          (new-pos           (cons (if truck-x (1- truck-x) new-x) new-y))
-         (new-boost-counter (max 0 (1- boost-counter)))
+         (new-boost-counter (if (eq move 'use_boost) 5 (max 0 (1- boost-counter))))
          (new-damage        (min 6 (+ muds-hit
                                       (* 2 walls-hit)
                                       (if truck-x 2 0)
