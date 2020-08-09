@@ -25,7 +25,7 @@
     (while t)
     (initially
      (setf *heuristic-coeficients* (read-weights))
-     (setf *full-game-map* (make-array '(4 150) :initial-element nil)))
+     (setf *full-game-map* (make-array '(1500 4) :initial-element nil)))
     (for round-number = (read-line))
     (bind ((*current-turn* (read-from-string round-number)))
       (for move = (move-for-round round-number)))
@@ -611,11 +611,11 @@ MY-ABS-X position on the board."
                                                      (boost-counter 0))))))
     (iter
       (for x from 0 below (game-map-x-dim game-map))
-      (for absolute-x from (max 0 (- player-absolute-x 5)))
+      (for absolute-x from (max 0 (- player-absolute-x 5)) below 1500)
       (iter
         (for y from 0 below 4)
         (setf (aref *full-game-map* absolute-x y)
-              (aref-game-map game-map x y))))
+              (aref-game-map game-map y x))))
     (setf *previous-move* move)
     (format *error-output*
             "My total/average speed: ~a - ~a~%"
