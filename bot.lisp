@@ -546,8 +546,21 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((opponent-is-behind-me (< (opponent absolute-x) (player absolute-x)))
+     (bind ((opponent-is-behind-me         (< (opponent absolute-x) (player absolute-x)))
+            (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
+                                                (> (car *player-cyber-truck-position*)
+                                                   (opponent absolute-x))))
+            (will-crash                    (> (make-moves
+                                               'nothing
+                                               'nothing
+                                               (player damage))
+                                              (player damage)))
             (move (cond
+                    ((and opponent-is-behind-me
+                          (not cyber-truck-ahead-of-opponent)
+                          (> (player trucks) 0)
+                          (not will-crash))
+                     (cons 'use_tweet (most-used-square-on-shortest-paths ,game-state)))
                     ((opponent-is-close-by (player absolute-x)
                                            (cdr (player position))
                                            (opponent absolute-x)
@@ -556,12 +569,7 @@ MY-ABS-X position on the board."
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state))))
-            (*ahead-of-cache* (make-hash-table :test #'equal))
-            (will-crash       (> (make-moves
-                                  'nothing
-                                  'nothing
-                                  (player damage))
-                                 (player damage))))
+            (*ahead-of-cache* (make-hash-table :test #'equal)))
        (cond
          ((and (no-net-change move ,game-state)
                opponent-is-behind-me
@@ -574,6 +582,93 @@ MY-ABS-X position on the board."
                (not will-crash))
           'use_emp)
          (t move)))))
+
+(defmacro most-used-square-on-shortest-paths (game-state)
+  "Find the shortest path from the opponents current position to me in GAME-STATE.
+
+The game map so far is recorded on FULL-GAME-MAP."
+  `(bind ((square-travel-count (make-hash-table :test #'equal))
+          best-x
+          best-turns)
+     (with-initial-state ,(cons `(iteration (count 5)) game-state)
+       (when (= 10 (iteration count))
+         (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
+         (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position))))
+         (setf    best-turns (make-array '(1500) :initial-element 0))
+         (iter
+           (for i from 0 to (opponent x))
+           (setf (aref best-turns i) (iteration count))))
+       (cond
+         ((>= (opponent absolute-x) (player absolute-x)) t)
+         ((>= (opponent absolute-x) 1500)                t)
+         ((= (iteration count) 0)                        t)
+         (t
+          (iter
+            (for original-x = (opponent x))
+            (for opponent-move in (opponent moves))
+            ;; The only way to become completely stuck is to not fix
+            ;; damage or keep fixing...
+            (when (or (and (= 5 (opponent damage))
+                           (not (eq opponent-move 'fix)))
+                      (and (= 0 (opponent damage))
+                           (eq opponent-move 'fix)))
+              (next-iteration))
+            (make-moves
+             'nothing
+             opponent-move
+             (when (< (iteration count) 9)
+               (accumulate-path square-travel-count
+                                original-x
+                                (opponent y)
+                                (opponent x)))
+             (iter
+               (for i downfrom (opponent x))
+               (while (< (aref best-turns i) (iteration count)))
+               (setf (aref best-turns i) (iteration count)))
+             (bind ((ahead
+                     (iter
+                       (for i from (opponent x) below 1500)
+                       (while (> (aref best-turns i) (iteration count)))
+                       (finally (return (- i (opponent x)))))))
+               (when (> (* (iteration count) 15) ahead)
+                 (recur (1- (iteration count)))))))))
+       (iter
+         (for (key value) in-hashtable square-travel-count)
+         (finding key maximizing value)))))
+
+#+nil
+(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  (most-used-square-on-shortest-paths
+   ((game (turn 10))
+    (iteration (count 3))
+    (game-map empty-game-map)
+    (player (absolute-x 1)
+            (position (cons 2 1))
+            (boosts 3)
+            (lizards 4)
+            (trucks 5)
+            (speed 6)
+            (damage 0)
+            (emps 0)
+            (boost-counter 8))
+    (opponent (absolute-x 9)
+              (position (cons 10 3))
+              (boosts 11)
+              (lizards 12)
+              (trucks 13)
+              (speed 14)
+              (damage 0)
+              (emps 1)
+              (boost-counter 16)))))
+
+(defun accumulate-path (square-travel-count start-absolute-x end-absolute-x end-y)
+  "Increment squares in SQUARE-TRAVEL-COUNT in the given path.
+
+Path starts at (START-ABSOLUTE-X, END-Y) and ends
+at (END-ABSOLUTE-X, END-Y)."
+  (iter
+    (for x from start-absolute-x below end-absolute-x)
+    (incf (gethash (cons x end-y) square-travel-count 0))))
 
 (defun move-for-state (state)
   "Produce the move which my bot makes from STATE."
@@ -620,7 +715,7 @@ MY-ABS-X position on the board."
       (for absolute-x from (max 0 (- player-absolute-x 5)) below 1500)
       (iter
         (for y from 0 below 4)
-        (setf (aref *full-game-map* absolute-x y)
+        (setf (aref *full-game-map* y absolute-x)
               (aref-game-map game-map y x))))
     (setf *previous-move* move)
     (format *error-output*
