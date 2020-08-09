@@ -12,6 +12,9 @@
 (defvar *full-game-map* nil
   "The map as it's been discovered so far.")
 
+(defvar *player-cyber-truck-position* nil
+  "The position at which I last placed the cyber truck.")
+
 (defun read-weights ()
   "Read all scores from the score config file."
   (with-open-file (f "./score-config")
@@ -25,7 +28,8 @@
     (while t)
     (initially
      (setf *heuristic-coeficients* (read-weights))
-     (setf *full-game-map* (make-array '(1500 4) :initial-element nil)))
+     (setf *full-game-map* (make-array '(4 1500) :initial-element nil))
+     (setf *player-cyber-truck-position* nil))
     (for round-number = (read-line))
     (bind ((*current-turn* (read-from-string round-number)))
       (for move = (move-for-round round-number)))
