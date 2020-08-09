@@ -560,7 +560,6 @@ MY-ABS-X position on the board."
                (< (opponent x) (player x))
                (> (player oils) 0))
           'use_oil)
-         ;; TODO: check that we aren't going to crash into a wall! XD
          ((and (> (opponent x) (player x))
                (member (player y) '(1 2))
                (not (eq *previous-move* 'use_emp))
