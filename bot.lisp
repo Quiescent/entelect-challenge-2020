@@ -540,7 +540,8 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((move (cond
+     (bind ((opponent-is-behind-me (< (opponent absolute-x) (player absolute-x)))
+            (move (cond
                     ((opponent-is-close-by (player absolute-x)
                                            (cdr (player position))
                                            (opponent absolute-x)
@@ -557,10 +558,10 @@ MY-ABS-X position on the board."
                                  (player damage))))
        (cond
          ((and (no-net-change move ,game-state)
-               (< (opponent x) (player x))
+               opponent-is-behind-me
                (> (player oils) 0))
           'use_oil)
-         ((and (> (opponent x) (player x))
+         ((and (not opponent-is-behind-me)
                (member (player y) '(1 2))
                (not (eq *previous-move* 'use_emp))
                (> (player emps) 0)
