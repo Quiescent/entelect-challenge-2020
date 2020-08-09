@@ -908,9 +908,6 @@ powerups of TYPE on the GAME-MAP starting from POSITION."
       (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
       (ahead-of ,move ,type ,speed ,game-map ,position)))
 
-;; Known short cuts:
-;;  - I don't take boost length into account;
-;;
 ;; TODO: deal with collision state in:
 ;; "../EntelectChallenge-2020-Overdrive/game-runner/match-logs/2020.08.08.12.33.49"
 (defun make-move (move opponent-move game-map
