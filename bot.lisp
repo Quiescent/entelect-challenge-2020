@@ -300,6 +300,8 @@ Unused values will be ignored."
                                                                 player-emps
                                                                 all-makeable-moves))
                                                        (t (intern (mkstr 'player    '- symbol))))))
+                      (setting    (name value)
+                        `(setf ,name ,value))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
                       (recur      (iteration-count) `(recur-inner current-game-map
                                                                   player-absolute-x
