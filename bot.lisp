@@ -609,7 +609,8 @@ The game map so far is recorded on FULL-GAME-MAP."
          ((= (iteration count) 0)                        t)
          (t
           (iter
-            (for original-x = (opponent x))
+            (for original-x      = (opponent x))
+            (for original-damage = (opponent damage))
             (for opponent-move in (opponent moves))
             ;; The only way to become completely stuck is to not fix
             ;; damage or keep fixing...
@@ -621,6 +622,8 @@ The game map so far is recorded on FULL-GAME-MAP."
             (make-moves
              'nothing
              opponent-move
+             (when (> (opponent damage) original-damage)
+               (next-iteration))
              (when (< (iteration count) 4)
                (accumulate-path square-travel-count
                                 original-x
