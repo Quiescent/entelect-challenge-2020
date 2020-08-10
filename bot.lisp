@@ -599,8 +599,8 @@ The game map so far is recorded on FULL-GAME-MAP."
      (iter
        (for i from 0 to (opponent x))
        (setf (aref best-turns i) (iteration count)))
-     (with-initial-state ,(cons `(iteration (count 5)) (cons `(game-map ,full-game-map) game-state))
-       (when (= 5 (iteration count))
+     (with-initial-state ,(cons `(iteration (count 10)) (cons `(game-map ,full-game-map) game-state))
+       (when (= 10 (iteration count))
          (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
          (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position)))))
        (cond
