@@ -664,7 +664,7 @@ The game map so far is recorded on FULL-GAME-MAP."
                                 (if (numberp tile)
                                     (format nil "[~4,'0d]" tile)
                                     (case tile
-                                      (dirt     #\_)
+                                      (mud      #\▓)
                                       (wall     #\#)
                                       (tweet    #\T)
                                       (emp      #\*)
