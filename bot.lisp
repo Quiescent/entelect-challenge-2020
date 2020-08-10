@@ -566,6 +566,7 @@ MY-ABS-X position on the board."
                                         ,game-state
                                         (cons *full-game-map*
                                               (cdr ,(cadr (assoc 'game-map game-state)))))))
+                       (format t "Ahead by: ~a~%" (- (player absolute-x) (opponent absolute-x)))
                        (setf *player-cyber-truck-position* placement)
                        (cons 'use_tweet placement)))
                     ((opponent-is-close-by (player absolute-x)
