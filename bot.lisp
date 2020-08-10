@@ -547,7 +547,8 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((opponent-is-behind-me         (> (- (player absolute-x) (opponent absolute-x)) 30))
+     (bind ((i-have-margin-on-opponent     (> (- (player absolute-x) (opponent absolute-x)) 30))
+            (opponent-is-behind-me         (> (player absolute-x) (opponent absolute-x)))
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
                                                    (opponent absolute-x))))
@@ -558,7 +559,7 @@ MY-ABS-X position on the board."
                                                  (player damage))
                                                 (player damage))))
             (move (cond
-                    ((and opponent-is-behind-me
+                    ((and i-have-margin-on-opponent
                           (not cyber-truck-ahead-of-opponent)
                           (> (player trucks) 0)
                           (not will-crash))
