@@ -38,7 +38,7 @@
 (defun move-to-string (move)
   "Produce a string representation of MOVE."
   (if (consp move)
-      (format nil "~a ~a ~a" (car move) (cddr move) (cadr move))
+      (format nil "~a ~a ~a" (car move) (1+ (cddr move)) (cadr move))
       (format nil "~a" move)))
 
 (defun move-for-round (round-number)
