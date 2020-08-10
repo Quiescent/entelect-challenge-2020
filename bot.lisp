@@ -9,7 +9,7 @@
 (defvar *previous-move* nil
   "The move which was made last turn.")
 
-(defvar *full-game-map* nil
+(defvar *full-game-map* (make-array '(4 1500) :initial-element nil)
   "The map as it's been discovered so far.")
 
 (defvar *player-cyber-truck-position* nil
@@ -395,41 +395,42 @@ Unused values will be ignored."
   "Produce t if MOVE didn't actively change GAME-STATE.
 
 i.e. if we may as well not have mode MOVE."
-  `(with-initial-state ,game-state
-     (bind (nothing-player-absolute-x
-            nothing-player-position
-            nothing-player-boosts
-            nothing-player-lizards
-            nothing-player-trucks
-            nothing-player-emps
-            nothing-player-speed
-            nothing-player-damage
-            nothing-player-boost-counter)
-       (make-moves
-        'nothing
-        'nothing
-        (setf nothing-player-absolute-x    (player absolute-x)
-              nothing-player-position      (player position)
-              nothing-player-boosts        (player boosts)
-              nothing-player-lizards       (player lizards)
-              nothing-player-trucks        (player trucks)
-              nothing-player-emps          (player emps)
-              nothing-player-speed         (player speed)
-              nothing-player-damage        (player damage)
-              nothing-player-boost-counter (player boost-counter)))
-       (make-moves
-        ,move
-        'nothing
-        (and (equal nothing-player-position (player position))
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+     (with-initial-state ,game-state
+       (bind (nothing-player-absolute-x
+              nothing-player-position
+              nothing-player-boosts
+              nothing-player-lizards
+              nothing-player-trucks
+              nothing-player-emps
+              nothing-player-speed
+              nothing-player-damage
+              nothing-player-boost-counter)
+         (make-moves
+          'nothing
+          'nothing
+          (setf nothing-player-absolute-x    (player absolute-x)
+                nothing-player-position      (player position)
+                nothing-player-boosts        (player boosts)
+                nothing-player-lizards       (player lizards)
+                nothing-player-trucks        (player trucks)
+                nothing-player-emps          (player emps)
+                nothing-player-speed         (player speed)
+                nothing-player-damage        (player damage)
+                nothing-player-boost-counter (player boost-counter)))
+         (make-moves
+          ,move
+          'nothing
+          (and (equal nothing-player-position (player position))
 
-             (eq nothing-player-absolute-x    (player absolute-x))
-             (eq nothing-player-boosts        (player boosts))
-             (eq nothing-player-lizards       (player lizards))
-             (eq nothing-player-trucks        (player trucks))
-             (eq nothing-player-emps          (player emps))
-             (eq nothing-player-speed         (player speed))
-             (eq nothing-player-damage        (player damage))
-             (eq nothing-player-boost-counter (player boost-counter)))))))
+               (eq nothing-player-absolute-x    (player absolute-x))
+               (eq nothing-player-boosts        (player boosts))
+               (eq nothing-player-lizards       (player lizards))
+               (eq nothing-player-trucks        (player trucks))
+               (eq nothing-player-emps          (player emps))
+               (eq nothing-player-speed         (player speed))
+               (eq nothing-player-damage        (player damage))
+               (eq nothing-player-boost-counter (player boost-counter))))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
@@ -550,17 +551,21 @@ MY-ABS-X position on the board."
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
                                                    (opponent absolute-x))))
-            (will-crash                    (> (make-moves
-                                               'nothing
-                                               'nothing
-                                               (player damage))
-                                              (player damage)))
+            (will-crash                    (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+                                             (> (make-moves
+                                                 'nothing
+                                                 'nothing
+                                                 (player damage))
+                                                (player damage))))
             (move (cond
                     ((and opponent-is-behind-me
                           (not cyber-truck-ahead-of-opponent)
                           (> (player trucks) 0)
                           (not will-crash))
-                     (cons 'use_tweet (most-used-square-on-shortest-paths ,game-state)))
+                     (cons 'use_tweet
+                           (most-used-square-on-shortest-paths ,game-state
+                                                               (cons *full-game-map*
+                                                                     (cdr ,(cadr (assoc 'game-map game-state)))))))
                     ((opponent-is-close-by (player absolute-x)
                                            (cdr (player position))
                                            (opponent absolute-x)
@@ -568,8 +573,7 @@ MY-ABS-X position on the board."
                      (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
-                    (t (make-speed-move ,game-state))))
-            (*ahead-of-cache* (make-hash-table :test #'equal)))
+                    (t (make-speed-move ,game-state)))))
        (cond
          ((and (no-net-change move ,game-state)
                opponent-is-behind-me
@@ -583,21 +587,20 @@ MY-ABS-X position on the board."
           'use_emp)
          (t move)))))
 
-(defmacro most-used-square-on-shortest-paths (game-state)
+(defmacro most-used-square-on-shortest-paths (game-state full-game-map)
   "Find the shortest path from the opponents current position to me in GAME-STATE.
 
 The game map so far is recorded on FULL-GAME-MAP."
   `(bind ((square-travel-count (make-hash-table :test #'equal))
-          best-x
-          best-turns)
-     (with-initial-state ,(cons `(iteration (count 5)) game-state)
-       (when (= 10 (iteration count))
+          (*ahead-of-cache* (make-hash-table :test #'equal))
+          (best-turns (make-array '(1500) :initial-element 0)))
+     (iter
+       (for i from 0 to (opponent x))
+       (setf (aref best-turns i) (iteration count)))
+     (with-initial-state ,(cons `(iteration (count 5)) (cons `(game-map ,full-game-map) game-state))
+       (when (= 5 (iteration count))
          (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
-         (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position))))
-         (setf    best-turns (make-array '(1500) :initial-element 0))
-         (iter
-           (for i from 0 to (opponent x))
-           (setf (aref best-turns i) (iteration count))))
+         (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position)))))
        (cond
          ((>= (opponent absolute-x) (player absolute-x)) t)
          ((>= (opponent absolute-x) 1500)                t)
@@ -616,13 +619,13 @@ The game map so far is recorded on FULL-GAME-MAP."
             (make-moves
              'nothing
              opponent-move
-             (when (< (iteration count) 9)
+             (when (< (iteration count) 4)
                (accumulate-path square-travel-count
                                 original-x
-                                (opponent y)
-                                (opponent x)))
+                                (opponent x)
+                                (opponent y)))
              (iter
-               (for i downfrom (opponent x))
+               (for i from (opponent x) downto 0)
                (while (< (aref best-turns i) (iteration count)))
                (setf (aref best-turns i) (iteration count)))
              (bind ((ahead
@@ -631,10 +634,39 @@ The game map so far is recorded on FULL-GAME-MAP."
                        (while (> (aref best-turns i) (iteration count)))
                        (finally (return (- i (opponent x)))))))
                (when (> (* (iteration count) 15) ahead)
-                 (recur (1- (iteration count)))))))))
-       (iter
-         (for (key value) in-hashtable square-travel-count)
-         (finding key maximizing value)))))
+                 (recur (1- (iteration count))))))))))
+     (format *error-output* "~a~%" (iter
+                                     (with game-map = (make-array '(4 1500) :initial-element 0))
+                                     (for (key value) in-hashtable square-travel-count)
+                                     (for (x . y) = key)
+                                     (setf (aref game-map y x) value)
+                                     (finally (return (print-full-game-map-to-string (list game-map))))))
+     (format *error-output* "~a~%" (print-full-game-map-to-string (list *full-game-map*)))
+     (iter
+       (for (key value) in-hashtable square-travel-count)
+       (finding key maximizing value))))
+
+(defun print-full-game-map-to-string (full-game-map)
+  "Print FULL-GAME-MAP as a string."
+  (bind ((output (make-array '(0) :element-type 'extended-char
+                                  :fill-pointer 0 :adjustable t)))
+    (with-output-to-string (stream output)
+      (iter
+        (for y from 0 below 4)
+        (iter
+          (for x from 0 below 1500)
+          (format stream "~a" (bind ((tile (aref-game-map full-game-map y x)))
+                                (if (numberp tile)
+                                    (format nil "[~4,'0d]" tile)
+                                    (case tile
+                                      (dirt     #\_)
+                                      (wall     #\#)
+                                      (tweet    #\T)
+                                      (emp      #\*)
+                                      (oil-item #\Φ)
+                                      (t        #\░))))))
+        (format stream "~%")))
+    output))
 
 #+nil
 (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
