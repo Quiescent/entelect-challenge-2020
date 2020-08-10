@@ -275,6 +275,8 @@ Unused values will be ignored."
                                                                 game-turn
                                                                 opponent-boosts
                                                                 opponent-lizards
+                                                                opponent-trucks
+                                                                opponent-emps
                                                                 (cdr opponent-position)
                                                                 opponent-damage))
                                                        (moves '(remove-impossible-moves opponent-boosts
@@ -294,6 +296,8 @@ Unused values will be ignored."
                                                                 game-turn
                                                                 player-boosts
                                                                 player-lizards
+                                                                player-trucks
+                                                                player-emps
                                                                 (cdr player-position)
                                                                 player-damage))
                                                        (moves '(remove-impossible-moves
@@ -474,7 +478,8 @@ Eighth is my boost counter."
                          (player lizards)
                          (player trucks)
                          (player damage)
-                         (player boost-counter))
+                         (player boost-counter)
+                         (player emps))
                    found)
              (iter
                (for move in (player moves))
@@ -521,11 +526,13 @@ board."
      (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
       (-> (states-from ,game-state)
         copy-seq
-        (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 _ damage-2 _) state))
+        (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2) state))
                                     (global-score (+ (player absolute-x) (car pos-2))
                                                   (+ *current-turn* (length path))
                                                   boosts-2
                                                   lizards-2
+                                                  trucks-2
+                                                  emps-2
                                                   (cdr pos-2)
                                                   damage-2))))))))
 
@@ -843,7 +850,7 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts lizards trucks pos emps) all-makeable-moves))
 
-(defun global-score (absolute-x current-turn boosts lizards y damage)
+(defun global-score (absolute-x current-turn boosts lizards trucks emps y damage)
   "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
@@ -853,12 +860,16 @@ POS."
       (bind (((x-score
                boosts-score
                lizards-score
+               trucks-score
+               emp-score
                y-score
                damage-score
                current-turn-score) coefficients))
         (maximizing (+ (* x-score             absolute-x)
                        (* boosts-score        boosts)
                        (* lizards-score       lizards)
+                       (* trucks-score        trucks)
+                       (* emp-score           emps)
                        (* y-score             is-middle-two)
                        (* damage-score        damage)
                        (* current-turn-score  current-turn)))))))
