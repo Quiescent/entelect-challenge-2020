@@ -1,8 +1,10 @@
 (ql:quickload :metabang-bind)
+(ql:quickload :cl-ppcre)
+(ql:quickload :arrow-macros)
 (ql:quickload :iterate)
 
 (defpackage optimise-bot
-  (:use :cl :iterate :metabang-bind))
+  (:use :cl :iterate :metabang-bind :arrow-macros))
 
 (in-package :optimise-bot)
 
@@ -202,18 +204,39 @@ up to POPULATION-SIZE."
                                   :validate t
                                   :if-does-not-exist :ignore)
       (uiop:run-program (list "make" "run"))
-      (summing (/ (length (directory (make-pathname :directory
-                                                    (list :absolute
-                                                          (namestring
-                                                           (car (directory (make-pathname :directory
-                                                                                          (list :absolute
-                                                                                                *game-runner-dir*
-                                                                                                "match-logs")
-                                                                                          :name :wild
-                                                                                          :type :wild)))))
-                                                    :name :wild
-                                                    :type :wild)))
+      (summing (/ (- (final-x (csv-path "A" "Quantum"))
+                     (final-x (csv-path "B" "22")))
                   5)))))
+
+(defun final-x (path)
+  "Produce the final X position in the CSV file at PATH."
+  (with-open-file (file path)
+    (iter
+      (with line)
+      (for next-line = (ignore-errors (read-line file)))
+      (while next-line)
+      (setf line next-line)
+      (finally
+       (return
+         (->> line
+           (cl-ppcre:split ",")
+           (nth 3)
+           (read-from-string)))))))
+
+(defun csv-path (letter bot-name)
+  "Produce the CSV file for BOT-NAME in the latest game."
+  (format nil
+          "~a~a - ~a.csv"
+          (->> (directory (make-pathname :directory
+                                         (list :absolute
+                                               *game-runner-dir*
+                                               "match-logs")
+                                         :name :wild
+                                         :type :wild))
+            car
+            namestring)
+          letter
+          bot-name))
 
 (defun write-config (optimisation-vector)
   "Write OPTIMISATION-VECTOR to the config file for the bot being optimised."
