@@ -101,7 +101,7 @@
         (for (c-score . c-vector) = (aref current-generation c-idx))
         (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
         (for new-score  = (fitness new-vector))
-        (if (< new-score current-score)
+        (if (> new-score current-score)
             (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
                    (format next-generation-stream "'~A~%" (cons new-score new-vector)))
             (format next-generation-stream "'~A~%" (cons current-score i-vector)))
