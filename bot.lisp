@@ -640,13 +640,21 @@ The game map so far is recorded on FULL-GAME-MAP."
                        (finally (return (- i (opponent x)))))))
                (when (> (* (iteration count) 15) ahead)
                  (recur (1- (iteration count))))))))))
-     (format *error-output* "~a~%" (iter
-                                     (with game-map = (make-array '(4 1500) :initial-element 0))
-                                     (for (key value) in-hashtable square-travel-count)
-                                     (for (x . y) = key)
-                                     (setf (aref game-map y x) value)
-                                     (finally (return (print-full-game-map-to-string (list game-map))))))
-     (format *error-output* "~a~%" (print-full-game-map-to-string (list *full-game-map*)))
+     (with-open-file (f (format nil "map-out-~a" *current-turn*)
+                        :if-exists :supersede
+                        :if-does-not-exist :create
+                        :direction :output)
+       (format f "~a~%" (iter
+                          (with game-map = (make-array '(4 1500) :initial-element 0))
+                          (for (key value) in-hashtable square-travel-count)
+                          (for (x . y) = key)
+                          (setf (aref game-map y x) value)
+                          (finally (return (print-full-game-map-to-string (list game-map)))))))
+     (with-open-file (f (format nil "heat-out-~a" *current-turn*)
+                        :if-exists :supersede
+                        :if-does-not-exist :create
+                        :direction :output)
+       (format f "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
      (iter
        (for (key value) in-hashtable square-travel-count)
        (finding key maximizing value))))
