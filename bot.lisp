@@ -562,10 +562,12 @@ MY-ABS-X position on the board."
                           (not cyber-truck-ahead-of-opponent)
                           (> (player trucks) 0)
                           (not will-crash))
-                     (cons 'use_tweet
-                           (most-used-square-on-shortest-paths ,game-state
-                                                               (cons *full-game-map*
-                                                                     (cdr ,(cadr (assoc 'game-map game-state)))))))
+                     (bind ((placement (most-used-square-on-shortest-paths
+                                        ,game-state
+                                        (cons *full-game-map*
+                                              (cdr ,(cadr (assoc 'game-map game-state)))))))
+                       (setf *player-cyber-truck-position* placement)
+                       (cons 'use_tweet placement)))
                     ((opponent-is-close-by (player absolute-x)
                                            (cdr (player position))
                                            (opponent absolute-x)
