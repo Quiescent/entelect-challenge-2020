@@ -205,7 +205,7 @@ up to POPULATION-SIZE."
                                   :if-does-not-exist :ignore)
       (uiop:run-program (list "make" "run"))
       (summing (/ (- (final-x (csv-path "A" "Quantum"))
-                     (final-x (csv-path "B" "22")))
+                     (final-x (csv-path "B" "23")))
                   5)))))
 
 (defun final-x (path)
