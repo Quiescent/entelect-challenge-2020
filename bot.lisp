@@ -21,7 +21,7 @@
     (iter
       (for next-member = (eval (ignore-errors (read f))))
       (while next-member)
-      (collecting next-member))))
+      (collecting (mapcar (lambda (x) (coerce x 'float)) next-member)))))
 
 (defun main ()
   (iter
@@ -75,10 +75,18 @@ Value is [muds boosts walls tweets lizards].")
 (defconstant maximax-depth 2
   "The depth that we should search the game tree.")
 
+#+nil
+(sb-sprof:with-profiling (:max-samples 1000
+                          :report :flat
+                          :loop t)
+  (format t "Tick~%")
+  (move-for-state (load-state-from-file "./scratch/JsonMap.json")))
+
 ;; The moves being made here don't make sense!
 (defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+     (declare (optimize (speed 3) (safety 0) (debug 0)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
          (for current-turn = (+ *current-turn* (- maximax-depth (iteration count))))
