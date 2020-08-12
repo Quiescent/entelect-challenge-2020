@@ -593,7 +593,7 @@ MY-ABS-X position on the board."
                (> (player oils) 0))
           'use_oil)
          ((and (not opponent-is-behind-me)
-               (member (player y) '(1 2))
+               (<= (abs (- (player y) (opponent y))))
                (not (eq *previous-move* 'use_emp))
                (> (player emps) 0)
                (not will-crash))
