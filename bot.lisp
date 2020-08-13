@@ -564,6 +564,7 @@ MY-ABS-X position on the board."
   `(with-initial-state ,game-state
      (bind ((i-am-close-enough-to-opponent (< (opponent absolute-x) (+ (player speed) (player absolute-x))))
             (opponent-is-behind-me         (> (player absolute-x) (opponent absolute-x)))
+            (opponent-is-ahead-of-me       (> (opponent absolute-x) (player absolute-x)))
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
                                                    (opponent absolute-x))))
@@ -599,7 +600,7 @@ MY-ABS-X position on the board."
                opponent-is-behind-me
                (> (player oils) 0))
           'use_oil)
-         ((and (not opponent-is-behind-me)
+         ((and opponent-is-ahead-of-me
                (<= (abs (- (player y) (opponent y))) 1)
                (not (eq *previous-move* 'use_emp))
                (> (player emps) 0)
