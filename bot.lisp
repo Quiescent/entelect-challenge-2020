@@ -562,7 +562,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((i-have-margin-on-opponent     (> (- (player absolute-x) (opponent absolute-x)) 30))
+     (bind ((i-am-close-enough-to-opponent (< (opponent absolute-x) (+ (player speed) (player absolute-x))))
             (opponent-is-behind-me         (> (player absolute-x) (opponent absolute-x)))
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
@@ -574,7 +574,7 @@ MY-ABS-X position on the board."
                                                  (player damage))
                                                 (player damage))))
             (move (cond
-                    ((and i-have-margin-on-opponent
+                    ((and i-am-close-enough-to-opponent
                           (not cyber-truck-ahead-of-opponent)
                           (> (player trucks) 0)
                           (not will-crash))
@@ -582,7 +582,6 @@ MY-ABS-X position on the board."
                                         ,game-state
                                         (cons *full-game-map*
                                               (cdr ,(cadr (assoc 'game-map game-state)))))))
-                       (format t "Ahead by: ~a~%" (- (player absolute-x) (opponent absolute-x)))
                        (setf *player-cyber-truck-position* placement)
                        (if (null placement)
                            (make-speed-move ,game-state)
@@ -614,12 +613,14 @@ MY-ABS-X position on the board."
 The game map so far is recorded on FULL-GAME-MAP."
   `(bind ((square-travel-count (make-hash-table :test #'equal))
           (*ahead-of-cache* (make-hash-table :test #'equal))
-          (best-turns (make-array '(1500) :initial-element 0)))
+          (best-turns (make-array '(1500) :initial-element 0))
+          x-limit)
      (iter
        (for i from 0 to (opponent x))
        (setf (aref best-turns i) (iteration count)))
      (with-initial-state ,(cons `(iteration (count 5)) (cons `(game-map ,full-game-map) game-state))
        (when (= 5 (iteration count))
+         (setf x-limit (+ (player speed) (player absolute-x)))
          (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
          (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position)))))
        (cond
@@ -641,9 +642,10 @@ The game map so far is recorded on FULL-GAME-MAP."
             (make-moves
              'nothing
              opponent-move
-             (when (> (opponent damage) original-damage)
+             (when (or (> (opponent damage) original-damage)
+                       (> (opponent absolute-x) x-limit))
                (next-iteration))
-             (when (< (iteration count) 4)
+             (when (<= (iteration count) 4)
                (accumulate-path square-travel-count
                                 original-x
                                 (opponent x)
