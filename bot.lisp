@@ -615,11 +615,11 @@ The game map so far is recorded on FULL-GAME-MAP."
           (*ahead-of-cache* (make-hash-table :test #'equal))
           (best-turns (make-array '(1500) :initial-element 0))
           x-limit)
-     (iter
-       (for i from 0 to (opponent x))
-       (setf (aref best-turns i) (iteration count)))
      (with-initial-state ,(cons `(iteration (count 5)) (cons `(game-map ,full-game-map) game-state))
        (when (= 5 (iteration count))
+         (iter
+           (for i from 0 to (opponent x))
+           (setf (aref best-turns i) (iteration count)))
          (setf x-limit (+ (player speed) (player absolute-x)))
          (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
          (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position)))))
