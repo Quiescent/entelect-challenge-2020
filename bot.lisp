@@ -1120,7 +1120,14 @@ Produce the new new position, etc. as values."
   (if (and (eq opponent-move 'use_emp)
            (<= (abs (- (cdr position) (cdr opponent-position))) 1)
            (< (car opponent-position) (car position)))
-      (values position 3 boosts lizards trucks emps damage 0)
+      (values position
+              3
+              (if (eq move 'use_boost)                          (1- boosts)  boosts)
+              (if (eq move 'use_lizard)                         (1- lizards) lizards)
+              (if (and (consp move) (eq (car move) 'use_tweet)) (1- trucks)  trucks)
+              (if (eq move 'use_emp)                            (1- emps)    emps)
+              damage
+              0)
       (bind ((new-speed         (new-speed move (if (= 1 boost-counter) (min (maximum-speed damage) 9) speed) damage))
              ((x . y)           position)
              (new-x             (new-x x move new-speed damage))
