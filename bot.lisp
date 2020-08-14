@@ -295,7 +295,7 @@ Unused values will be ignored."
                                                                 all-makeable-moves))
                                                        (t (intern (mkstr 'opponent  '- symbol))))))
                       (game       (symbol) (case symbol
-                                             (map 'game-map)))
+                                             (map 'current-game-map)))
                       (player     (symbol) (values   (case symbol
                                                        (x '(car player-position))
                                                        (y '(cdr player-position))
