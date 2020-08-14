@@ -1105,8 +1105,8 @@ Limit the maximum speed by the amount of damage taken."
 Use the state transitions which occur when MOVE is made, finding
 powerups of TYPE on the GAME-MAP starting from POSITION."
   `(+ ,count-name
-      (if (eq ,move (quote ,(symb 'use_ type))) -1 0)
-      (ahead-of ,move ,type ,speed ,game-map ,position)))
+      (if (eq (if (consp ,move) (car ,move) ,move) (quote ,(symb 'use_ type))) -1 0)
+      (ahead-of (if (consp ,move) (car ,move) ,move) ,type ,speed ,game-map ,position)))
 
 ;; TODO: deal with collision state in:
 ;; "../EntelectChallenge-2020-Overdrive/game-runner/match-logs/2020.08.08.12.33.49"
@@ -1334,7 +1334,14 @@ Prepend 'WHICH-PLAYER - ' to the path for the players move and state."
 (defun load-command-from-file (file-path)
   "Load the players last command as a symbol from FILE-PATH."
   (with-open-file (f file-path)
-    (read-from-string (cadr (cl-ppcre:split "Command: " (read-line f))))))
+    (bind ((move-parts (->> (cl-ppcre:split "Command: " (read-line f))
+                         cadr
+                         (cl-ppcre:split " "))))
+      (if (> (length move-parts) 1)
+          (cons (read-from-string (car move-parts))
+                (cons (read-from-string (cadr move-parts))
+                      (read-from-string (caddr move-parts))))
+          (read-from-string (car move-parts))))))
 
 (defmacro should-equal (form-1 form-2)
   "Procude T if FORM-1 `equal's FORM-2.
