@@ -647,7 +647,8 @@ The game map so far is recorded on FULL-GAME-MAP."
                        (> (opponent absolute-x) x-limit))
                (next-iteration))
              (when (<= (iteration count) 4)
-               (accumulate-path square-travel-count
+               (accumulate-path (game map)
+                                square-travel-count
                                 original-x
                                 (opponent x)
                                 (opponent y)))
@@ -736,14 +737,31 @@ The game map so far is recorded on FULL-GAME-MAP."
               (emps 1)
               (boost-counter 16)))))
 
-(defun accumulate-path (square-travel-count start-absolute-x end-absolute-x end-y)
+(defun accumulate-path (game-map square-travel-count start-absolute-x end-absolute-x end-y)
   "Increment squares in SQUARE-TRAVEL-COUNT in the given path.
+
+Use relative position of obstacles on GAME-MAP to make certain squares
+more highly weighted.
 
 Path starts at (START-ABSOLUTE-X, END-Y) and ends
 at (END-ABSOLUTE-X, END-Y)."
   (iter
     (for x from start-absolute-x below end-absolute-x)
-    (incf (gethash (cons x end-y) square-travel-count 0))))
+    (for good-squares = (+ (is-obstacle-at game-map (1+ end-y) x)
+                           (is-obstacle-at game-map (1- end-y) x)
+                           (is-obstacle-at game-map (1- end-y) (1- x))
+                           (is-obstacle-at game-map (1+ end-y) (1- x))
+                           (is-obstacle-at game-map (1+ end-y) (1+ x))
+                           (is-obstacle-at game-map (1- end-y) (1+ x))))
+    (for bad-squares = (+ (is-obstacle-at game-map end-y x)
+                          (is-obstacle-at game-map end-y (1+ x))
+                          (is-obstacle-at game-map end-y (1- x))))
+    (incf (gethash (cons x end-y) square-travel-count 0) (1+ (- good-squares bad-squares)))))
+
+(defun is-obstacle-at (game-map y x)
+  "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
+  (and (< y 4) (> y 0) (> x 0) (< x 1500)
+       (member (aref-game-map game-map y x) '(mud wall))))
 
 (defun move-for-state (state)
   "Produce the move which my bot makes from STATE."
