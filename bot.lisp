@@ -662,7 +662,7 @@ The game map so far is recorded on FULL-GAME-MAP."
                        (finally (return (- i (opponent x)))))))
                (when (> (* (iteration count) 15) ahead)
                  (recur (1- (iteration count))))))))))
-     (with-open-file (f (format nil "map-out-~a" *current-turn*)
+     (with-open-file (f (format nil "heat-out-~a" *current-turn*)
                         :if-exists :supersede
                         :if-does-not-exist :create
                         :direction :output)
@@ -672,7 +672,7 @@ The game map so far is recorded on FULL-GAME-MAP."
                           (for (x . y) = key)
                           (setf (aref game-map y x) value)
                           (finally (return (print-full-game-map-to-string (list game-map)))))))
-     (with-open-file (f (format nil "heat-out-~a" *current-turn*)
+     (with-open-file (f (format nil "map-out-~a" *current-turn*)
                         :if-exists :supersede
                         :if-does-not-exist :create
                         :direction :output)
@@ -684,7 +684,15 @@ The game map so far is recorded on FULL-GAME-MAP."
 (defun print-full-game-map-to-string (full-game-map)
   "Print FULL-GAME-MAP as a string."
   (bind ((output (make-array '(0) :element-type 'extended-char
-                                  :fill-pointer 0 :adjustable t)))
+                                  :fill-pointer 0 :adjustable t))
+         (biggest-number
+          (iter
+            (for y from 0 below 4)
+            (maximizing
+             (iter
+               (for x from 0 below 1500)
+               (for value = (aref-game-map full-game-map y x))
+               (maximizing (if (numberp value) value 0)))))))
     (with-output-to-string (stream output)
       (iter
         (for y from 0 below 4)
@@ -692,7 +700,7 @@ The game map so far is recorded on FULL-GAME-MAP."
           (for x from 0 below 1500)
           (format stream "~a" (bind ((tile (aref-game-map full-game-map y x)))
                                 (if (numberp tile)
-                                    (format nil "[~4,'0d]" tile)
+                                    (format nil "~a" (floor (/ tile biggest-number)))
                                     (case tile
                                       (mud      #\▓)
                                       (wall     #\#)
