@@ -596,7 +596,8 @@ MY-ABS-X position on the board."
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
        (cond
-         ((and (no-net-change move ,game-state)
+         ((and (not (and (consp move) (eq (car move) 'USE_TWEET)))
+               (no-net-change move ,game-state)
                opponent-is-behind-me
                (> (player oils) 0))
           'use_oil)
