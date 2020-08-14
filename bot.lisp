@@ -694,7 +694,8 @@ The game map so far is recorded on FULL-GAME-MAP."
              (iter
                (for x from 0 below 1500)
                (for value = (aref-game-map full-game-map y x))
-               (maximizing (if (numberp value) value 0)))))))
+               (maximizing (if (numberp value) value 0))) into biggest)
+            (finally (return (if (= biggest 0) 1 biggest))))))
     (with-output-to-string (stream output)
       (iter
         (for y from 0 below 4)
@@ -702,7 +703,7 @@ The game map so far is recorded on FULL-GAME-MAP."
           (for x from 0 below 1500)
           (format stream "~a" (bind ((tile (aref-game-map full-game-map y x)))
                                 (if (numberp tile)
-                                    (format nil "~a" (floor (/ tile biggest-number)))
+                                    (format nil "~a" (floor (* 9 (/ tile biggest-number))))
                                     (case tile
                                       (mud      #\▓)
                                       (wall     #\#)
