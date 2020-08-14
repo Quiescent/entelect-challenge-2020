@@ -971,6 +971,8 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
          (adj-speed `(case ,move
                        (use_lizard 0)
                        (fix        0)
+                       (turn_left  ,speed)
+                       (turn_right ,speed)
                        (t          (1- ,speed))))
          (direction `(case ,move
                        (turn_left  'up)
