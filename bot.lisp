@@ -1153,7 +1153,7 @@ up in, in your lane."
     (iter
       (for (x-truck . y-truck) in trucks)
       (when (and (eq y-truck new-y)
-                 (< start-x x-truck)
+                 (<= start-x x-truck)
                  (>= end-x x-truck))
         (collecting x-truck into hits))
       (finally (return (iter (for x in hits)
