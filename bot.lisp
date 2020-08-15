@@ -1603,7 +1603,7 @@ If they're not equal then pretty print both forms."
 
 Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
   (bind (((:values player-position-2-staged
-                   player-speed-2
+                   player-speed-staged
                    player-decelerate-boost-counter
                    player-empd)
           (stage-positions player-move
@@ -1614,7 +1614,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                            player-damage
                            player-boost-counter))
          ((:values opponent-position-2-staged
-                   opponent-speed-2
+                   opponent-speed-staged
                    opponent-decelerate-boost-counter
                    opponent-empd)
           (stage-positions opponent-move
@@ -1634,9 +1634,10 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                               player-position-2-staged
                               opponent-position-2-staged
                               player-move
+                              opponent-move
                               current-game-map
                               player-damage
-                              player-speed-2
+                              player-speed-staged
                               player-decelerate-boost-counter
                               player-empd))
          ((:values opponent-collision-result
@@ -1649,9 +1650,10 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                               opponent-position-2-staged
                               player-position-2-staged
                               opponent-move
+                              player-move
                               current-game-map
                               opponent-damage
-                              opponent-speed-2
+                              opponent-speed-staged
                               opponent-decelerate-boost-counter
                               opponent-empd))
          ((:values player-boosts-2
