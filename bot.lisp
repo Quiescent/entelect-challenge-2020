@@ -82,6 +82,20 @@ Value is [muds boosts walls tweets lizards].")
   (format t "Tick~%")
   (move-for-state (load-state-from-file "./scratch/JsonMap.json")))
 
+(defmacro placing-oil (move position game-map &rest body)
+  "If MOVE is 'USE_OIL then put oil on GAME-MAP at POSITION.
+
+Runs BODY and then restores the map."
+  `(if (and (eq ,move 'use_oil)
+            (< (car ,position) (game-map-x-dim ,game-map)))
+       (progn
+         (bind (((x . y)       ,position)
+                (original-tile (aref-game-map ,game-map y x)))
+           (setf-game-map ,game-map y x 'mud)
+           ,@body
+           (setf-game-map ,game-map y x original-tile)))
+       ,@body))
+
 ;; The moves being made here don't make sense!
 (defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
@@ -1210,6 +1224,8 @@ Produces staged values of position speed and the new boost counter."
                           start-position
                           end-position
                           move
+                          other-move
+                          other-position
                           game-map
                           damage
                           speed
@@ -1222,58 +1238,64 @@ Produces staged values of position speed and the new boost counter."
 
 Start from START-POSITION and end at END-POSITION, accumulating into
 DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
-  (bind ((muds-hit          (ahead-of collision-result
-                                      move
-                                      mud
-                                      game-map
-                                      start-position
-                                      end-position))
-         (walls-hit         (ahead-of collision-result
-                                      move
-                                      wall
-                                      game-map
-                                      start-position
-                                      end-position))
-         (new-boosts        (accumulating-powerups boosts
-                                                   collision-result
-                                                   move
-                                                   boost
-                                                   game-map
-                                                   start-position
-                                                   end-position))
-         (new-lizards       (accumulating-powerups lizards
-                                                   collision-result
-                                                   move
-                                                   lizard
-                                                   game-map
-                                                   start-position
-                                                   end-position))
-         (new-trucks        (accumulating-powerups trucks
-                                                   collision-result
-                                                   move
-                                                   tweet
-                                                   game-map
-                                                   start-position
-                                                   end-position))
-         (new-emps          (accumulating-powerups emps
-                                                   collision-result
-                                                   move
-                                                   emp
-                                                   game-map
-                                                   start-position
-                                                   end-position))
-         (new-damage        (min 6 (+ muds-hit
-                                      (* 2 walls-hit)
-                                      (max 0 (if (eq move 'fix) (- damage 2) damage)))))
-         (final-speed       (min (maximum-speed new-damage)
-                                 (if (> walls-hit 0)
-                                     (min speed 3)
-                                     (decrease-speed-by muds-hit speed))))
-         (boost-counter-2   (if (or (> muds-hit 0)
-                                    (> walls-hit 0))
-                                0
-                                boost-counter)))
-    (values new-boosts final-speed new-lizards new-trucks new-emps new-damage boost-counter-2)))
+  (bind (((oil-x . oil-y) other-position)
+         (using-oil       (and (eq other-move 'use_oil)
+                               (< (car other-position) (game-map-x-dim game-map))))
+         (original-tile   (when using-oil (aref-game-map game-map oil-y oil-x))))
+    (when using-oil (setf-game-map game-map oil-y oil-x 'mud))
+    (bind ((muds-hit          (ahead-of collision-result
+                                        move
+                                        mud
+                                        game-map
+                                        start-position
+                                        end-position))
+           (walls-hit         (ahead-of collision-result
+                                        move
+                                        wall
+                                        game-map
+                                        start-position
+                                        end-position))
+           (new-boosts        (accumulating-powerups boosts
+                                                     collision-result
+                                                     move
+                                                     boost
+                                                     game-map
+                                                     start-position
+                                                     end-position))
+           (new-lizards       (accumulating-powerups lizards
+                                                     collision-result
+                                                     move
+                                                     lizard
+                                                     game-map
+                                                     start-position
+                                                     end-position))
+           (new-trucks        (accumulating-powerups trucks
+                                                     collision-result
+                                                     move
+                                                     tweet
+                                                     game-map
+                                                     start-position
+                                                     end-position))
+           (new-emps          (accumulating-powerups emps
+                                                     collision-result
+                                                     move
+                                                     emp
+                                                     game-map
+                                                     start-position
+                                                     end-position))
+           (new-damage        (min 6 (+ muds-hit
+                                        (* 2 walls-hit)
+                                        (max 0 (if (eq move 'fix) (- damage 2) damage)))))
+           (final-speed       (min (maximum-speed new-damage)
+                                   (if (> walls-hit 0)
+                                       (min speed 3)
+                                       (decrease-speed-by muds-hit speed))))
+           (boost-counter-2   (if (or (> muds-hit 0)
+                                      (> walls-hit 0))
+                                  0
+                                  boost-counter)))
+      (when using-oil (setf-game-map game-map oil-y oil-x original-tile))
+      (values new-boosts final-speed new-lizards new-trucks new-emps new-damage boost-counter-2))))
 
 (defun hit-a-truck (game-map start-x end-x new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
@@ -1319,6 +1341,10 @@ coming!"
 (defun aref-game-map (game-map y x)
   "Produce the value in GAME-MAP at coordinate Y, X."
   (aref (car game-map) y x))
+
+(defun setf-game-map (game-map y x value)
+  "Set the VALUE of GAME-MAP at coordinate Y, X."
+  (setf (aref (car game-map) y x) value))
 
 (defun aref-game-map-with-default (game-map y x &optional default)
   "Produce the value in GAME-MAP at coordinate Y, X.
@@ -1668,6 +1694,8 @@ If they're not equal then pretty print both forms."
                                  player-position
                                  player-position-2
                                  player-move
+                                 opponent-move
+                                 opponent-position
                                  current-game-map
                                  player-truck-damage
                                  player-truck-speed
@@ -1687,6 +1715,8 @@ If they're not equal then pretty print both forms."
                                  opponent-position
                                  opponent-position-2
                                  opponent-move
+                                 player-move
+                                 player-position
                                  current-game-map
                                  opponent-truck-damage
                                  opponent-truck-speed
