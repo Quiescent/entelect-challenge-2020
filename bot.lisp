@@ -1129,7 +1129,7 @@ Produces staged values of position speed and the new boost counter."
   (if (and (eq other-move 'use_emp)
            (<= (abs (- (cdr position) (cdr other-position))) 1)
            (< (car other-position) (car position)))
-      (values position 3 0)
+      (values position 3 0 'was-empd)
       (bind ((new-speed         (new-speed move
                                            (if (= 1 boost-counter)
                                                (min (maximum-speed damage) 9)
@@ -1140,9 +1140,9 @@ Produces staged values of position speed and the new boost counter."
              (new-y             (new-y y move new-speed damage))
              (new-pos           (cons new-x new-y))
              (new-boost-counter (if (eq move 'decelerate) 0 boost-counter)))
-        (values new-pos new-speed new-boost-counter))))
+        (values new-pos new-speed new-boost-counter 'not-empd))))
 
-(defun resolve-collisions (one-start other-start one-end other-end move game-map damage speed boost-counter)
+(defun resolve-collisions (one-start other-start one-end other-end move game-map damage speed boost-counter empd)
   "Resolve collisions and produce the new position, damage and speed of one car."
   (bind (((one-start-x   . one-start-y)   one-start)
          ((other-start-x . other-start-y) other-start)
@@ -1156,7 +1156,10 @@ Produces staged values of position speed and the new boost counter."
          (truck-x                         (hit-a-truck game-map one-start-x one-end-x one-end-y))
          (one-hit-other-back              (and one-got-ahead start-lane-same end-lane-same))
          (one-hit-truck-before-other      (and truck-x (< truck-x other-end-x)))
-         (boost-counter-2                 (if (eq move 'use_boost) 5 (max 0 (1- boost-counter)))))
+         (boost-counter-2                 (if (and (eq empd 'not-empd)
+                                                   (eq move 'use_boost))
+                                              5
+                                              (max 0 (1- boost-counter)))))
     (cond
       (one-hit-truck-before-other (values 'hit-truck
                                           (cons (1- truck-x) one-end-y)
@@ -1595,7 +1598,8 @@ If they're not equal then pretty print both forms."
 Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
   (bind (((:values player-position-2-staged
                    player-speed-2
-                   player-decelerate-boost-counter)
+                   player-decelerate-boost-counter
+                   player-empd)
           (stage-positions player-move
                            opponent-move
                            player-position
@@ -1605,7 +1609,8 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                            player-boost-counter))
          ((:values opponent-position-2-staged
                    opponent-speed-2
-                   opponent-decelerate-boost-counter)
+                   opponent-decelerate-boost-counter
+                   opponent-empd)
           (stage-positions opponent-move
                            player-move
                            opponent-position
@@ -1626,7 +1631,8 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                               current-game-map
                               player-damage
                               player-speed-2
-                              player-decelerate-boost-counter))
+                              player-decelerate-boost-counter
+                              player-empd))
          ((:values opponent-collision-result
                    opponent-position-2
                    opponent-truck-damage
@@ -1640,7 +1646,8 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                               current-game-map
                               opponent-damage
                               opponent-speed-2
-                              opponent-decelerate-boost-counter))
+                              opponent-decelerate-boost-counter
+                              opponent-empd))
          ((:values player-boosts-2
                    player-speed-2
                    player-lizards-2
