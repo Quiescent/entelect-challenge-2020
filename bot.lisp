@@ -991,8 +991,10 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                          (if (eq ,move 'fix)
                              (car ,start-position)
                              (ecase ,direction
-                               (up    (car ,start-position))
-                               (down  (car ,start-position))
+                               (up    (+ (car ,start-position)
+                                         (if (eq ,collision-result 'side-collision) 1 0)))
+                               (down  (+ (car ,start-position)
+                                         (if (eq ,collision-result 'side-collision) 1 0)))
                                (ahead (1+ (car ,start-position)))))))
          (adj-y     `(cdr ,end-position)))
     `(if (eq ,move 'fix) 0
@@ -1174,7 +1176,7 @@ Produces staged values of position speed and the new boost counter."
       (side-collision             (values 'side-collision
                                           (cons (1- one-end-x) one-start-y)
                                           damage
-                                          0
+                                          speed
                                           boost-counter-2))
       (t                          (values 'no-collision
                                           one-end
@@ -1267,7 +1269,7 @@ up in, in your lane."
   (bind (((_ . trucks)  game-map))
     (iter
       (for (x-truck . y-truck) in trucks)
-      (when (and (eq y-truck new-y)
+      (when (and (= y-truck new-y)
                  (<= start-x x-truck)
                  (>= end-x x-truck))
         (collecting x-truck into hits))
