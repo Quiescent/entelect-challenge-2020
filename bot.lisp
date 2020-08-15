@@ -1158,7 +1158,8 @@ Produces staged values of position speed and the new boost counter."
                                                (equal one-end other-end)))
          (truck-x                         (hit-a-truck game-map one-start-x one-end-x one-end-y))
          (one-hit-other-back              (and one-got-ahead start-lane-same end-lane-same))
-         (one-hit-truck-before-other      (and truck-x (< truck-x other-end-x)))
+         (one-hit-truck-before-other      (and truck-x (or (not (or one-hit-other-back side-collision))
+                                                           (< truck-x other-end-x))))
          (boost-counter-2                 (if (and (eq empd 'not-empd)
                                                    (eq move 'use_boost))
                                               5
