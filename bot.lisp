@@ -1701,7 +1701,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
             player-lizards-2
             player-trucks-2
             player-emps-2
-            player-speed-2
+            (if (eq player-collision-result 'side-collision) (manual-decelerate player-speed-2) player-speed-2)
             player-damage-2
             player-boost-counter-2
             (+ (- (car opponent-position-2) (car opponent-position))
@@ -1711,7 +1711,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
             opponent-lizards-2
             opponent-trucks-2
             opponent-emps-2
-            opponent-speed-2
+            (if (eq opponent-collision-result 'side-collision) (manual-decelerate opponent-speed-2) opponent-speed-2)
             opponent-damage-2
             opponent-boost-counter-2)))
 
