@@ -180,14 +180,14 @@ up to POPULATION-SIZE."
   "Create a population of vectors for coefficients for the global scare heuristic."
   (iter
     (for i from 0 below population-size)
-    (collecting (list (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (/ (random 1000) 1000)
-                      (- 0 (/ (random 1000) 1000))
-                      (- 0 (/ (random 1000) 1000))))))
+    (collecting (list (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)
+                      (- 0 (/ (random 100000) 100000))
+                      (- 0 (/ (random 100000) 100000))))))
 
 (defun fitness (optimisation-vector)
   "Produce a measure of the fitness of OPTIMISATION-VECTOR."
