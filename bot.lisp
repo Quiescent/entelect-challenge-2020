@@ -1263,7 +1263,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
       (when using-oil (setf-game-map game-map oil-y oil-x original-tile))
       (values new-boosts final-speed new-lizards new-trucks new-emps new-damage boost-counter-2))))
 
-(defun hit-a-truck (game-map start-x end-x new-y)
+(defun hit-a-truck (game-map start-x end-x start-y new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
 
 NEW-Y is the lane which the car ends up in, and END-X is where you end
@@ -1272,7 +1272,9 @@ up in, in your lane."
     (iter
       (for (x-truck . y-truck) in trucks)
       (when (and (= y-truck new-y)
-                 (< start-x x-truck)
+                 (<= start-x x-truck)
+                 (not (and (= start-x x-truck)
+                           (= start-y y-truck)))
                  (>= end-x x-truck))
         (collecting x-truck into hits))
       (finally (return (iter (for x in hits)
