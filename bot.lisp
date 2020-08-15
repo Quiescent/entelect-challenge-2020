@@ -213,90 +213,49 @@ Unused values will be ignored."
 
                 (iteration-count        ,@(and iteration-state (cdr (assoc 'count iteration-state)))))
            (macrolet ((make-moves (player-move opponent-move &rest subsequent)
-                        `(bind (((:values player-position-2-staged
-                                          player-speed-2)
-                                 (stage-positions ,player-move
-                                                  ,opponent-move
-                                                  player-position
-                                                  opponent-position
-                                                  player-speed
-                                                  player-damage
-                                                  player-boost-counter))
-                                ((:values opponent-position-2-staged
-                                          opponent-speed-2)
-                                 (stage-positions ,opponent-move
-                                                  ,player-move
-                                                  opponent-position
-                                                  player-position
-                                                  opponent-speed
-                                                  opponent-damage
-                                                  opponent-boost-counter))
-                                ((:values player-position-2
-                                          player-truck-damage
-                                          player-truck-speed
-                                          player-truck-boost-counter)
-                                 (resolve-collisions player-position
-                                                     opponent-position
-                                                     player-position-2-staged
-                                                     opponent-position-2-staged
-                                                     ,player-move
-                                                     current-game-map
-                                                     player-damage
-                                                     player-speed-2
-                                                     player-boost-counter))
-                                ((:values opponent-position-2
-                                          opponent-truck-damage
-                                          opponent-truck-speed
-                                          opponent-truck-boost-counter)
-                                 (resolve-collisions opponent-position
-                                                     player-position
-                                                     opponent-position-2-staged
-                                                     player-position-2-staged
-                                                     ,opponent-move
-                                                     current-game-map
-                                                     opponent-damage
-                                                     opponent-speed-2
-                                                     opponent-boost-counter))
-                                ((:values player-boosts-2
-                                          player-speed-2
+                        `(bind (((:values player-absolute-x-2
+                                          player-position-2
+                                          player-boosts-2
                                           player-lizards-2
                                           player-trucks-2
                                           player-emps-2
+                                          player-speed-2
                                           player-damage-2
-                                          player-boost-counter-2)
-                                 (interact-with-map player-position
-                                                    player-position-2
-                                                    ,player-move
-                                                    current-game-map
-                                                    player-truck-damage
-                                                    player-truck-speed
-                                                    player-boosts
-                                                    player-lizards
-                                                    player-trucks
-                                                    player-emps
-                                                    player-truck-boost-counter))
-                                ((:values opponent-boosts-2
-                                          opponent-speed-2
+                                          player-boost-counter-2
+
+                                          opponent-absolute-x-2
+                                          opponent-position-2
+                                          opponent-boosts-2
                                           opponent-lizards-2
                                           opponent-trucks-2
                                           opponent-emps-2
+                                          opponent-speed-2
                                           opponent-damage-2
                                           opponent-boost-counter-2)
-                                 (interact-with-map opponent-position
-                                                    opponent-position-2
-                                                    ,opponent-move
-                                                    current-game-map
-                                                    opponent-truck-damage
-                                                    opponent-truck-speed
-                                                    opponent-boosts
-                                                    opponent-lizards
-                                                    opponent-trucks
-                                                    opponent-emps
-                                                    opponent-truck-boost-counter))
-                                (opponent-absolute-x-2 (+ (- (car opponent-position-2) (car opponent-position))
-                                                          opponent-absolute-x))
-                                (player-absolute-x-2 (+ (- (car player-position-2) (car player-position))
-                                                        player-absolute-x)))
+                                 (process-moves player-absolute-x
+                                                player-position
+                                                player-boosts
+                                                player-lizards
+                                                player-trucks
+                                                player-emps
+                                                player-speed
+                                                player-damage
+                                                player-boost-counter
+
+                                                opponent-absolute-x
+                                                opponent-position
+                                                opponent-boosts
+                                                opponent-lizards
+                                                opponent-trucks
+                                                opponent-emps
+                                                opponent-speed
+                                                opponent-damage
+                                                opponent-boost-counter
+
+                                                current-game-map
+
+                                                ,player-move
+                                                ,opponent-move)))
                            (bind ((current-game-map current-game-map)
 
                                   (player-absolute-x    player-absolute-x-2)
@@ -1607,6 +1566,144 @@ If they're not equal then pretty print both forms."
 ;;               ranked-speed-moves)
 ;;       (format t "========================================~%"))))
 
+(defun process-moves (player-absolute-x
+                      player-position
+                      player-boosts
+                      player-lizards
+                      player-trucks
+                      player-emps
+                      player-speed
+                      player-damage
+                      player-boost-counter
+
+                      opponent-absolute-x
+                      opponent-position
+                      opponent-boosts
+                      opponent-lizards
+                      opponent-trucks
+                      opponent-emps
+                      opponent-speed
+                      opponent-damage
+                      opponent-boost-counter
+
+                      current-game-map
+
+                      player-move
+                      opponent-move)
+  "Process GAME-STATE, producing new values for the player and opponent state.
+
+Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
+  (bind (((:values player-position-2-staged
+                   player-speed-2
+                   player-decelerate-boost-counter)
+          (stage-positions player-move
+                           opponent-move
+                           player-position
+                           opponent-position
+                           player-speed
+                           player-damage
+                           player-boost-counter))
+         ((:values opponent-position-2-staged
+                   opponent-speed-2
+                   opponent-decelerate-boost-counter)
+          (stage-positions opponent-move
+                           player-move
+                           opponent-position
+                           player-position
+                           opponent-speed
+                           opponent-damage
+                           opponent-boost-counter))
+         ((:values player-collision-result
+                   player-position-2
+                   player-truck-damage
+                   player-truck-speed
+                   player-truck-boost-counter)
+          (resolve-collisions player-position
+                              opponent-position
+                              player-position-2-staged
+                              opponent-position-2-staged
+                              player-move
+                              current-game-map
+                              player-damage
+                              player-speed-2
+                              player-decelerate-boost-counter))
+         ((:values opponent-collision-result
+                   opponent-position-2
+                   opponent-truck-damage
+                   opponent-truck-speed
+                   opponent-truck-boost-counter)
+          (resolve-collisions opponent-position
+                              player-position
+                              opponent-position-2-staged
+                              player-position-2-staged
+                              opponent-move
+                              current-game-map
+                              opponent-damage
+                              opponent-speed-2
+                              opponent-decelerate-boost-counter))
+         ((:values player-boosts-2
+                   player-speed-2
+                   player-lizards-2
+                   player-trucks-2
+                   player-emps-2
+                   player-damage-2
+                   player-boost-counter-2)
+          (interact-with-map player-collision-result
+                             player-position
+                             player-position-2
+                             player-move
+                             opponent-move
+                             opponent-position
+                             current-game-map
+                             player-truck-damage
+                             player-truck-speed
+                             player-boosts
+                             player-lizards
+                             player-trucks
+                             player-emps
+                             player-truck-boost-counter))
+         ((:values opponent-boosts-2
+                   opponent-speed-2
+                   opponent-lizards-2
+                   opponent-trucks-2
+                   opponent-emps-2
+                   opponent-damage-2
+                   opponent-boost-counter-2)
+          (interact-with-map opponent-collision-result
+                             opponent-position
+                             opponent-position-2
+                             opponent-move
+                             player-move
+                             player-position
+                             current-game-map
+                             opponent-truck-damage
+                             opponent-truck-speed
+                             opponent-boosts
+                             opponent-lizards
+                             opponent-trucks
+                             opponent-emps
+                             opponent-truck-boost-counter)))
+    (values (+ (- (car player-position-2) (car player-position))
+               player-absolute-x)
+            player-position-2
+            player-boosts-2
+            player-lizards-2
+            player-trucks-2
+            player-emps-2
+            player-speed-2
+            player-damage-2
+            player-boost-counter-2
+            (+ (- (car opponent-position-2) (car opponent-position))
+               opponent-absolute-x)
+            opponent-position-2
+            opponent-boosts-2
+            opponent-lizards-2
+            opponent-trucks-2
+            opponent-emps-2
+            opponent-speed-2
+            opponent-damage-2
+            opponent-boost-counter-2)))
+
 (defun replay-from-folder (folder-path &rest rounds)
   "Check that `make-move' produces the same result as the target engine."
   (with-consecutive-states folder-path "Quantum" 'A
@@ -1619,6 +1716,7 @@ If they're not equal then pretty print both forms."
 
              ((player-position . opponent-position) (positions current-state))
 
+             (player-absolute-x    (my-abs-x current-state))
              (player-speed         (my-speed current-state))
              (player-boosts        (my-boosts current-state))
              (player-lizards       (my-lizards current-state))
@@ -1627,6 +1725,7 @@ If they're not equal then pretty print both forms."
              (player-damage        (my-damage current-state))
              (player-boost-counter (my-boost-counter current-state))
 
+             (opponent-absolute-x    (opponent-abs-x current-state))
              (opponent-speed         (opponent-speed current-state))
              (opponent-boosts        0)
              (opponent-lizards       0)
@@ -1635,97 +1734,49 @@ If they're not equal then pretty print both forms."
              (opponent-damage        0)
              (opponent-boost-counter 0)
 
-             ((:values player-position-2-staged
-                       player-speed-2
-                       player-decelerate-boost-counter)
-              (stage-positions player-move
-                               opponent-move
-                               player-position
-                               opponent-position
-                               player-speed
-                               player-damage
-                               player-boost-counter))
-             ((:values opponent-position-2-staged
-                       opponent-speed-2
-                       opponent-decelerate-boost-counter)
-              (stage-positions opponent-move
-                               player-move
-                               opponent-position
-                               player-position
-                               opponent-speed
-                               opponent-damage
-                               opponent-boost-counter))
-             ((:values player-collision-result
+             ((:values player-absolute-x-2
                        player-position-2
-                       player-truck-damage
-                       player-truck-speed
-                       player-truck-boost-counter)
-              (resolve-collisions player-position
-                                  opponent-position
-                                  player-position-2-staged
-                                  opponent-position-2-staged
-                                  player-move
-                                  current-game-map
-                                  player-damage
-                                  player-speed-2
-                                  player-decelerate-boost-counter))
-             ((:values opponent-collision-result
-                       opponent-position-2
-                       opponent-truck-damage
-                       opponent-truck-speed
-                       opponent-truck-boost-counter)
-              (resolve-collisions opponent-position
-                                  player-position
-                                  opponent-position-2-staged
-                                  player-position-2-staged
-                                  opponent-move
-                                  current-game-map
-                                  opponent-damage
-                                  opponent-speed-2
-                                  opponent-boost-counter))
-             ((:values player-boosts-2
-                       player-speed-2
+                       player-boosts-2
                        player-lizards-2
                        player-trucks-2
                        player-emps-2
+                       player-speed-2
                        player-damage-2
-                       player-boost-counter-2)
-              (interact-with-map player-collision-result
-                                 player-position
-                                 player-position-2
-                                 player-move
-                                 opponent-move
-                                 opponent-position
-                                 current-game-map
-                                 player-truck-damage
-                                 player-truck-speed
-                                 player-boosts
-                                 player-lizards
-                                 player-trucks
-                                 player-emps
-                                 player-truck-boost-counter))
-             ((:values opponent-boosts-2
-                       opponent-speed-2
+                       player-boost-counter-2
+
+                       opponent-absolute-x-2
+                       opponent-position-2
+                       opponent-boosts-2
                        opponent-lizards-2
                        opponent-trucks-2
                        opponent-emps-2
+                       opponent-speed-2
                        opponent-damage-2
                        opponent-boost-counter-2)
-              (interact-with-map opponent-collision-result
-                                 opponent-position
-                                 opponent-position-2
-                                 opponent-move
-                                 player-move
-                                 player-position
-                                 current-game-map
-                                 opponent-truck-damage
-                                 opponent-truck-speed
-                                 opponent-boosts
-                                 opponent-lizards
-                                 opponent-trucks
-                                 opponent-emps
-                                 opponent-truck-boost-counter))
+              (process-moves player-absolute-x
+                             player-position
+                             player-boosts
+                             player-lizards
+                             player-trucks
+                             player-emps
+                             player-speed
+                             player-damage
+                             player-boost-counter
 
+                             opponent-absolute-x
+                             opponent-position
+                             opponent-boosts
+                             opponent-lizards
+                             opponent-trucks
+                             opponent-emps
+                             opponent-speed
+                             opponent-damage
+                             opponent-boost-counter
+
+                             current-game-map
+
+                             player-move
+                             opponent-move))
              (player-absolute-pos (my-abs-pos current-state))
              (resolved-pos   (cons (- (+ (car player-absolute-pos) (car player-position-2))
                                       (car player-position))
