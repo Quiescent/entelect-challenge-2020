@@ -1144,7 +1144,7 @@ Produces staged values of position speed and the new boost counter."
              (new-boost-counter (if (eq move 'decelerate) 0 boost-counter)))
         (values new-pos new-speed new-boost-counter 'not-empd))))
 
-(defun resolve-collisions (one-start other-start one-end other-end move game-map damage speed boost-counter empd)
+(defun resolve-collisions (one-start other-start one-end other-end move other-move game-map damage speed boost-counter empd)
   "Resolve collisions and produce the new position, damage and speed of one car."
   (bind (((one-start-x   . one-start-y)   one-start)
          ((other-start-x . other-start-y) other-start)
@@ -1156,8 +1156,11 @@ Produces staged values of position speed and the new boost counter."
          (end-lane-same                   (= one-end-y other-end-y))
          (side-collision                  (and (not start-lane-same)
                                                (equal one-end other-end)))
-         (truck-x                         (hit-a-truck game-map one-start-x one-end-x one-end-y))
-         (one-hit-other-back              (and one-got-ahead start-lane-same end-lane-same))
+         (truck-x                         (hit-a-truck game-map one-start-x one-end-x one-start-y one-end-y))
+         (one-hit-other-back              (and (not (eq other-move 'use_lizard))
+                                               one-got-ahead
+                                               start-lane-same
+                                               end-lane-same))
          (one-hit-truck-before-other      (and truck-x (or (not (or one-hit-other-back side-collision))
                                                            (< truck-x other-end-x))))
          (boost-counter-2                 (if (and (eq empd 'not-empd)
