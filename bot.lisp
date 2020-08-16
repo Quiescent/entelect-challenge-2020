@@ -97,16 +97,19 @@ Runs BODY and then restores the map."
        ,@body))
 
 ;; The moves being made here don't make sense!
-(defmacro make-opposed-move (game-state)
+(defmacro make-opposed-move (game-state full-game-map)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal))
+          (my-cyber-truck-move (most-used-square-on-shortest-paths ,game-state ,full-game-map)))
      (declare (optimize (speed 3) (safety 0) (debug 0)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
          (for current-turn = (+ *current-turn* (- maximax-depth (iteration count))))
          (with cells =
                (iter
-                 (for player-move in (player moves))
+                 (for player-move in (if (= (iteration count) ,maximax-depth)
+                                         (cons my-cyber-truck-move (player moves))
+                                         (player moves)))
                  (collecting
                   (iter
                     (for opponent-move in (opponent moves))
@@ -119,12 +122,12 @@ Runs BODY and then restores the map."
                                      (< (iteration count) 1))
                                  (list (player score) (opponent score) nil nil nil)
                                  (recur (1- (iteration count))))))
-                       (finding (list player-score opponent-score player-move opponent-move (- maximax-depth (iteration count)))
+                       (finding (list player-score
+                                      opponent-score
+                                      player-move
+                                      opponent-move
+                                      (- maximax-depth (iteration count)))
                                 maximizing opponent-score)))))))
-         ;; (initially
-         ;;  (when (eq maximax-depth (iteration count)) (format t "~a: ~{ ~a ~%~}~%"
-         ;;                                    (iteration count)
-         ;;                                    (mapcar (lambda (cell) (cons (coerce (car cell) 'float) (cons (coerce (cadr cell) 'float) (cddr cell)))) cells))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
 
@@ -601,7 +604,7 @@ MY-ABS-X position on the board."
                                            (cdr (player position))
                                            (opponent absolute-x)
                                            (cdr (opponent position)))
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state ,*full-game-map*)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
