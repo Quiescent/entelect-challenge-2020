@@ -1284,6 +1284,11 @@ If X, Y is OOB then produce DEFAULT."
   (with-open-file (f file-path)
     (parse-state f)))
 
+(defmethod minimum-x ((this state))
+  "Produce the minimum value of x in the map in THIS state."
+  (1- (deep-accessor (aref (aref (slot-value this 'world-map) 0) 0)
+                     'map-position 'x)))
+
 (defmethod rows ((this state))
   "Produce rows as a 2D array of cells from the map in THIS state."
   (iter
@@ -1292,13 +1297,14 @@ If X, Y is OOB then produce DEFAULT."
     (with result = (make-array (list (length world-map)
                                      (length (aref world-map 0)))
                                :initial-element nil))
+    (with x-start = (minimum-x this))
     (for y from 0)
     (for row in-vector world-map)
     (iter
       (for cell in-vector row)
       (for x from 0)
       (when (is-occupied-by-cyber-truck cell)
-        (push (cons x y) trucks))
+        (push (cons (+ x-start x) y) trucks))
       (setf (aref result y x)
             (case (slot-value cell 'surface-object)
               (0 nil)
