@@ -751,8 +751,8 @@ at (END-X, END-Y)."
   (and (< y 4) (> y 0) (> x 0) (< x 1500)
        (member (aref-game-map game-map y x) '(mud wall))))
 
-(defun move-for-state (state)
-  "Produce the move which my bot makes from STATE."
+(defun fill-map (state)
+  "Fill *GAME-MAP* with the latest small map from STATE and return it in game-map format."
   (bind ((small-game-map (rows state)))
     (iter
         (for x from 0 below (game-map-x-dim (rows state)))
@@ -761,52 +761,59 @@ at (END-X, END-Y)."
           (for y from 0 below 4)
           (setf (aref *full-game-map* y absolute-x)
                 (aref-game-map small-game-map y x))))
-    (bind (((player-position . opponent-position) (positions state))
+    (cons *full-game-map*
+          (cdr small-game-map))))
 
-           (player-boosts            (my-boosts state))
-           (player-boost-counter     (my-boost-counter state))
-           (player-lizards           (my-lizards state))
-           (player-trucks            (my-trucks state))
-           (player-emps              (my-emps state))
-           (player-oils              (my-oils state))
-           (player-speed             (my-speed state))
-           (player-damage            (my-damage state))
-           (opponent-boosts          1)
-           (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
-           (opponent-speed           (opponent-speed state))
-           (move                     (determine-move ((game (turn *current-turn*))
-                                                      (game-map (cons *full-game-map*
-                                                                      (cdr small-game-map)))
-                                                      (player
-                                                       (position player-position)
-                                                       (boosts player-boosts)
-                                                       (oils player-oils)
-                                                       (lizards player-lizards)
-                                                       (trucks player-trucks)
-                                                       (emps player-emps)
-                                                       (speed player-speed)
-                                                       (damage player-damage)
-                                                       (boost-counter player-boost-counter))
-                                                      (opponent
-                                                       (position opponent-position)
-                                                       (boosts opponent-boosts)
-                                                       (oils 0)
-                                                       (lizards 1)
-                                                       (trucks 1)
-                                                       (emps opponent-emps)
-                                                       (speed opponent-speed)
-                                                       (damage 0)
-                                                       (boost-counter 0))))))
-      (setf *previous-move* move)
-      (format *error-output*
-              "My total/average speed: ~a - ~a~%"
-              (car player-position)
-              (/ (car player-position) *current-turn*))
-      (format *error-output*
-              "Op total/average speed: ~a - ~a~%"
-              (car opponent-position)
-              (/ (car opponent-position) *current-turn*))
-      move)))
+(defun move-for-state (state)
+  "Produce the move which my bot makes from STATE."
+  (bind (((player-position . opponent-position) (positions state))
+
+         (player-boosts            (my-boosts state))
+         (player-boost-counter     (my-boost-counter state))
+         (player-lizards           (my-lizards state))
+         (player-trucks            (my-trucks state))
+         (player-emps              (my-emps state))
+         (player-oils              (my-oils state))
+         (player-speed             (my-speed state))
+         (player-damage            (my-damage state))
+         (opponent-boosts          1)
+         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
+         (opponent-speed           (opponent-speed state))
+
+         (filled-game-map          (fill-map state))
+
+         (move                     (determine-move ((game (turn *current-turn*))
+                                                    (game-map filled-game-map)
+                                                    (player
+                                                     (position player-position)
+                                                     (boosts player-boosts)
+                                                     (oils player-oils)
+                                                     (lizards player-lizards)
+                                                     (trucks player-trucks)
+                                                     (emps player-emps)
+                                                     (speed player-speed)
+                                                     (damage player-damage)
+                                                     (boost-counter player-boost-counter))
+                                                    (opponent
+                                                     (position opponent-position)
+                                                     (boosts opponent-boosts)
+                                                     (oils 0)
+                                                     (lizards 1)
+                                                     (trucks 1)
+                                                     (emps opponent-emps)
+                                                     (speed opponent-speed)
+                                                     (damage 0)
+                                                     (boost-counter 0))))))
+    (setf *previous-move* move)
+    (format *error-output*
+            "My total/average speed: ~a - ~a~%"
+            (car player-position)
+            (/ (car player-position) *current-turn*))
+    (format *error-output*
+            "Op total/average speed: ~a - ~a~%"
+            (car opponent-position)
+            (/ (car opponent-position) *current-turn*))
+    move))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
