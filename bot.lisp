@@ -1277,7 +1277,9 @@ If X, Y is OOB then produce DEFAULT."
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
-  (load-state-from-file (format nil "rounds/~a/state.json" round)))
+  (load-state-from-file (make-pathname :directory (list :relative "rounds" (format nil "~a" round))
+                                       :name "state"
+                                       :type "json")))
 
 (defun load-state-from-file (file-path)
   "Load the state from file at FILE-PATH."
