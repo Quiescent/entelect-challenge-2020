@@ -1220,7 +1220,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
 
 NEW-Y is the lane which the car ends up in, and END-X is where you end
 up in, in your lane."
-  (bind (((_ . trucks)  game-map))
+  (bind (((_ . trucks) game-map))
     (iter
       (for (x-truck . y-truck) in trucks)
       (when (and (= y-truck new-y)
