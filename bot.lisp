@@ -940,7 +940,7 @@ POS."
       (thereis (and (eq y-truck y)
                     (eq x (1- x-truck)))))))
 
-(defmacro ahead-of (collision-result move type game-map start-position end-position)
+(defmacro ahead-of (collision-result move game-map start-position end-position)
   "Produce the appropriate `ahead-of' form.
 
 Take into account the nuances of changing direction and not counting
@@ -954,15 +954,7 @@ If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
 produce `mud-ahead-of' etc.
 
 SPEED, GAME-MAP, and POS should be un-adjusted values."
-  (bind ((index     (ecase type
-                      (mud      0)
-                      (boost    1)
-                      (wall     2)
-                      (tweet    3)
-                      (lizard   4)
-                      (emp      5)
-                      (oil-item 6)))
-         (direction `(case ,move
+  (bind ((direction `(case ,move
                        (turn_left  'up)
                        (turn_right 'down)
                        (otherwise  'ahead)))
@@ -986,12 +978,10 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                                          (if (eq ,collision-result 'side-collision) 1 0)))
                                (ahead (1+ (car ,start-position)))))))
          (adj-y     `(cdr ,end-position)))
-    `(if (eq ,move 'fix) 0
-         (aif (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-              (aref it ,index)
-              (aref (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-                          (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y))
-                    ,index)))))
+    `(if (eq ,move 'fix) (vector 0 0 0 0 0 0 0)
+         (or (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+             (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                   (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y))))))
 
 (defun all-ahead-of (speed game-map x y)
   "Produce a count of all types of powerups and obstacles.
@@ -1098,20 +1088,6 @@ Limit the maximum speed by the amount of damage taken."
       0
       (decrease-speed speed)))
 
-(defmacro accumulating-powerups (count-name collision-result move type game-map start-position end-position)
-  "Produce the value of COUNT-NAME with collected powerups.
-
-Use the state transitions which occur when MOVE is made, finding
-powerups of TYPE on the GAME-MAP starting from POSITION."
-  `(+ ,count-name
-      (if (eq (if (consp ,move) (car ,move) ,move) (quote ,(symb 'use_ type))) -1 0)
-      (ahead-of ,collision-result
-                (if (consp ,move) (car ,move) ,move)
-                ,type
-                ,game-map
-                ,start-position
-                ,end-position)))
-
 ;; TODO: deal with collision state in:
 ;; "../EntelectChallenge-2020-Overdrive/game-runner/match-logs/2020.08.08.12.33.49"
 (defun stage-positions (move other-move position other-position speed damage boost-counter)
@@ -1203,53 +1179,28 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
                                (< (car other-position) (game-map-x-dim game-map))))
          (original-tile   (when using-oil (aref-game-map game-map oil-y oil-x))))
     (when using-oil (setf-game-map game-map oil-y oil-x 'mud))
-    (bind ((muds-hit          (ahead-of collision-result
+    (bind ((all-hit           (ahead-of collision-result
                                         move
-                                        mud
                                         game-map
                                         start-position
                                         end-position))
-           (walls-hit         (ahead-of collision-result
-                                        move
-                                        wall
-                                        game-map
-                                        start-position
-                                        end-position))
-           (new-boosts        (accumulating-powerups boosts
-                                                     collision-result
-                                                     move
-                                                     boost
-                                                     game-map
-                                                     start-position
-                                                     end-position))
-           (new-lizards       (accumulating-powerups lizards
-                                                     collision-result
-                                                     move
-                                                     lizard
-                                                     game-map
-                                                     start-position
-                                                     end-position))
-           (new-trucks        (accumulating-powerups trucks
-                                                     collision-result
-                                                     move
-                                                     tweet
-                                                     game-map
-                                                     start-position
-                                                     end-position))
-           (new-emps          (accumulating-powerups emps
-                                                     collision-result
-                                                     move
-                                                     emp
-                                                     game-map
-                                                     start-position
-                                                     end-position))
-           (new-oils          (accumulating-powerups oils
-                                                     collision-result
-                                                     move
-                                                     oil-item
-                                                     game-map
-                                                     start-position
-                                                     end-position))
+           (muds-hit          (aref all-hit 0))
+           (walls-hit         (aref all-hit 2))
+           (new-boosts        (+ (if (eq move 'use_boost) -1 0)
+                                 (aref all-hit 1)
+                                 boosts))
+           (new-lizards       (+ (if (eq move 'use_lizard) -1 0)
+                                 (aref all-hit 4)
+                                 lizards))
+           (new-trucks        (+ (if (and (consp move) (eq (car move) 'use_tweet)) -1 0)
+                                 (aref all-hit 3)
+                                 trucks))
+           (new-emps          (+ (if (eq move 'use_emp) -1 0)
+                                 (aref all-hit 5)
+                                 emps))
+           (new-oils          (+ (if (eq move 'use_oil) -1 0)
+                                 (aref all-hit 6)
+                                 oils))
            (new-damage        (min 6 (+ muds-hit
                                         (* 2 walls-hit)
                                         (max 0 (if (eq move 'fix) (- damage 2) damage)))))
