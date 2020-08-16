@@ -504,8 +504,9 @@ Eighth is my boost counter."
                    found)
              (iter
                (for move in (player moves))
-               (when (and (member move all-straight-moves)
-                          (truck-infront-of (player position) (game map)))
+               (when (or (eq move 'use_oil)
+                         (and (member move all-straight-moves)
+                              (truck-infront-of (player position) (game map))))
                  (next-iteration))
                (push move path)
                (make-moves
