@@ -421,8 +421,7 @@ i.e. if we may as well not have mode MOVE."
               nothing-player-trucks
               nothing-player-emps
               nothing-player-speed
-              nothing-player-damage
-              nothing-player-boost-counter)
+              nothing-player-damage)
          (make-moves
           'nothing
           'nothing
@@ -433,8 +432,7 @@ i.e. if we may as well not have mode MOVE."
                 nothing-player-trucks        (player trucks)
                 nothing-player-emps          (player emps)
                 nothing-player-speed         (player speed)
-                nothing-player-damage        (player damage)
-                nothing-player-boost-counter (player boost-counter)))
+                nothing-player-damage        (player damage)))
          (make-moves
           ,move
           'nothing
@@ -446,8 +444,7 @@ i.e. if we may as well not have mode MOVE."
                (eq nothing-player-trucks        (player trucks))
                (eq nothing-player-emps          (player emps))
                (eq nothing-player-speed         (player speed))
-               (eq nothing-player-damage        (player damage))
-               (eq nothing-player-boost-counter (player boost-counter))))))))
+               (eq nothing-player-damage        (player damage))))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
