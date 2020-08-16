@@ -1166,6 +1166,7 @@ Produces staged values of position speed and the new boost counter."
 
 (defun resolve-collisions (one-start other-start one-end other-end move other-move game-map damage speed boost-counter empd)
   "Resolve collisions and produce the new position, damage and speed of one car."
+  (declare (optimize (speed 3) (safety 0) (debug 0)))
   (bind (((one-start-x   . one-start-y)   one-start)
          ((other-start-x . other-start-y) other-start)
          ((one-end-x     . one-end-y)     one-end)
