@@ -64,7 +64,7 @@ Value is [muds boosts walls tweets lizards].")
   (defun symb (&rest args)
     (values (intern (apply #'mkstr args)))))
 
-(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix use_oil)
+(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix use_emp use_oil)
   "All the moves which I can make.")
 
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
@@ -97,10 +97,10 @@ Runs BODY and then restores the map."
        ,@body))
 
 ;; The moves being made here don't make sense!
-(defmacro make-opposed-move (game-state full-game-map)
+(defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
   `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal))
-          (my-cyber-truck-move (most-used-square-on-shortest-paths ,game-state ,full-game-map)))
+          (my-cyber-truck-move (most-used-square-on-shortest-paths ,game-state)))
      (declare (optimize (speed 3) (safety 0) (debug 0)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
@@ -117,8 +117,8 @@ Runs BODY and then restores the map."
                      player-move
                      opponent-move
                      (bind (((player-score opponent-score _ _ _)
-                             (if (or (end-state (player position)   game-map)
-                                     (end-state (opponent position) game-map)
+                             (if (or (end-state (player position)   (game map))
+                                     (end-state (opponent position) (game map))
                                      (< (iteration count) 1))
                                  (list (player score) (opponent score) nil nil nil)
                                  (recur (1- (iteration count))))))
@@ -165,7 +165,6 @@ Unused values will be ignored."
                (iteration-is-not-defined (symbol)
                  (when (not (assoc symbol iteration-state))
                    (error (concatenate 'string "Iteration " (symbol-name symbol) " not defined")))))
-        (player-not-defined 'absolute-x)
         (player-not-defined 'position)
         (player-not-defined 'boosts)
         (player-not-defined 'oils)
@@ -176,7 +175,6 @@ Unused values will be ignored."
         (player-not-defined 'damage)
         (player-not-defined 'boost-counter)
 
-        (opponent-not-defined 'absolute-x)
         (opponent-not-defined 'position)
         (opponent-not-defined 'boosts)
         (opponent-not-defined 'oils)
@@ -194,7 +192,6 @@ Unused values will be ignored."
 
         `(bind ((current-game-map ,@(cdr (assoc 'game-map initial-state)))
 
-                (player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
                 (player-position      ,@(cdr (assoc 'position      player-state)))
                 (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
                 (player-oils          ,@(cdr (assoc 'oils          player-state)))
@@ -205,7 +202,6 @@ Unused values will be ignored."
                 (player-damage        ,@(cdr (assoc 'damage        player-state)))
                 (player-boost-counter ,@(cdr (assoc 'boost-counter player-state)))
 
-                (opponent-absolute-x    ,@(cdr (assoc 'absolute-x    opponent-state)))
                 (opponent-position      ,@(cdr (assoc 'position      opponent-state)))
                 (opponent-boosts        ,@(cdr (assoc 'boosts        opponent-state)))
                 (opponent-oils          ,@(cdr (assoc 'oils          opponent-state)))
@@ -220,8 +216,7 @@ Unused values will be ignored."
 
                 (iteration-count        ,@(and iteration-state (cdr (assoc 'count iteration-state)))))
            (macrolet ((make-moves (player-move opponent-move &rest subsequent)
-                        `(bind (((:values player-absolute-x-2
-                                          player-position-2
+                        `(bind (((:values player-position-2
                                           player-boosts-2
                                           player-oils-2
                                           player-lizards-2
@@ -231,7 +226,6 @@ Unused values will be ignored."
                                           player-damage-2
                                           player-boost-counter-2
 
-                                          opponent-absolute-x-2
                                           opponent-position-2
                                           opponent-boosts-2
                                           opponent-oils-2
@@ -241,8 +235,7 @@ Unused values will be ignored."
                                           opponent-speed-2
                                           opponent-damage-2
                                           opponent-boost-counter-2)
-                                 (process-moves player-absolute-x
-                                                player-position
+                                 (process-moves player-position
                                                 player-boosts
                                                 player-oils
                                                 player-lizards
@@ -252,7 +245,6 @@ Unused values will be ignored."
                                                 player-damage
                                                 player-boost-counter
 
-                                                opponent-absolute-x
                                                 opponent-position
                                                 opponent-boosts
                                                 opponent-oils
@@ -269,7 +261,6 @@ Unused values will be ignored."
                                                 ,opponent-move)))
                            (bind ((current-game-map current-game-map)
 
-                                  (player-absolute-x    player-absolute-x-2)
                                   (player-position      player-position-2)
                                   (player-boosts        player-boosts-2)
                                   (player-oils          player-oils-2)
@@ -280,7 +271,6 @@ Unused values will be ignored."
                                   (player-damage        player-damage-2)
                                   (player-boost-counter player-boost-counter-2)
 
-                                  (opponent-absolute-x    opponent-absolute-x-2)
                                   (opponent-position      opponent-position-2)
                                   (opponent-boosts        opponent-boosts-2)
                                   (opponent-oils          opponent-oils-2)
@@ -297,7 +287,7 @@ Unused values will be ignored."
                                                        (x '(car opponent-position))
                                                        (y '(cdr opponent-position))
                                                        (score '(global-score
-                                                                opponent-absolute-x
+                                                                (car opponent-position)
                                                                 game-turn
                                                                 opponent-boosts
                                                                 opponent-lizards
@@ -320,7 +310,7 @@ Unused values will be ignored."
                                                        (x '(car player-position))
                                                        (y '(cdr player-position))
                                                        (score '(global-score
-                                                                player-absolute-x
+                                                                (car player-position)
                                                                 game-turn
                                                                 player-boosts
                                                                 player-lizards
@@ -341,7 +331,6 @@ Unused values will be ignored."
                         `(setf ,name ,value))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
                       (recur      (iteration-count) `(recur-inner current-game-map
-                                                                  player-absolute-x
                                                                   player-position
                                                                   player-boosts
                                                                   player-oils
@@ -351,7 +340,6 @@ Unused values will be ignored."
                                                                   player-speed
                                                                   player-damage
                                                                   player-boost-counter
-                                                                  opponent-absolute-x
                                                                   opponent-position
                                                                   opponent-boosts
                                                                   opponent-oils
@@ -364,7 +352,6 @@ Unused values will be ignored."
                                                                   game-turn
                                                                   ,iteration-count)))
              (labels ((recur-inner (current-game-map
-                                    player-absolute-x
                                     player-position
                                     player-boosts
                                     player-oils
@@ -374,7 +361,6 @@ Unused values will be ignored."
                                     player-speed
                                     player-damage
                                     player-boost-counter
-                                    opponent-absolute-x
                                     opponent-position
                                     opponent-boosts
                                     opponent-oils
@@ -394,8 +380,7 @@ Unused values will be ignored."
   (with-initial-state ((game (turn 10))
                        (iteration (count 3))
                        (game-map empty-game-map)
-                       (player (absolute-x 1)
-                               (position (cons 2 1))
+                       (player (position (cons 2 1))
                                (boosts 3)
                                (oils 1)
                                (lizards 4)
@@ -403,8 +388,7 @@ Unused values will be ignored."
                                (speed 6)
                                (damage 0)
                                (boost-counter 8))
-                       (opponent (absolute-x 9)
-                                 (position (cons 10 3))
+                       (opponent (position (cons 10 3))
                                  (boosts 11)
                                  (oils 20)
                                  (lizards 12)
@@ -437,15 +421,13 @@ i.e. if we may as well not have mode MOVE."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (and (not (member ,move '(use_emp use_lizard use_boost use_tweet use_oil)))
           (with-initial-state ,game-state
-            (bind (nothing-player-absolute-x
-                   nothing-player-position
+            (bind (nothing-player-position
                    nothing-player-speed
                    nothing-player-damage)
               (make-moves
                'nothing
                'nothing
-               (setf nothing-player-absolute-x    (player absolute-x)
-                     nothing-player-position      (player position)
+               (setf nothing-player-position      (player position)
                      nothing-player-speed         (player speed)
                      nothing-player-damage        (player damage)))
               (make-moves
@@ -453,7 +435,6 @@ i.e. if we may as well not have mode MOVE."
                'nothing
                (and (equal nothing-player-position (player position))
 
-                    (eq nothing-player-absolute-x    (player absolute-x))
                     (eq nothing-player-speed         (player speed))
                     (eq nothing-player-damage        (player damage)))))))))
 
@@ -505,6 +486,7 @@ Eighth is my boost counter."
              (iter
                (for move in (player moves))
                (when (or (eq move 'use_oil)
+                         (eq move 'use_emp)
                          (and (member move all-straight-moves)
                               (truck-infront-of (player position) (game map))))
                  (next-iteration))
@@ -521,16 +503,14 @@ Eighth is my boost counter."
   (states-from ((game (turn 10))
                 (iteration (count 3))
                 (game-map empty-game-map)
-                (player (absolute-x 1)
-                        (position (cons 2 1))
+                (player (position (cons 2 1))
                         (boosts 3)
                         (lizards 4)
                         (trucks 5)
                         (speed 6)
                         (damage 0)
                         (boost-counter 8))
-                (opponent (absolute-x 9)
-                          (position (cons 10 3))
+                (opponent (position (cons 10 3))
                           (boosts 11)
                           (lizards 12)
                           (trucks 13)
@@ -549,7 +529,7 @@ board."
       (-> (states-from ,game-state)
         copy-seq
         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2) state))
-                                    (global-score (+ (player absolute-x) (car pos-2))
+                                    (global-score (car pos-2)
                                                   (+ *current-turn* (length path))
                                                   boosts-2
                                                   lizards-2
@@ -576,12 +556,12 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((i-am-close-enough-to-opponent (< (opponent absolute-x) (+ (player speed) (player absolute-x))))
-            (opponent-is-behind-me         (> (player absolute-x) (opponent absolute-x)))
-            (opponent-is-ahead-of-me       (> (opponent absolute-x) (player absolute-x)))
+     (bind ((i-am-close-enough-to-opponent (< (opponent x) (+ (player speed) (player x))))
+            (opponent-is-behind-me         (> (player   x) (opponent x)))
+            (opponent-is-ahead-of-me       (> (opponent x) (player x)))
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
-                                                   (opponent absolute-x))))
+                                                   (opponent x))))
             (will-crash                    (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
                                              (> (make-moves
                                                  'nothing
@@ -594,22 +574,18 @@ MY-ABS-X position on the board."
                           (> (player trucks) 0)
                           (not will-crash))
                      (bind ((placement (most-used-square-on-shortest-paths
-                                        ,game-state
-                                        (cons *full-game-map*
-                                              (cdr ,(cadr (assoc 'game-map game-state)))))))
+                                        ,game-state)))
                        (setf *player-cyber-truck-position* placement)
                        (if (null placement)
                            (make-speed-move ,game-state)
                            (cons 'use_tweet placement))))
-                    ((opponent-is-close-by (player absolute-x)
+                    ((opponent-is-close-by (player x)
                                            (cdr (player position))
-                                           (opponent absolute-x)
+                                           (opponent x)
                                            (cdr (opponent position)))
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state
-                                                                      (cons *full-game-map*
-                                                                            (cdr ,(cadr (assoc 'game-map game-state)))))))
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
-                    ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
+                    ((close-to-end (player x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
        (cond
          ((and (not (and (consp move) (eq (car move) 'USE_TWEET)))
@@ -625,26 +601,22 @@ MY-ABS-X position on the board."
           'use_emp)
          (t move)))))
 
-(defmacro most-used-square-on-shortest-paths (game-state full-game-map)
-  "Find the shortest path from the opponents current position to me in GAME-STATE.
-
-The game map so far is recorded on FULL-GAME-MAP."
+(defmacro most-used-square-on-shortest-paths (game-state)
+  "Find the shortest path from the opponents current position to me in GAME-STATE."
   `(bind ((square-travel-count (make-hash-table :test #'equal))
           (*ahead-of-cache* (make-hash-table :test #'equal))
           (best-turns (make-array '(1500) :initial-element 0))
           x-limit)
-     (with-initial-state ,(cons `(iteration (count 5)) (cons `(game-map ,full-game-map) game-state))
+     (with-initial-state ,(cons `(iteration (count 5)) game-state)
        (when (= 5 (iteration count))
          (iter
            (for i from 0 to (opponent x))
            (setf (aref best-turns i) (iteration count)))
-         (setf x-limit (min 1499 (+ (player speed) (player absolute-x))))
-         (setting (player position)   (cons (player absolute-x)   (cdr (player position))))
-         (setting (opponent position) (cons (opponent absolute-x) (cdr (opponent position)))))
+         (setf x-limit (min 1499 (+ (player speed) (player x)))))
        (cond
-         ((>= (opponent absolute-x) (player absolute-x)) t)
-         ((>= (opponent absolute-x) 1500)                t)
-         ((= (iteration count) 0)                        t)
+         ((>= (opponent x) (player x)) t)
+         ((>= (opponent x) 1500)       t)
+         ((= (iteration count) 0)      t)
          (t
           (iter
             (for original-x      = (opponent x))
@@ -661,7 +633,7 @@ The game map so far is recorded on FULL-GAME-MAP."
              'nothing
              opponent-move
              (when (or (> (opponent damage) original-damage)
-                       (> (opponent absolute-x) x-limit))
+                       (> (opponent x) x-limit))
                (next-iteration))
              (when (<= (iteration count) 4)
                (accumulate-path (game map)
@@ -736,8 +708,7 @@ The game map so far is recorded on FULL-GAME-MAP."
    ((game (turn 10))
     (iteration (count 3))
     (game-map empty-game-map)
-    (player (absolute-x 1)
-            (position (cons 2 1))
+    (player (position (cons 2 1))
             (boosts 3)
             (lizards 4)
             (trucks 5)
@@ -745,8 +716,7 @@ The game map so far is recorded on FULL-GAME-MAP."
             (damage 0)
             (emps 0)
             (boost-counter 8))
-    (opponent (absolute-x 9)
-              (position (cons 10 3))
+    (opponent (position (cons 10 3))
               (boosts 11)
               (lizards 12)
               (trucks 13)
@@ -755,16 +725,16 @@ The game map so far is recorded on FULL-GAME-MAP."
               (emps 1)
               (boost-counter 16)))))
 
-(defun accumulate-path (game-map square-travel-count start-absolute-x end-absolute-x end-y)
+(defun accumulate-path (game-map square-travel-count start-x end-x end-y)
   "Increment squares in SQUARE-TRAVEL-COUNT in the given path.
 
 Use relative position of obstacles on GAME-MAP to make certain squares
 more highly weighted.
 
-Path starts at (START-ABSOLUTE-X, END-Y) and ends
-at (END-ABSOLUTE-X, END-Y)."
+Path starts at (START-X, END-Y) and ends
+at (END-X, END-Y)."
   (iter
-    (for x from start-absolute-x below end-absolute-x)
+    (for x from start-x below end-x)
     (for good-squares = (+ (if (is-obstacle-at game-map (1+ end-y) x)      1 0)
                            (if (is-obstacle-at game-map (1- end-y) x)      1 0)
                            (if (is-obstacle-at game-map (1- end-y) (1- x)) 1 0)
@@ -783,63 +753,60 @@ at (END-ABSOLUTE-X, END-Y)."
 
 (defun move-for-state (state)
   "Produce the move which my bot makes from STATE."
-  (bind (((player-position . opponent-position) (positions state))
-
-         (game-map                 (rows state))
-         (player-absolute-x        (my-abs-x state))
-         (opponent-absolute-x      (opponent-abs-x state))
-         (player-boosts            (my-boosts state))
-         (player-boost-counter     (my-boost-counter state))
-         (player-lizards           (my-lizards state))
-         (player-trucks            (my-trucks state))
-         (player-emps              (my-emps state))
-         (player-oils              (my-oils state))
-         (player-speed             (my-speed state))
-         (player-damage            (my-damage state))
-         (opponent-boosts          1)
-         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
-         (opponent-speed           (opponent-speed state))
-         (move                     (determine-move ((game (turn *current-turn*))
-                                                    (game-map game-map)
-                                                    (player
-                                                     (absolute-x player-absolute-x)
-                                                     (position player-position)
-                                                     (boosts player-boosts)
-                                                     (oils player-oils)
-                                                     (lizards player-lizards)
-                                                     (trucks player-trucks)
-                                                     (emps player-emps)
-                                                     (speed player-speed)
-                                                     (damage player-damage)
-                                                     (boost-counter player-boost-counter))
-                                                    (opponent
-                                                     (absolute-x opponent-absolute-x)
-                                                     (position opponent-position)
-                                                     (boosts opponent-boosts)
-                                                     (oils 0)
-                                                     (lizards 1)
-                                                     (trucks 1)
-                                                     (emps opponent-emps)
-                                                     (speed opponent-speed)
-                                                     (damage 0)
-                                                     (boost-counter 0))))))
+  (bind ((small-game-map (rows state)))
     (iter
-      (for x from 0 below (game-map-x-dim game-map))
-      (for absolute-x from (max 0 (- player-absolute-x 5)) below 1500)
-      (iter
-        (for y from 0 below 4)
-        (setf (aref *full-game-map* y absolute-x)
-              (aref-game-map game-map y x))))
-    (setf *previous-move* move)
-    (format *error-output*
-            "My total/average speed: ~a - ~a~%"
-            player-absolute-x
-            (/ player-absolute-x *current-turn*))
-    (format *error-output*
-            "Op total/average speed: ~a - ~a~%"
-            opponent-absolute-x
-            (/ opponent-absolute-x *current-turn*))
-    move))
+        (for x from 0 below (game-map-x-dim (rows state)))
+        (for absolute-x from (max 0 (- (caar (positions state)) 5)) below 1500)
+        (iter
+          (for y from 0 below 4)
+          (setf (aref *full-game-map* y absolute-x)
+                (aref-game-map small-game-map y x))))
+    (bind (((player-position . opponent-position) (positions state))
+
+           (player-boosts            (my-boosts state))
+           (player-boost-counter     (my-boost-counter state))
+           (player-lizards           (my-lizards state))
+           (player-trucks            (my-trucks state))
+           (player-emps              (my-emps state))
+           (player-oils              (my-oils state))
+           (player-speed             (my-speed state))
+           (player-damage            (my-damage state))
+           (opponent-boosts          1)
+           (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
+           (opponent-speed           (opponent-speed state))
+           (move                     (determine-move ((game (turn *current-turn*))
+                                                      (game-map (cons *full-game-map*
+                                                                      (cdr small-game-map)))
+                                                      (player
+                                                       (position player-position)
+                                                       (boosts player-boosts)
+                                                       (oils player-oils)
+                                                       (lizards player-lizards)
+                                                       (trucks player-trucks)
+                                                       (emps player-emps)
+                                                       (speed player-speed)
+                                                       (damage player-damage)
+                                                       (boost-counter player-boost-counter))
+                                                      (opponent
+                                                       (position opponent-position)
+                                                       (boosts opponent-boosts)
+                                                       (oils 0)
+                                                       (lizards 1)
+                                                       (trucks 1)
+                                                       (emps opponent-emps)
+                                                       (speed opponent-speed)
+                                                       (damage 0)
+                                                       (boost-counter 0))))))
+      (setf *previous-move* move)
+      (format *error-output*
+              "My total/average speed: ~a - ~a~%"
+              (car player-position)
+              (/ (car player-position) *current-turn*))
+      (format *error-output*
+              "Op total/average speed: ~a - ~a~%"
+              (car opponent-position)
+              (/ (car opponent-position) *current-turn*))
+      move)))
 
 (defmacro deep-accessor (object &rest nested-slots)
   "Produce the value of OBJECT at the path defined by NESTED-SLOTS."
@@ -892,9 +859,9 @@ at (END-ABSOLUTE-X, END-Y)."
   "Produce the speed which the opponent is going in THIS state."
   (deep-accessor this 'opponent 'player-speed))
 
-(defun close-to-end (absolute-x)
-  "Produce T if ABSOLUTE-X is close to the edge of the map."
-  (> absolute-x 1480))
+(defun close-to-end (x)
+  "Produce T if X is close to the edge of the map."
+  (> x 1480))
 
 (defmacro cannot-make-move (boosts oils lizards trucks pos emps)
   "Produce a function which produces T if MOVE can't be made with BOOSTS, LIZARDS, TRUCKS and EMPS from POS."
@@ -908,8 +875,8 @@ POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
 ;; TODO: Include oils...
-(defun global-score (absolute-x current-turn boosts lizards trucks emps y damage)
-  "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
+(defun global-score (x current-turn boosts lizards trucks emps y damage)
+  "Score the position described by X BOOSTS LIZARDS."
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1
@@ -923,7 +890,7 @@ POS."
                y-score
                damage-score
                current-turn-score) coefficients))
-        (maximizing (+ (* x-score             absolute-x)
+        (maximizing (+ (* x-score             x)
                        (* boosts-score        boosts)
                        (* lizards-score       lizards)
                        (* trucks-score        trucks)
@@ -1393,26 +1360,10 @@ If X, Y is OOB then produce DEFAULT."
   (cons (slot-value this 'x)
         (slot-value this 'y)))
 
-(defun to-relative-position (pos min-x)
-  "Convert POS to a relative position, given that MIN-X is the smallest x on the map."
-  (->> pos
-    position-to-cons
-    (subtract-x min-x)
-    to-zero-indexed))
-
 (defmethod positions ((this state))
   "Produce the player positions in THIS state."
-  (bind ((min-x (minimum-x this)))
-    (cons (to-relative-position (deep-accessor this 'player   'map-position) min-x)
-          (to-relative-position (deep-accessor this 'opponent 'map-position) min-x))))
-
-(defmethod opponent-abs-x ((this state))
-  "Produce opponents absolute x position in THIS state."
-  (car (position-to-cons (deep-accessor this 'opponent 'map-position))))
-
-(defmethod my-abs-x ((this state))
-  "Produce my absolute x position in THIS state."
-  (car (position-to-cons (deep-accessor this 'player 'map-position))))
+  (cons (to-zero-indexed (position-to-cons (deep-accessor this 'player   'map-position)))
+        (to-zero-indexed (position-to-cons (deep-accessor this 'opponent 'map-position)))))
 
 (defmethod my-abs-pos ((this state))
   "Produce my absolute position in THIS state."
@@ -1426,11 +1377,6 @@ If X, Y is OOB then produce DEFAULT."
 (defun subtract-x (x x-y)
   "Produce (X, Y) shifted left by X."
   (cons (- (car x-y) x) (cdr x-y)))
-
-(defmethod minimum-x ((this state))
-  "Produce the minimum value of x in the map in THIS state."
-  (1- (deep-accessor (aref (aref (slot-value this 'world-map) 0) 0)
-                     'map-position 'x)))
 
 (defmacro with-consecutive-states (path player which-player &rest body)
   "Load states from PATH for PLAYER and bind the current and next over BODY.
@@ -1603,8 +1549,7 @@ If they're not equal then pretty print both forms."
 ;;               ranked-speed-moves)
 ;;       (format t "========================================~%"))))
 
-(defun process-moves (player-absolute-x
-                      player-position
+(defun process-moves (player-position
                       player-boosts
                       player-oils
                       player-lizards
@@ -1614,7 +1559,6 @@ If they're not equal then pretty print both forms."
                       player-damage
                       player-boost-counter
 
-                      opponent-absolute-x
                       opponent-position
                       opponent-boosts
                       opponent-oils
@@ -1732,9 +1676,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              opponent-trucks
                              opponent-emps
                              opponent-truck-boost-counter)))
-    (values (+ (- (car player-position-2) (car player-position))
-               player-absolute-x)
-            player-position-2
+    (values player-position-2
             player-boosts-2
             player-oils-2
             player-lizards-2
@@ -1743,8 +1685,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
             (if (eq player-collision-result 'side-collision) (manual-decelerate player-speed-2) player-speed-2)
             player-damage-2
             player-boost-counter-2
-            (+ (- (car opponent-position-2) (car opponent-position))
-               opponent-absolute-x)
             opponent-position-2
             opponent-boosts-2
             opponent-oils-2
@@ -1767,7 +1707,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
 
              ((player-position . opponent-position) (positions current-state))
 
-             (player-absolute-x    (my-abs-x current-state))
              (player-speed         (my-speed current-state))
              (player-boosts        (my-boosts current-state))
              (player-oils          (my-oils current-state))
@@ -1777,7 +1716,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (player-damage        (my-damage current-state))
              (player-boost-counter (my-boost-counter current-state))
 
-             (opponent-absolute-x    (opponent-abs-x current-state))
              (opponent-speed         (opponent-speed current-state))
              (opponent-boosts        0)
              (opponent-oils          0)
@@ -1787,8 +1725,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (opponent-damage        0)
              (opponent-boost-counter 0)
 
-             ((:values player-absolute-x-2
-                       player-position-2
+             ((:values player-position-2
                        player-boosts-2
                        player-oils-2
                        player-lizards-2
@@ -1798,7 +1735,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                        player-damage-2
                        player-boost-counter-2
 
-                       opponent-absolute-x-2
                        opponent-position-2
                        opponent-boosts-2
                        opponent-oils-2
@@ -1808,8 +1744,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                        opponent-speed-2
                        opponent-damage-2
                        opponent-boost-counter-2)
-              (process-moves player-absolute-x
-                             player-position
+              (process-moves player-position
                              player-boosts
                              player-oils
                              player-lizards
@@ -1819,7 +1754,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              player-damage
                              player-boost-counter
 
-                             opponent-absolute-x
                              opponent-position
                              opponent-boosts
                              opponent-oils
@@ -1834,10 +1768,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
 
                              player-move
                              opponent-move))
-             (player-absolute-pos (my-abs-pos current-state))
-             (resolved-pos   (cons (- (+ (car player-absolute-pos) (car player-position-2))
-                                      (car player-position))
-                                   (cdr player-position-2)))
              (initial    (list (my-abs-pos       current-state)
                                (my-speed         current-state)
                                (my-boosts        current-state)
@@ -1847,7 +1777,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                                (my-emps          current-state)
                                (my-damage        current-state)
                                (my-boost-counter current-state)))
-             (computed   (list resolved-pos
+             (computed   (list player-position-2
                                player-speed-2
                                player-boosts-2
                                player-oils-2
