@@ -413,38 +413,27 @@ Unused values will be ignored."
 
 i.e. if we may as well not have mode MOVE."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-     (with-initial-state ,game-state
-       (bind (nothing-player-absolute-x
-              nothing-player-position
-              nothing-player-boosts
-              nothing-player-lizards
-              nothing-player-trucks
-              nothing-player-emps
-              nothing-player-speed
-              nothing-player-damage)
-         (make-moves
-          'nothing
-          'nothing
-          (setf nothing-player-absolute-x    (player absolute-x)
-                nothing-player-position      (player position)
-                nothing-player-boosts        (player boosts)
-                nothing-player-lizards       (player lizards)
-                nothing-player-trucks        (player trucks)
-                nothing-player-emps          (player emps)
-                nothing-player-speed         (player speed)
-                nothing-player-damage        (player damage)))
-         (make-moves
-          ,move
-          'nothing
-          (and (equal nothing-player-position (player position))
+     (and (not (member ,move '(use_emp use_lizard use_boost use_tweet use_oil)))
+          (with-initial-state ,game-state
+            (bind (nothing-player-absolute-x
+                   nothing-player-position
+                   nothing-player-speed
+                   nothing-player-damage)
+              (make-moves
+               'nothing
+               'nothing
+               (setf nothing-player-absolute-x    (player absolute-x)
+                     nothing-player-position      (player position)
+                     nothing-player-speed         (player speed)
+                     nothing-player-damage        (player damage)))
+              (make-moves
+               ,move
+               'nothing
+               (and (equal nothing-player-position (player position))
 
-               (eq nothing-player-absolute-x    (player absolute-x))
-               (eq nothing-player-boosts        (player boosts))
-               (eq nothing-player-lizards       (player lizards))
-               (eq nothing-player-trucks        (player trucks))
-               (eq nothing-player-emps          (player emps))
-               (eq nothing-player-speed         (player speed))
-               (eq nothing-player-damage        (player damage))))))))
+                    (eq nothing-player-absolute-x    (player absolute-x))
+                    (eq nothing-player-speed         (player speed))
+                    (eq nothing-player-damage        (player damage)))))))))
 
 ;; Speeds:
 ;; MINIMUM_SPEED = 0
