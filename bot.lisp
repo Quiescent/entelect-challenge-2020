@@ -604,7 +604,9 @@ MY-ABS-X position on the board."
                                            (cdr (player position))
                                            (opponent absolute-x)
                                            (cdr (opponent position)))
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state *full-game-map*)))
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state
+                                                                      (cons *full-game-map*
+                                                                            (cdr ,(cadr (assoc 'game-map game-state)))))))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player absolute-x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
