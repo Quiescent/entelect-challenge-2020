@@ -64,7 +64,7 @@ Value is [muds boosts walls tweets lizards].")
   (defun symb (&rest args)
     (values (intern (apply #'mkstr args)))))
 
-(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix)
+(defvar all-makeable-moves '(accelerate use_boost turn_right turn_left nothing decelerate use_lizard fix use_oil)
   "All the moves which I can make.")
 
 (defvar all-straight-moves '(accelerate use_boost nothing decelerate)
@@ -302,7 +302,9 @@ Unused values will be ignored."
                                                                 opponent-emps
                                                                 (cdr opponent-position)
                                                                 opponent-damage))
-                                                       (moves '(remove-impossible-moves opponent-boosts
+                                                       (moves '(remove-impossible-moves
+                                                                opponent-boosts
+                                                                opponent-oils
                                                                 opponent-lizards
                                                                 opponent-trucks
                                                                 opponent-position
@@ -325,6 +327,7 @@ Unused values will be ignored."
                                                                 player-damage))
                                                        (moves '(remove-impossible-moves
                                                                 player-boosts
+                                                                player-oils
                                                                 player-lizards
                                                                 player-trucks
                                                                 player-position
@@ -887,16 +890,16 @@ at (END-ABSOLUTE-X, END-Y)."
   "Produce T if ABSOLUTE-X is close to the edge of the map."
   (> absolute-x 1480))
 
-(defmacro cannot-make-move (boosts lizards trucks pos emps)
+(defmacro cannot-make-move (boosts oils lizards trucks pos emps)
   "Produce a function which produces T if MOVE can't be made with BOOSTS, LIZARDS, TRUCKS and EMPS from POS."
-  `(lambda (move) (not (move-can-be-made move ,boosts ,lizards ,trucks (cdr ,pos) ,emps))))
+  `(lambda (move) (not (move-can-be-made move ,boosts ,oils ,lizards ,trucks (cdr ,pos) ,emps))))
 
-(defun remove-impossible-moves (boosts lizards trucks pos emps all-makeable-moves)
+(defun remove-impossible-moves (boosts oils lizards trucks pos emps all-makeable-moves)
   "Remove impossible moves from ALL-MOVES.
 
 Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
-  (remove-if (cannot-make-move boosts lizards trucks pos emps) all-makeable-moves))
+  (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
 ;; TODO: Include oils...
 (defun global-score (absolute-x current-turn boosts lizards trucks emps y damage)
@@ -1313,7 +1316,7 @@ Being at the edge of the map is best, because we don't know what's
 coming!"
   (>= (car position) (1- (game-map-x-dim game-map))))
 
-(defun move-can-be-made (move boosts lizards trucks y emps)
+(defun move-can-be-made (move boosts oils lizards trucks y emps)
   "Produce T if the MOVE can be made from Y coordinate."
   (case move
     (turn_right (< y 3))
@@ -1322,6 +1325,7 @@ coming!"
     (use_tweet  (> trucks 0))
     (use_lizard (> lizards 0))
     (use_emp    (> emps 0))
+    (use_oil    (> oils 0))
     (t          t)))
 
 (defun aref-game-map (game-map y x)
