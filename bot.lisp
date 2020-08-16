@@ -127,7 +127,7 @@ Runs BODY and then restores the map."
                                       player-move
                                       opponent-move
                                       (- maximax-depth (iteration count)))
-                                maximizing opponent-score)))))))
+                                minimizing player-score)))))))
          (for cell in cells)
          (finding cell maximizing (car cell))))))
 
