@@ -165,6 +165,7 @@ Unused values will be ignored."
         (player-not-defined 'absolute-x)
         (player-not-defined 'position)
         (player-not-defined 'boosts)
+        (player-not-defined 'oils)
         (player-not-defined 'lizards)
         (player-not-defined 'trucks)
         (player-not-defined 'emps)
@@ -175,6 +176,7 @@ Unused values will be ignored."
         (opponent-not-defined 'absolute-x)
         (opponent-not-defined 'position)
         (opponent-not-defined 'boosts)
+        (opponent-not-defined 'oils)
         (opponent-not-defined 'lizards)
         (opponent-not-defined 'trucks)
         (opponent-not-defined 'emps)
@@ -192,6 +194,7 @@ Unused values will be ignored."
                 (player-absolute-x    ,@(cdr (assoc 'absolute-x    player-state)))
                 (player-position      ,@(cdr (assoc 'position      player-state)))
                 (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
+                (player-oils          ,@(cdr (assoc 'oils          player-state)))
                 (player-lizards       ,@(cdr (assoc 'lizards       player-state)))
                 (player-trucks        ,@(cdr (assoc 'trucks        player-state)))
                 (player-emps          ,@(cdr (assoc 'emps          player-state)))
@@ -202,6 +205,7 @@ Unused values will be ignored."
                 (opponent-absolute-x    ,@(cdr (assoc 'absolute-x    opponent-state)))
                 (opponent-position      ,@(cdr (assoc 'position      opponent-state)))
                 (opponent-boosts        ,@(cdr (assoc 'boosts        opponent-state)))
+                (opponent-oils          ,@(cdr (assoc 'oils          opponent-state)))
                 (opponent-lizards       ,@(cdr (assoc 'lizards       opponent-state)))
                 (opponent-trucks        ,@(cdr (assoc 'trucks        opponent-state)))
                 (opponent-emps          ,@(cdr (assoc 'emps          opponent-state)))
@@ -216,6 +220,7 @@ Unused values will be ignored."
                         `(bind (((:values player-absolute-x-2
                                           player-position-2
                                           player-boosts-2
+                                          player-oils-2
                                           player-lizards-2
                                           player-trucks-2
                                           player-emps-2
@@ -226,6 +231,7 @@ Unused values will be ignored."
                                           opponent-absolute-x-2
                                           opponent-position-2
                                           opponent-boosts-2
+                                          opponent-oils-2
                                           opponent-lizards-2
                                           opponent-trucks-2
                                           opponent-emps-2
@@ -235,6 +241,7 @@ Unused values will be ignored."
                                  (process-moves player-absolute-x
                                                 player-position
                                                 player-boosts
+                                                player-oils
                                                 player-lizards
                                                 player-trucks
                                                 player-emps
@@ -245,6 +252,7 @@ Unused values will be ignored."
                                                 opponent-absolute-x
                                                 opponent-position
                                                 opponent-boosts
+                                                opponent-oils
                                                 opponent-lizards
                                                 opponent-trucks
                                                 opponent-emps
@@ -261,6 +269,7 @@ Unused values will be ignored."
                                   (player-absolute-x    player-absolute-x-2)
                                   (player-position      player-position-2)
                                   (player-boosts        player-boosts-2)
+                                  (player-oils          player-oils-2)
                                   (player-lizards       player-lizards-2)
                                   (player-trucks        player-trucks-2)
                                   (player-emps          player-emps-2)
@@ -271,6 +280,7 @@ Unused values will be ignored."
                                   (opponent-absolute-x    opponent-absolute-x-2)
                                   (opponent-position      opponent-position-2)
                                   (opponent-boosts        opponent-boosts-2)
+                                  (opponent-oils          opponent-oils-2)
                                   (opponent-lizards       opponent-lizards-2)
                                   (opponent-trucks        opponent-trucks-2)
                                   (opponent-emps          opponent-emps-2)
@@ -328,6 +338,7 @@ Unused values will be ignored."
                                                                   player-absolute-x
                                                                   player-position
                                                                   player-boosts
+                                                                  player-oils
                                                                   player-lizards
                                                                   player-trucks
                                                                   player-emps
@@ -337,6 +348,7 @@ Unused values will be ignored."
                                                                   opponent-absolute-x
                                                                   opponent-position
                                                                   opponent-boosts
+                                                                  opponent-oils
                                                                   opponent-lizards
                                                                   opponent-trucks
                                                                   opponent-emps
@@ -349,6 +361,7 @@ Unused values will be ignored."
                                     player-absolute-x
                                     player-position
                                     player-boosts
+                                    player-oils
                                     player-lizards
                                     player-trucks
                                     player-emps
@@ -358,6 +371,7 @@ Unused values will be ignored."
                                     opponent-absolute-x
                                     opponent-position
                                     opponent-boosts
+                                    opponent-oils
                                     opponent-lizards
                                     opponent-trucks
                                     opponent-emps
@@ -377,6 +391,7 @@ Unused values will be ignored."
                        (player (absolute-x 1)
                                (position (cons 2 1))
                                (boosts 3)
+                               (oils 1)
                                (lizards 4)
                                (trucks 5)
                                (speed 6)
@@ -385,6 +400,7 @@ Unused values will be ignored."
                        (opponent (absolute-x 9)
                                  (position (cons 10 3))
                                  (boosts 11)
+                                 (oils 20)
                                  (lizards 12)
                                  (trucks 13)
                                  (speed 14)
@@ -780,6 +796,7 @@ at (END-ABSOLUTE-X, END-Y)."
                                                      (absolute-x player-absolute-x)
                                                      (position player-position)
                                                      (boosts player-boosts)
+                                                     (oils player-oils)
                                                      (lizards player-lizards)
                                                      (trucks player-trucks)
                                                      (emps player-emps)
@@ -790,6 +807,7 @@ at (END-ABSOLUTE-X, END-Y)."
                                                      (absolute-x opponent-absolute-x)
                                                      (position opponent-position)
                                                      (boosts opponent-boosts)
+                                                     (oils 0)
                                                      (lizards 1)
                                                      (trucks 1)
                                                      (emps opponent-emps)
@@ -880,6 +898,7 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts lizards trucks pos emps) all-makeable-moves))
 
+;; TODO: Include oils...
 (defun global-score (absolute-x current-turn boosts lizards trucks emps y damage)
   "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
   (bind ((is-middle-two (if (or (= y 1)
@@ -953,12 +972,13 @@ produce `mud-ahead-of' etc.
 
 SPEED, GAME-MAP, and POS should be un-adjusted values."
   (bind ((index     (ecase type
-                      (mud    0)
-                      (boost  1)
-                      (wall   2)
-                      (tweet  3)
-                      (lizard 4)
-                      (emp    5)))
+                      (mud      0)
+                      (boost    1)
+                      (wall     2)
+                      (tweet    3)
+                      (lizard   4)
+                      (emp      5)
+                      (oil-item 6)))
          (direction `(case ,move
                        (turn_left  'up)
                        (turn_right 'down)
@@ -997,13 +1017,14 @@ When going at SPEED from X, Y on GAME-MAP."
   (iter
     (for i from (max x 0) below (min (1+ (+ x speed)) (game-map-x-dim game-map)))
     (for tile = (aref-game-map game-map y i))
-    (counting (eq 'mud tile)    into muds)
-    (counting (eq 'wall tile)   into walls)
-    (counting (eq 'boost tile)  into boosts)
-    (counting (eq 'lizard tile) into lizards)
-    (counting (eq 'tweet tile)  into tweets)
-    (counting (eq 'emp tile)    into emps)
-    (finally (return (vector muds boosts walls tweets lizards emps)))))
+    (counting (eq 'mud tile)      into muds)
+    (counting (eq 'wall tile)     into walls)
+    (counting (eq 'boost tile)    into boosts)
+    (counting (eq 'lizard tile)   into lizards)
+    (counting (eq 'tweet tile)    into tweets)
+    (counting (eq 'emp tile)      into emps)
+    (counting (eq 'oil-item tile) into oils)
+    (finally (return (vector muds boosts walls tweets lizards emps oils)))))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
@@ -1185,6 +1206,7 @@ Produces staged values of position speed and the new boost counter."
                           damage
                           speed
                           boosts
+                          oils
                           lizards
                           trucks
                           emps
@@ -1238,6 +1260,13 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
                                                      game-map
                                                      start-position
                                                      end-position))
+           (new-oils          (accumulating-powerups oils
+                                                     collision-result
+                                                     move
+                                                     oil-item
+                                                     game-map
+                                                     start-position
+                                                     end-position))
            (new-damage        (min 6 (+ muds-hit
                                         (* 2 walls-hit)
                                         (max 0 (if (eq move 'fix) (- damage 2) damage)))))
@@ -1250,7 +1279,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
                                   0
                                   boost-counter)))
       (when using-oil (setf-game-map game-map oil-y oil-x original-tile))
-      (values new-boosts final-speed new-lizards new-trucks new-emps new-damage boost-counter-2))))
+      (values new-boosts new-oils final-speed new-lizards new-trucks new-emps new-damage boost-counter-2))))
 
 (defun hit-a-truck (game-map start-x end-x start-y new-y)
   "Produce t if you would hit a truck on GAME-MAP from START-X.
@@ -1567,6 +1596,7 @@ If they're not equal then pretty print both forms."
 (defun process-moves (player-absolute-x
                       player-position
                       player-boosts
+                      player-oils
                       player-lizards
                       player-trucks
                       player-emps
@@ -1577,6 +1607,7 @@ If they're not equal then pretty print both forms."
                       opponent-absolute-x
                       opponent-position
                       opponent-boosts
+                      opponent-oils
                       opponent-lizards
                       opponent-trucks
                       opponent-emps
@@ -1646,6 +1677,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                               opponent-decelerate-boost-counter
                               opponent-empd))
          ((:values player-boosts-2
+                   player-oils-2
                    player-speed-2
                    player-lizards-2
                    player-trucks-2
@@ -1662,11 +1694,13 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              player-truck-damage
                              player-truck-speed
                              player-boosts
+                             player-oils
                              player-lizards
                              player-trucks
                              player-emps
                              player-truck-boost-counter))
          ((:values opponent-boosts-2
+                   opponent-oils-2
                    opponent-speed-2
                    opponent-lizards-2
                    opponent-trucks-2
@@ -1683,6 +1717,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              opponent-truck-damage
                              opponent-truck-speed
                              opponent-boosts
+                             opponent-oils
                              opponent-lizards
                              opponent-trucks
                              opponent-emps
@@ -1691,6 +1726,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                player-absolute-x)
             player-position-2
             player-boosts-2
+            player-oils-2
             player-lizards-2
             player-trucks-2
             player-emps-2
@@ -1701,6 +1737,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                opponent-absolute-x)
             opponent-position-2
             opponent-boosts-2
+            opponent-oils-2
             opponent-lizards-2
             opponent-trucks-2
             opponent-emps-2
@@ -1723,6 +1760,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (player-absolute-x    (my-abs-x current-state))
              (player-speed         (my-speed current-state))
              (player-boosts        (my-boosts current-state))
+             (player-oils          (my-oils current-state))
              (player-lizards       (my-lizards current-state))
              (player-trucks        (my-trucks current-state))
              (player-emps          (my-emps   current-state))
@@ -1732,6 +1770,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (opponent-absolute-x    (opponent-abs-x current-state))
              (opponent-speed         (opponent-speed current-state))
              (opponent-boosts        0)
+             (opponent-oils          0)
              (opponent-lizards       0)
              (opponent-trucks        0)
              (opponent-emps          0)
@@ -1741,6 +1780,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              ((:values player-absolute-x-2
                        player-position-2
                        player-boosts-2
+                       player-oils-2
                        player-lizards-2
                        player-trucks-2
                        player-emps-2
@@ -1751,6 +1791,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                        opponent-absolute-x-2
                        opponent-position-2
                        opponent-boosts-2
+                       opponent-oils-2
                        opponent-lizards-2
                        opponent-trucks-2
                        opponent-emps-2
@@ -1760,6 +1801,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
               (process-moves player-absolute-x
                              player-position
                              player-boosts
+                             player-oils
                              player-lizards
                              player-trucks
                              player-emps
@@ -1770,6 +1812,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              opponent-absolute-x
                              opponent-position
                              opponent-boosts
+                             opponent-oils
                              opponent-lizards
                              opponent-trucks
                              opponent-emps
@@ -1788,6 +1831,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (initial    (list (my-abs-pos       current-state)
                                (my-speed         current-state)
                                (my-boosts        current-state)
+                               (my-oils          current-state)
                                (my-lizards       current-state)
                                (my-trucks        current-state)
                                (my-emps          current-state)
@@ -1796,6 +1840,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (computed   (list resolved-pos
                                player-speed-2
                                player-boosts-2
+                               player-oils-2
                                player-lizards-2
                                player-trucks-2
                                player-emps-2
@@ -1804,6 +1849,7 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
              (actual     (list (my-abs-pos       next-state)
                                (my-speed         next-state)
                                (my-boosts        next-state)
+                               (my-oils          next-state)
                                (my-lizards       next-state)
                                (my-trucks        next-state)
                                (my-emps          next-state)
