@@ -1,8 +1,5 @@
 (in-package :bot)
 
-(defvar *heuristic-coeficients* '((1 1 1 1 1 1))
-  "The coefficients to use when computing the score of a position.")
-
 (defvar *current-turn* 1
   "The turn of the game that we're on.")
 
@@ -15,19 +12,54 @@
 (defvar *player-cyber-truck-position* nil
   "The position at which I last placed the cyber truck.")
 
+(defvar *x-score* 1.0)
+(defvar *boosts-score* 1.0)
+(defvar *lizards-score* 1.0)
+(defvar *trucks-score* 1.0)
+(defvar *emp-score* 1.0)
+(defvar *y-score* 1.0)
+(defvar *damage-score* 1.0)
+(defvar *current-turn-score* 1.0)
+
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
+  (declaim (type single-float
+                 *x-score*
+                 *boosts-score*
+                 *lizards-score*
+                 *trucks-score*
+                 *emp-score*
+                 *y-score*
+                 *damage-score*
+                 *current-turn-score*)))
+
 (defun read-weights ()
   "Read all scores from the score config file."
   (with-open-file (f "./score-config")
-    (iter
-      (for next-member = (eval (ignore-errors (read f))))
-      (while next-member)
-      (collecting (mapcar (lambda (x) (coerce x 'float)) next-member)))))
+    (bind (((x-score
+             boosts-score
+             lizards-score
+             trucks-score
+             emp-score
+             y-score
+             damage-score
+             current-turn-score)
+            (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
+      (setf *x-score*            x-score
+            *boosts-score*       boosts-score
+            *lizards-score*      lizards-score
+            *trucks-score*       trucks-score
+            *emp-score*          emp-score
+            *y-score*            y-score
+            *damage-score*       damage-score
+            *current-turn-score* current-turn-score))))
 
 (defun main ()
   (iter
     (while t)
     (initially
-     (setf *heuristic-coeficients* (read-weights))
+     (read-weights)
      (setf *full-game-map* (make-array '(4 1500) :initial-element nil))
      (setf *player-cyber-truck-position* nil))
     (for round-number = (read-line))
@@ -96,23 +128,72 @@ Runs BODY and then restores the map."
            (setf-game-map ,game-map y x original-tile)))
        ,@body))
 
-;; The moves being made here don't make sense!
-(defmacro make-opposed-move (game-state)
+(defun buffer-with-nothing (these-moves those-moves)
+  "Buffer THESE-MOVES with nothing until >= length as THOSE-MOVES."
+  (bind ((this-length (length these-moves))
+         (that-length (length those-moves)))
+    (if (> this-length that-length)
+               these-moves
+               (concatenate 'list
+                            these-moves
+                            (iter
+                              (for i from 0 below (- that-length this-length))
+                              (collecting 'nothing))))))
+
+(defmacro make-opposed-move (game-state cyber-truck-ahead-of-opponent)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal))
-          (my-cyber-truck-move (most-used-square-on-shortest-paths ,game-state)))
+  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal)))
      (declare (optimize (speed 3) (safety 0) (debug 0)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
          (for current-turn = (+ *current-turn* (- maximax-depth (iteration count))))
+         (with opponent-moves           = (opponent moves))
+         (with player-moves             = (player   moves))
+         (with (player-cyber-truck-moves . opponent-cyber-truck-moves) =
+               (if (= (iteration count) ,maximax-depth)
+                   (iter
+                     (for opponent-move in (buffer-with-nothing opponent-moves player-moves))
+                     (for player-move   in (buffer-with-nothing player-moves   opponent-moves))
+                     (make-moves
+                      player-move
+                      opponent-move
+                      (when (> (player y) 0)
+                        (collecting (list 'use_tweet (cons (player x) (1- (player y))))
+                                    into opponent-cyber-truck-moves))
+                      (when (< (player y) 3)
+                        (collecting (list 'use_tweet (cons (player x) (1+ (player y))))
+                                    into opponent-cyber-truck-moves))
+                      (collecting (list 'use_tweet (cons (1+ (player x)) (player y)))
+                                  into opponent-cyber-truck-moves)
+                      (when (> (opponent y) 0)
+                        (collecting (list 'use_tweet (cons (opponent x) (1- (opponent y))))
+                                    into player-cyber-truck-moves))
+                      (when (< (opponent y) 3)
+                        (collecting (list 'use_tweet (cons (opponent x) (1+ (opponent y))))
+                                    into player-cyber-truck-moves))
+                      (collecting (list 'use_tweet (cons (1+ (opponent x)) (opponent y)))
+                                  into player-cyber-truck-moves))
+                     (finally (return (cons player-cyber-truck-moves
+                                            opponent-cyber-truck-moves))))
+                   (cons nil nil)))
          (with cells =
                (iter
-                 (for player-move in (if (= (iteration count) ,maximax-depth)
-                                         (cons my-cyber-truck-move (player moves))
+                 (for player-move in (if (and player-cyber-truck-moves
+                                              (> (player trucks) 0)
+                                              (not ,cyber-truck-ahead-of-opponent))
+                                         (concatenate
+                                          'list
+                                          (remove-duplicates player-cyber-truck-moves :test #'equal)
+                                          (player moves))
                                          (player moves)))
                  (collecting
                   (iter
-                    (for opponent-move in (opponent moves))
+                    (for opponent-move in (if (and opponent-cyber-truck-moves (> (opponent trucks) 0))
+                                              (concatenate
+                                               'list
+                                               (remove-duplicates opponent-cyber-truck-moves :test #'equal)
+                                               (opponent moves))
+                                              (opponent moves)))
                     (make-moves
                      player-move
                      opponent-move
@@ -129,7 +210,7 @@ Runs BODY and then restores the map."
                                       (- maximax-depth (iteration count)))
                                 minimizing player-score)))))))
          (for cell in cells)
-         (finding cell maximizing (car cell))))))
+         (finding cell minimizing (cadr cell))))))
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
@@ -549,6 +630,9 @@ board."
        last
        car)))
 
+(defconstant window-ahead-to-consider-maximax 15
+  "The window ahead me that I should use to consider using maximax.")
+
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
 
@@ -556,9 +640,8 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((i-am-close-enough-to-opponent (< (opponent x) (+ (player speed) (player x))))
-            (opponent-is-behind-me         (> (player   x) (opponent x)))
-            (opponent-is-ahead-of-me       (> (opponent x) (player x)))
+     (bind ((competitive-move              (opponent-is-close-by (player x) (opponent x)))
+            (opponent-is-way-ahead-of-me   (not competitive-move))
             (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
                                                 (> (car *player-cyber-truck-position*)
                                                    (opponent x))))
@@ -569,37 +652,18 @@ MY-ABS-X position on the board."
                                                  (player damage))
                                                 (player damage))))
             (move (cond
-                    ((and i-am-close-enough-to-opponent
-                          (not cyber-truck-ahead-of-opponent)
-                          (> (player trucks) 0)
-                          (not will-crash))
-                     (bind ((placement (most-used-square-on-shortest-paths
-                                        ,game-state)))
-                       (setf *player-cyber-truck-position* placement)
-                       (if (null placement)
-                           (make-speed-move ,game-state)
-                           (cons 'use_tweet placement))))
-                    ((opponent-is-close-by (player x)
-                                           (cdr (player position))
-                                           (opponent x)
-                                           (cdr (opponent position)))
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
+                    (competitive-move
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state cyber-truck-ahead-of-opponent)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
-       (cond
-         ((and (not (and (consp move) (eq (car move) 'USE_TWEET)))
-               (no-net-change move ,game-state)
-               opponent-is-behind-me
-               (> (player oils) 0))
-          'use_oil)
-         ((and opponent-is-ahead-of-me
-               (<= (abs (- (player y) (opponent y))) 1)
-               (not (eq *previous-move* 'use_emp))
-               (> (player emps) 0)
-               (not will-crash))
-          'use_emp)
-         (t move)))))
+       (if (and opponent-is-way-ahead-of-me
+                (<= (abs (- (player y) (opponent y))) 1)
+                (not (eq *previous-move* 'use_emp))
+                (> (player emps) 0)
+                (not will-crash))
+           'use_emp
+           move))))
 
 (defmacro most-used-square-on-shortest-paths (game-state)
   "Find the shortest path from the opponents current position to me in GAME-STATE."
@@ -884,27 +948,21 @@ POS."
 ;; TODO: Include oils...
 (defun global-score (x current-turn boosts lizards trucks emps y damage)
   "Score the position described by X BOOSTS LIZARDS."
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+           (type fixnum x current-turn boosts lizards trucks emps y damage))
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
-                            1
-                            0)))
-    (iter (for coefficients in *heuristic-coeficients*)
-      (bind (((x-score
-               boosts-score
-               lizards-score
-               trucks-score
-               emp-score
-               y-score
-               damage-score
-               current-turn-score) coefficients))
-        (maximizing (+ (* x-score             x)
-                       (* boosts-score        boosts)
-                       (* lizards-score       lizards)
-                       (* trucks-score        trucks)
-                       (* emp-score           emps)
-                       (* y-score             is-middle-two)
-                       (* damage-score        damage)
-                       (* current-turn-score  current-turn)))))))
+                            1.0
+                            0.0)))
+    (declare (type float is-middle-two))
+    (+ (* *x-score*             x)
+       (* *boosts-score*        boosts)
+       (* *lizards-score*       lizards)
+       (* *trucks-score*        trucks)
+       (* *emp-score*           emps)
+       (* *y-score*             is-middle-two)
+       (* *damage-score*        damage)
+       (* *current-turn-score*  current-turn))))
 
 (defun minimax-score (my-abs-x op-abs-x)
   "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X."
@@ -918,18 +976,9 @@ POS."
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
 
-(defconstant window-ahead-to-consider-maximax 15
-  "The window ahead me that I should use to consider using maximax.")
-
-(defconstant window-behind-to-consider-maximax 5
-  "The window behind me that I should use to consider using maximax.")
-
-(defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
+(defun opponent-is-close-by (my-abs-x opponent-abs-x)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
-  (and (>= opponent-abs-x (- my-abs-x window-behind-to-consider-maximax))
-       (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
-       (>= opponent-y     (- my-y     1))
-       (<= opponent-y     (+ my-y     1))))
+  (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax)))
 
 (defun truck-infront-of (current-pos game-map)
   "Produce t if there is a truck immediately in front of CURRENT-POS on GAME-MAP."
@@ -978,10 +1027,13 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                                          (if (eq ,collision-result 'side-collision) 1 0)))
                                (ahead (1+ (car ,start-position)))))))
          (adj-y     `(cdr ,end-position)))
-    `(if (eq ,move 'fix) (vector 0 0 0 0 0 0 0)
-         (or (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-             (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-                   (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y))))))
+    `(the (simple-array fixnum (7))
+          (if (eq ,move 'fix) (make-array '(7)
+                                          :initial-contents (list 0 0 0 0 0 0 0)
+                                          :element-type 'fixnum)
+              (or (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                  (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                        (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y)))))))
 
 (defun all-ahead-of (speed game-map x y)
   "Produce a count of all types of powerups and obstacles.
@@ -997,7 +1049,9 @@ When going at SPEED from X, Y on GAME-MAP."
     (counting (eq 'tweet tile)    into tweets)
     (counting (eq 'emp tile)      into emps)
     (counting (eq 'oil-item tile) into oils)
-    (finally (return (vector muds boosts walls tweets lizards emps oils)))))
+    (finally (return (make-array '(7)
+                                 :initial-contents (list muds boosts walls tweets lizards emps oils)
+                                 :element-type 'fixnum)))))
 
 (defmacro move-car (direction speed x)
   "Produce the new value of X when the car moves in DIRECTION at SPEED."
@@ -1155,6 +1209,16 @@ Produces staged values of position speed and the new boost counter."
                                           speed
                                           boost-counter-2)))))
 
+(defmacro use-power-up-if-move-is (this-move accumulating-move)
+  "Produce -1 if THIS-MOVE is ACCUMULATING-MOVE, otherwise 0."
+  (if (eq accumulating-move 'use_tweet)
+      `(if (eq ,(car this-move) ,accumulating-move)
+           (the fixnum -1)
+           (the fixnum 0))
+      `(if (eq ,this-move ,accumulating-move)
+           (the fixnum -1)
+           (the fixnum 0))))
+
 (defun interact-with-map (collision-result
                           start-position
                           end-position
@@ -1174,6 +1238,8 @@ Produces staged values of position speed and the new boost counter."
 
 Start from START-POSITION and end at END-POSITION, accumulating into
 DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+           (type fixnum damage speed boosts oils lizards trucks emps boost-counter))
   (bind (((oil-x . oil-y) other-position)
          (using-oil       (and (eq other-move 'use_oil)
                                (< (car other-position) (game-map-x-dim game-map))))
@@ -1186,19 +1252,19 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
                                         end-position))
            (muds-hit          (aref all-hit 0))
            (walls-hit         (aref all-hit 2))
-           (new-boosts        (+ (if (eq move 'use_boost) -1 0)
+           (new-boosts        (+ (use-power-up-if-move-is move 'use_boost)
                                  (aref all-hit 1)
                                  boosts))
-           (new-lizards       (+ (if (eq move 'use_lizard) -1 0)
+           (new-lizards       (+ (use-power-up-if-move-is move 'use_lizard)
                                  (aref all-hit 4)
                                  lizards))
-           (new-trucks        (+ (if (and (consp move) (eq (car move) 'use_tweet)) -1 0)
+           (new-trucks        (+ (use-power-up-if-move-is move 'use_tweet)
                                  (aref all-hit 3)
                                  trucks))
-           (new-emps          (+ (if (eq move 'use_emp) -1 0)
+           (new-emps          (+ (use-power-up-if-move-is move 'use_emp)
                                  (aref all-hit 5)
                                  emps))
-           (new-oils          (+ (if (eq move 'use_oil) -1 0)
+           (new-oils          (+ (use-power-up-if-move-is move 'use_oil)
                                  (aref all-hit 6)
                                  oils))
            (new-damage        (min 6 (+ muds-hit
