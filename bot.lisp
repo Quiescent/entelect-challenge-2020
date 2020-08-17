@@ -18,6 +18,7 @@
 (defvar *trucks-score* 1.0)
 (defvar *emp-score* 1.0)
 (defvar *y-score* 1.0)
+(defvar *margin-score* 1.0)
 (defvar *damage-score* 1.0)
 (defvar *current-turn-score* 1.0)
 
@@ -26,6 +27,7 @@
             :execute)
   (declaim (type single-float
                  *x-score*
+                 *margin-score*
                  *boosts-score*
                  *lizards-score*
                  *trucks-score*
@@ -628,6 +630,7 @@ board."
         copy-seq
         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2) state))
                                     (global-score (car pos-2)
+                                                  0
                                                   (+ *current-turn* (length path))
                                                   boosts-2
                                                   lizards-2
@@ -836,12 +839,12 @@ at (END-X, END-Y)."
   "Fill *GAME-MAP* with the latest small map from STATE and return it in game-map format."
   (bind ((small-game-map (rows state)))
     (iter
-        (for x from 0 below (game-map-x-dim (rows state)))
-        (for absolute-x from (max 0 (- (caar (positions state)) 5)) below 1500)
-        (iter
-          (for y from 0 below 4)
-          (setf (aref *full-game-map* y absolute-x)
-                (aref-game-map small-game-map y x))))
+      (for x from 0 below (game-map-x-dim (rows state)))
+      (for absolute-x from (max 0 (- (caar (positions state)) 5)) below 1500)
+      (iter
+        (for y from 0 below 4)
+        (setf (aref *full-game-map* y absolute-x)
+              (aref-game-map small-game-map y x))))
     (cons *full-game-map*
           (cdr small-game-map))))
 
@@ -963,16 +966,17 @@ POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
 ;; TODO: Include oils...
-(defun global-score (x current-turn boosts lizards trucks emps y damage)
+(defun global-score (x other-x current-turn boosts lizards trucks emps y damage)
   "Score the position described by X BOOSTS LIZARDS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type fixnum x current-turn boosts lizards trucks emps y damage))
+           (type fixnum x other-x current-turn boosts lizards trucks emps y damage))
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1.0
                             0.0)))
     (declare (type float is-middle-two))
     (+ (* *x-score*             x)
+       (* *margin-score*        (the fixnum (- x other-x)))
        (* *boosts-score*        boosts)
        (* *lizards-score*       lizards)
        (* *trucks-score*        trucks)
@@ -1873,7 +1877,14 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                    initial
                    current-move
                    computed
-                   actual)))))))
+                   actual))
+         (when (not (equal new-game-map filled-game-map))
+           (format t "Round: ~a~%" round)
+           (format t "Trucks old: ~a~%" (cdr filled-game-map))
+           (format t "Trucks new: ~a~%" (cdr new-game-map))
+           (format t "Old:~%~A~%" (print-full-game-map-to-string new-game-map))
+           (format t "New:~%~A~%" (print-full-game-map-to-string filled-game-map))
+           (format t "Game maps don't match~%")))))))
 
 #+nil
 (progn
