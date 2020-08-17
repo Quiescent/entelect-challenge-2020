@@ -328,7 +328,9 @@ Unused values will be ignored."
                                           opponent-emps-2
                                           opponent-speed-2
                                           opponent-damage-2
-                                          opponent-boost-counter-2)
+                                          opponent-boost-counter-2
+
+                                          game-map-2)
                                  (process-moves player-position
                                                 player-boosts
                                                 player-oils
@@ -353,7 +355,7 @@ Unused values will be ignored."
 
                                                 ,player-move
                                                 ,opponent-move)))
-                           (bind ((current-game-map current-game-map)
+                           (bind ((current-game-map game-map-2)
 
                                   (player-position      player-position-2)
                                   (player-boosts        player-boosts-2)
@@ -382,6 +384,7 @@ Unused values will be ignored."
                                                        (y '(cdr opponent-position))
                                                        (score '(global-score
                                                                 (car opponent-position)
+                                                                (car ployer-position)
                                                                 game-turn
                                                                 opponent-boosts
                                                                 opponent-lizards
@@ -405,6 +408,7 @@ Unused values will be ignored."
                                                        (y '(cdr player-position))
                                                        (score '(global-score
                                                                 (car player-position)
+                                                                (car opponent-position)
                                                                 game-turn
                                                                 player-boosts
                                                                 player-lizards
@@ -1721,7 +1725,8 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                              opponent-lizards
                              opponent-trucks
                              opponent-emps
-                             opponent-truck-boost-counter)))
+                             opponent-truck-boost-counter))
+         (new-game-map (place-cyber-trucks current-game-map player-move opponent-move)))
     (values player-position-2
             player-boosts-2
             player-oils-2
@@ -1739,7 +1744,25 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
             opponent-emps-2
             (if (eq opponent-collision-result 'side-collision) (manual-decelerate opponent-speed-2) opponent-speed-2)
             opponent-damage-2
-            opponent-boost-counter-2)))
+            opponent-boost-counter-2
+
+            new-game-map)))
+
+;; TODO: Shortcuts abound!
+(defun place-cyber-trucks (game-map player-move opponent-move)
+  "Place cyber trucks on GAME-MAP if PLAYER-MOVE or OPPONENT-MOVE is a truck."
+  (bind ((trucks                 (cdr game-map))
+         (new-trucks-with-player (if (consp player-move)
+                                     (cons (cadr player-move) trucks)
+                                     trucks))
+         (new-trucks             (if (consp opponent-move)
+                                     (cons (cadr opponent-move)
+                                           new-trucks-with-player)
+                                     new-trucks-with-player)))
+    (cons (car game-map)
+          (subseq new-trucks
+                  0
+                  (min (length trucks) 2)))))
 
 (defun replay-from-folder (folder-path &rest rounds)
   "Check that `make-move' produces the same result as the target engine."
@@ -1790,7 +1813,9 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                         opponent-emps-2
                         opponent-speed-2
                         opponent-damage-2
-                        opponent-boost-counter-2)
+                        opponent-boost-counter-2
+
+                        new-game-map)
                (process-moves player-position
                               player-boosts
                               player-oils
