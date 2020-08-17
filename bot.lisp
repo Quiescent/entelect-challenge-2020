@@ -72,7 +72,7 @@
 (defun move-to-string (move)
   "Produce a string representation of MOVE."
   (if (consp move)
-      (format nil "~a ~a ~a" (car move) (1+ (cddr move)) (cadr move))
+      (format nil "~a ~a ~a" (car move) (1+ (cddr move)) (1+ (cadr move)))
       (format nil "~a" move)))
 
 (defun move-for-round (round-number)
@@ -106,7 +106,7 @@ Value is [muds boosts walls tweets lizards].")
 
 ;; Might want to try turning on optimsations for this to get to depth
 ;; three!
-(defconstant maximax-depth 3
+(defconstant maximax-depth 2
   "The depth that we should search the game tree.")
 
 #+nil
@@ -142,82 +142,39 @@ Runs BODY and then restores the map."
                               (for i from 0 below (- that-length this-length))
                               (collecting 'nothing))))))
 
-(defmacro make-opposed-move (game-state cyber-truck-ahead-of-opponent)
+(defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal))
-          (alpha               most-negative-fixnum)
-          (beta                most-positive-fixnum))
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+          max-x)
      (declare (optimize (speed 3) (safety 0) (debug 0)))
-     (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
+     (with-initial-state ,(cons `(iteration (count ,maximax-depth))
+                                (cons `(recur (alpha ,most-negative-fixnum) (beta ,most-positive-fixnum))
+                                      game-state))
+       (when (= (iteration count) ,maximax-depth)
+         (setf max-x (+ (player x) 20)))
        (iter
-         (for current-turn = (+ *current-turn* (- maximax-depth (iteration count))))
-         (with opponent-moves           = (opponent moves))
-         (with player-moves             = (player   moves))
-         (with (player-cyber-truck-moves . opponent-cyber-truck-moves) =
-               (if (= (iteration count) ,maximax-depth)
-                   (iter
-                     (for opponent-move in (buffer-with-nothing opponent-moves player-moves))
-                     (for player-move   in (buffer-with-nothing player-moves   opponent-moves))
-                     (make-moves
-                      player-move
-                      opponent-move
-                      (when (> (player y) 0)
-                        (collecting (list 'use_tweet (cons (player x) (1- (player y))))
-                                    into opponent-cyber-truck-moves))
-                      (when (< (player y) 3)
-                        (collecting (list 'use_tweet (cons (player x) (1+ (player y))))
-                                    into opponent-cyber-truck-moves))
-                      (collecting (list 'use_tweet (cons (1+ (player x)) (player y)))
-                                  into opponent-cyber-truck-moves)
-                      (when (> (opponent y) 0)
-                        (collecting (list 'use_tweet (cons (opponent x) (1- (opponent y))))
-                                    into player-cyber-truck-moves))
-                      (when (< (opponent y) 3)
-                        (collecting (list 'use_tweet (cons (opponent x) (1+ (opponent y))))
-                                    into player-cyber-truck-moves))
-                      (collecting (list 'use_tweet (cons (1+ (opponent x)) (opponent y)))
-                                  into player-cyber-truck-moves))
-                     (finally (return (cons player-cyber-truck-moves
-                                            opponent-cyber-truck-moves))))
-                   (cons nil nil)))
          (with cells =
                (iter
-                 (for player-move in (if (and player-cyber-truck-moves
-                                              (> (player trucks) 0)
-                                              (not ,cyber-truck-ahead-of-opponent))
-                                         (concatenate
-                                          'list
-                                          (remove-duplicates player-cyber-truck-moves :test #'equal)
-                                          (player moves))
-                                         (player moves)))
+                 (for player-move in (player moves))
                  (collecting
                   (iter
-                    (for opponent-move in (if (and opponent-cyber-truck-moves (> (opponent trucks) 0))
-                                              (concatenate
-                                               'list
-                                               (remove-duplicates opponent-cyber-truck-moves :test #'equal)
-                                               (opponent moves))
-                                              (opponent moves)))
+                    (for opponent-move in (opponent moves))
                     (make-moves
                      player-move
                      opponent-move
-                     (bind (((player-score _ _ _ _)
-                             (if (or (end-state (player position)   (game map))
-                                     (end-state (opponent position) (game map))
+                     (bind (((player-score _ _ _ depth)
+                             (if (or (> (player   x) max-x)
+                                     (> (opponent x) max-x)
                                      (< (iteration count) 1))
-                                 (list (player score) nil nil nil nil)
-                                 (recur (1- (iteration count))))))
+                                 (list (player score) nil nil nil (- maximax-depth (iteration count)))
+                                 (recur (1- (iteration count)) alpha beta))))
                        (finding (list player-score
                                       nil
                                       player-move
                                       opponent-move
-                                      (- maximax-depth (iteration count)))
+                                      depth)
                                 minimizing player-score
                                 into best-cell)
-                       ;; (format t "Depth: ~a~%Alpha: ~a~%Beta: ~a~%"
-                       ;;         (- maximax-depth (iteration count))
-                       ;;         alpha
-                       ;;         beta)
                        (setf alpha (max alpha player-score))
                        (setf beta  (min beta  player-score))
                        (when (<= beta alpha)
@@ -248,7 +205,15 @@ Unused values will be ignored."
            (opponent-state   (cdr (assoc 'opponent  initial-state)))
            (game-state       (cdr (assoc 'game  initial-state)))
            (iteration-state  (when (assoc 'iteration initial-state)
-                               (cdr (assoc 'iteration initial-state)))))
+                               (cdr (assoc 'iteration initial-state))))
+           ((recur-args . recur-vals)
+            (if (assoc 'recur initial-state)
+                (iter
+                  (for arg in (cdr (assoc 'recur initial-state)))
+                  (collecting (car arg)  into names)
+                  (collecting (cadr arg) into values)
+                  (finally (return (cons names values))))
+                (cons nil nil))))
       (labels ((player-not-defined (symbol)
                  (when (not (assoc symbol player-state))
                    (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
@@ -386,7 +351,7 @@ Unused values will be ignored."
                                                        (y '(cdr opponent-position))
                                                        (score '(global-score
                                                                 (car opponent-position)
-                                                                (car ployer-position)
+                                                                (car player-position)
                                                                 game-turn
                                                                 opponent-boosts
                                                                 opponent-lizards
@@ -402,6 +367,22 @@ Unused values will be ignored."
                                                                 opponent-position
                                                                 opponent-emps
                                                                 all-makeable-moves))
+                                                       (cyber-moves '(iter
+                                                                      (for player-move in (player moves))
+                                                                      (for initial-damage = (player damage))
+                                                                      (make-moves
+                                                                       player-move
+                                                                       'nothing
+                                                                       (bind (((x . y) player-position)
+                                                                              (damage-taken (- player-damage initial-damage)))
+                                                                         (when (> y 0)
+                                                                           (collecting (cons damage-taken
+                                                                                             (cons 'use_tweet (cons x (1- y))))))
+                                                                         (when (< y 3)
+                                                                           (collecting (cons damage-taken
+                                                                                             (cons 'use_tweet (cons x (1+ y))))))
+                                                                         (collecting (cons damage-taken
+                                                                                           (cons 'use_tweet (cons (1+ x) y))))))))
                                                        (t (intern (mkstr 'opponent  '- symbol))))))
                       (game       (symbol) (case symbol
                                              (map 'current-game-map)))
@@ -426,31 +407,48 @@ Unused values will be ignored."
                                                                 player-position
                                                                 player-emps
                                                                 all-makeable-moves))
+                                                       (cyber-moves '(iter
+                                                                      (for opponent-move in (opponent moves))
+                                                                      (for initial-damage = (opponent damage))
+                                                                      (make-moves
+                                                                       'nothing
+                                                                       opponent-move
+                                                                       (bind (((x . y)      opponent-position)
+                                                                              (damage-taken (- opponent-damage initial-damage)))
+                                                                         (when (> y 0)
+                                                                           (collecting (cons damage-taken
+                                                                                             (cons 'use_tweet (cons x (1- y))))))
+                                                                         (when (< y 3)
+                                                                           (collecting (cons damage-taken
+                                                                                             (cons 'use_tweet (cons x (1+ y))))))
+                                                                         (collecting (cons damage-taken
+                                                                                           (cons 'use_tweet (cons (1+ x) y))))))))
                                                        (t (intern (mkstr 'player    '- symbol))))))
                       (setting    (name value)
                         `(setf ,name ,value))
                       (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
-                      (recur      (iteration-count) `(recur-inner current-game-map
-                                                                  player-position
-                                                                  player-boosts
-                                                                  player-oils
-                                                                  player-lizards
-                                                                  player-trucks
-                                                                  player-emps
-                                                                  player-speed
-                                                                  player-damage
-                                                                  player-boost-counter
-                                                                  opponent-position
-                                                                  opponent-boosts
-                                                                  opponent-oils
-                                                                  opponent-lizards
-                                                                  opponent-trucks
-                                                                  opponent-emps
-                                                                  opponent-speed
-                                                                  opponent-damage
-                                                                  opponent-boost-counter
-                                                                  game-turn
-                                                                  ,iteration-count)))
+                      (recur      (iteration-count ,@recur-args) `(recur-inner current-game-map
+                                                                               player-position
+                                                                               player-boosts
+                                                                               player-oils
+                                                                               player-lizards
+                                                                               player-trucks
+                                                                               player-emps
+                                                                               player-speed
+                                                                               player-damage
+                                                                               player-boost-counter
+                                                                               opponent-position
+                                                                               opponent-boosts
+                                                                               opponent-oils
+                                                                               opponent-lizards
+                                                                               opponent-trucks
+                                                                               opponent-emps
+                                                                               opponent-speed
+                                                                               opponent-damage
+                                                                               opponent-boost-counter
+                                                                               game-turn
+                                                                               ,iteration-count
+                                                                               ,,@recur-args)))
              (labels ((recur-inner (current-game-map
                                     player-position
                                     player-boosts
@@ -471,9 +469,10 @@ Unused values will be ignored."
                                     opponent-damage
                                     opponent-boost-counter
                                     game-turn
-                                    iteration-count)
+                                    iteration-count
+                                    ,@recur-args)
                         (progn ,@body)))
-               (recur iteration-count))))))))
+               (recur iteration-count ,@recur-vals))))))))
 
 #+nil
 (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
@@ -653,6 +652,17 @@ board."
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
 
+(defmacro make-cyber-move (game-state)
+  "Produce the best cyber truck move against the opponent."
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+     (with-initial-state ,game-state
+       (iter
+         (for (damage-taken . move) in (player cyber-moves))
+         (when (> damage-taken 0)
+           (next-iteration))
+         (for (_ . (x . y)) = move)
+         (finding move maximizing (square-score (game map) x y))))))
+
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
 
@@ -671,9 +681,14 @@ MY-ABS-X position on the board."
                                                  'nothing
                                                  (player damage))
                                                 (player damage))))
+            (cyber-time                    (and competitive-move
+                                                (not will-crash)
+                                                (not cyber-truck-ahead-of-opponent)
+                                                (> (player trucks) 0)))
             (move (cond
+                    (cyber-time (make-cyber-move ,game-state))
                     (competitive-move
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state cyber-truck-ahead-of-opponent)))
+                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
                     ((close-to-end (player x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
@@ -685,75 +700,29 @@ MY-ABS-X position on the board."
            'use_emp
            move))))
 
-(defmacro most-used-square-on-shortest-paths (game-state)
-  "Find the shortest path from the opponents current position to me in GAME-STATE."
-  `(bind ((square-travel-count (make-hash-table :test #'equal))
-          (*ahead-of-cache* (make-hash-table :test #'equal))
-          (best-turns (make-array '(1500) :initial-element 0))
-          x-limit)
-     (with-initial-state ,(cons `(iteration (count 5)) game-state)
-       (when (= 5 (iteration count))
-         (iter
-           (for i from 0 to (opponent x))
-           (setf (aref best-turns i) (iteration count)))
-         (setf x-limit (min 1499 (+ (player speed) (player x)))))
-       (cond
-         ((>= (opponent x) (player x)) t)
-         ((>= (opponent x) 1500)       t)
-         ((= (iteration count) 0)      t)
-         (t
-          (iter
-            (for original-x      = (opponent x))
-            (for original-damage = (opponent damage))
-            (for opponent-move in (opponent moves))
-            ;; The only way to become completely stuck is to not fix
-            ;; damage or keep fixing...
-            (when (or (and (= 5 (opponent damage))
-                           (not (eq opponent-move 'fix)))
-                      (and (= 0 (opponent damage))
-                           (eq opponent-move 'fix)))
-              (next-iteration))
-            (make-moves
-             'nothing
-             opponent-move
-             (when (or (> (opponent damage) original-damage)
-                       (> (opponent x) x-limit))
-               (next-iteration))
-             (when (<= (iteration count) 4)
-               (accumulate-path (game map)
-                                square-travel-count
-                                original-x
-                                (opponent x)
-                                (opponent y)))
-             (iter
-               (for i from (opponent x) downto 0)
-               (while (< (aref best-turns i) (iteration count)))
-               (setf (aref best-turns i) (iteration count)))
-             (bind ((ahead
-                     (iter
-                       (for i from (opponent x) below 1500)
-                       (while (> (aref best-turns i) (iteration count)))
-                       (finally (return (- i (opponent x)))))))
-               (when (> (* (iteration count) 15) ahead)
-                 (recur (1- (iteration count))))))))))
-     (with-open-file (f (format nil "heat-out-~a" *current-turn*)
-                        :if-exists :supersede
-                        :if-does-not-exist :create
-                        :direction :output)
-       (format f "~a~%" (iter
-                          (with game-map = (make-array '(4 1500) :initial-element 0))
-                          (for (key value) in-hashtable square-travel-count)
-                          (for (x . y) = key)
-                          (setf (aref game-map y x) value)
-                          (finally (return (print-full-game-map-to-string (list game-map)))))))
-     (with-open-file (f (format nil "map-out-~a" *current-turn*)
-                        :if-exists :supersede
-                        :if-does-not-exist :create
-                        :direction :output)
-       (format f "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
-     (iter
-       (for (key value) in-hashtable square-travel-count)
-       (finding key maximizing value))))
+(defun is-obstacle-at (game-map y x)
+  "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
+  (and (< y 4) (> y 0) (> x 0) (< x 1500)
+       (member (aref-game-map game-map y x) '(mud wall))))
+
+(defun square-score (game-map x y)
+  "Score a square for how good a cyber truck would be there.
+
+A square is good if GAME-MAP has obstacles which constrain moves
+around (X, Y), but not in such a way that it would be avoided usually
+anyway."
+  (bind ((good-squares (+ (if (is-obstacle-at game-map (1+ y) x)      1 0)
+                          (if (is-obstacle-at game-map (1- y) x)      1 0)
+                          (if (is-obstacle-at game-map (1- y) (1- x)) 1 0)
+                          (if (is-obstacle-at game-map (1+ y) (1- x)) 1 0)
+                          (if (is-obstacle-at game-map (1+ y) (1+ x)) 1 0)
+                          (if (is-obstacle-at game-map (1- y) (1+ x)) 1 0)))
+
+         (bad-squares (+ (if (is-obstacle-at game-map y x)      1 0)
+                         (if (is-obstacle-at game-map y (1+ x)) 1 0)
+                         (if (is-obstacle-at game-map y (1- x)) 1 0))))
+    (+ (* 10 x)
+       (- good-squares bad-squares))))
 
 (defun print-full-game-map-to-string (full-game-map)
   "Print FULL-GAME-MAP as a string."
@@ -809,32 +778,6 @@ MY-ABS-X position on the board."
               (emps 1)
               (boost-counter 16)))))
 
-(defun accumulate-path (game-map square-travel-count start-x end-x end-y)
-  "Increment squares in SQUARE-TRAVEL-COUNT in the given path.
-
-Use relative position of obstacles on GAME-MAP to make certain squares
-more highly weighted.
-
-Path starts at (START-X, END-Y) and ends
-at (END-X, END-Y)."
-  (iter
-    (for x from start-x below end-x)
-    (for good-squares = (+ (if (is-obstacle-at game-map (1+ end-y) x)      1 0)
-                           (if (is-obstacle-at game-map (1- end-y) x)      1 0)
-                           (if (is-obstacle-at game-map (1- end-y) (1- x)) 1 0)
-                           (if (is-obstacle-at game-map (1+ end-y) (1- x)) 1 0)
-                           (if (is-obstacle-at game-map (1+ end-y) (1+ x)) 1 0)
-                           (if (is-obstacle-at game-map (1- end-y) (1+ x)) 1 0)))
-    (for bad-squares = (+ (if (is-obstacle-at game-map end-y x)      1 0)
-                          (if (is-obstacle-at game-map end-y (1+ x)) 1 0)
-                          (if (is-obstacle-at game-map end-y (1- x)) 1 0)))
-    (incf (gethash (cons x end-y) square-travel-count 0) (1+ (- good-squares bad-squares)))))
-
-(defun is-obstacle-at (game-map y x)
-  "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
-  (and (< y 4) (> y 0) (> x 0) (< x 1500)
-       (member (aref-game-map game-map y x) '(mud wall))))
-
 (defun fill-map (state)
   "Fill *GAME-MAP* with the latest small map from STATE and return it in game-map format."
   (bind ((small-game-map (rows state)))
@@ -860,8 +803,6 @@ at (END-X, END-Y)."
          (player-oils              (my-oils state))
          (player-speed             (my-speed state))
          (player-damage            (my-damage state))
-         (opponent-boosts          1)
-         (opponent-emps            0) ; (TODO decide what's best here) Start off, assuming that he has none.
          (opponent-speed           (opponent-speed state))
 
          (filled-game-map          (fill-map state))
@@ -880,11 +821,11 @@ at (END-X, END-Y)."
                                                      (boost-counter player-boost-counter))
                                                     (opponent
                                                      (position opponent-position)
-                                                     (boosts opponent-boosts)
-                                                     (oils 0)
+                                                     (boosts 1)
+                                                     (oils 1)
                                                      (lizards 1)
                                                      (trucks 1)
-                                                     (emps opponent-emps)
+                                                     (emps 0) ; TODO: decide what's best here
                                                      (speed opponent-speed)
                                                      (damage 0)
                                                      (boost-counter 0))))))
@@ -1757,16 +1698,16 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
   "Place cyber trucks on GAME-MAP if PLAYER-MOVE or OPPONENT-MOVE is a truck."
   (bind ((trucks                 (cdr game-map))
          (new-trucks-with-player (if (consp player-move)
-                                     (cons (cadr player-move) trucks)
+                                     (cons (cdr player-move) trucks)
                                      trucks))
          (new-trucks             (if (consp opponent-move)
-                                     (cons (cadr opponent-move)
+                                     (cons (cdr opponent-move)
                                            new-trucks-with-player)
                                      new-trucks-with-player)))
     (cons (car game-map)
           (subseq new-trucks
                   0
-                  (min (length trucks) 2)))))
+                  (min (max (length new-trucks) (length trucks)) 2)))))
 
 (defun replay-from-folder (folder-path &rest rounds)
   "Check that `make-move' produces the same result as the target engine."
