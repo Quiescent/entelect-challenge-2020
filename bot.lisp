@@ -104,7 +104,7 @@ Value is [muds boosts walls tweets lizards].")
 
 ;; Might want to try turning on optimsations for this to get to depth
 ;; three!
-(defconstant maximax-depth 2
+(defconstant maximax-depth 3
   "The depth that we should search the game tree.")
 
 #+nil
@@ -142,7 +142,9 @@ Runs BODY and then restores the map."
 
 (defmacro make-opposed-move (game-state cyber-truck-ahead-of-opponent)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal)))
+  `(bind ((*ahead-of-cache*    (make-hash-table :test #'equal))
+          (alpha               most-negative-fixnum)
+          (beta                most-positive-fixnum))
      (declare (optimize (speed 3) (safety 0) (debug 0)))
      (with-initial-state ,(cons `(iteration (count ,maximax-depth)) game-state)
        (iter
@@ -197,20 +199,31 @@ Runs BODY and then restores the map."
                     (make-moves
                      player-move
                      opponent-move
-                     (bind (((player-score opponent-score _ _ _)
+                     (bind (((player-score _ _ _ _)
                              (if (or (end-state (player position)   (game map))
                                      (end-state (opponent position) (game map))
                                      (< (iteration count) 1))
-                                 (list (player score) (opponent score) nil nil nil)
+                                 (list (player score) nil nil nil nil)
                                  (recur (1- (iteration count))))))
                        (finding (list player-score
-                                      opponent-score
+                                      nil
                                       player-move
                                       opponent-move
                                       (- maximax-depth (iteration count)))
-                                minimizing player-score)))))))
+                                minimizing player-score
+                                into best-cell)
+                       ;; (format t "Depth: ~a~%Alpha: ~a~%Beta: ~a~%"
+                       ;;         (- maximax-depth (iteration count))
+                       ;;         alpha
+                       ;;         beta)
+                       (setf alpha (max alpha player-score))
+                       (setf beta  (min beta  player-score))
+                       (when (<= beta alpha)
+                         (return best-cell))
+                       (finally
+                        (return best-cell))))))))
          (for cell in cells)
-         (finding cell minimizing (cadr cell))))))
+         (finding cell maximizing (car cell))))))
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
