@@ -639,11 +639,12 @@ board."
      (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
        (-> (states-from ,game-state)
          copy-seq
-         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2) state))
+         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
                                      (global-score (car pos-2)
                                                    (opponent x)
                                                    (+ *current-turn* (length path))
                                                    boosts-2
+                                                   oils-2
                                                    lizards-2
                                                    trucks-2
                                                    emps-2
