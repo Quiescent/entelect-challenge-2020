@@ -1269,8 +1269,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
            (type fixnum damage speed boosts oils lizards trucks emps boost-counter))
   (bind (((oil-x . oil-y) other-position)
-         (using-oil       (and (eq other-move 'use_oil)
-                               (< (car other-position) (game-map-x-dim game-map))))
+         (using-oil       (eq other-move 'use_oil))
          (original-tile   (when using-oil (aref-game-map game-map oil-y oil-x))))
     (when using-oil (setf-game-map game-map oil-y oil-x 'mud))
     (bind ((all-hit           (ahead-of collision-result
