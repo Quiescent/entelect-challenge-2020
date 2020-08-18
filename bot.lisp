@@ -719,9 +719,10 @@ MY-ABS-X position on the board."
                                                  (not will-crash)
                                                  (not cyber-truck-ahead-of-opponent)
                                                  (> (player trucks) 0)))
-            (hes-right-behind               (and (= (opponent y) (player y))
+            (opponent-right-behind          (and (= (opponent y) (player y))
                                                  (> (player x) (opponent x))
                                                  (< (player x) (+ (opponent speed) (opponent x)))))
+            (opponent-is-behind             (> (player x) (opponent x)))
             (opponent-damage-now            (opponent damage))
             (there-are-obstacles-next-to-us (or (make-moves
                                                  'nothing
@@ -731,9 +732,12 @@ MY-ABS-X position on the board."
                                                  'nothing
                                                  'turn_right
                                                  (> (opponent damage) opponent-damage-now))))
+            (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
             (oil-time                       (and (not will-crash)
-                                                 hes-right-behind
-                                                 there-are-obstacles-next-to-us
+                                                 (or (and opponent-right-behind
+                                                          there-are-obstacles-next-to-us)
+                                                     (and opponent-is-behind
+                                                          im-on-a-constriction))
                                                  (> (player oils) 0)))
             (emp-time                       (and opponent-is-way-ahead-of-me
                                                  (<= (abs (- (player y) (opponent y))) 1)
