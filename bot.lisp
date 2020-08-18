@@ -171,12 +171,12 @@ Runs BODY and then restores the map."
   (bind ((this-length (length these-moves))
          (that-length (length those-moves)))
     (if (> this-length that-length)
-               these-moves
-               (concatenate 'list
-                            these-moves
-                            (iter
-                              (for i from 0 below (- that-length this-length))
-                              (collecting 'nothing))))))
+        these-moves
+        (concatenate 'list
+                     these-moves
+                     (iter
+                       (for i from 0 below (- that-length this-length))
+                       (collecting 'nothing))))))
 
 (defmacro make-opposed-move (game-state)
   "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
@@ -544,10 +544,10 @@ Unused values will be ignored."
 (defmacro make-speed-move (game-state)
   "Produce the best speed move to make on GAME-STATE."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-    (-> (rank-order-all-moves ,game-state)
-      caar
-      last
-      car)))
+     (-> (rank-order-all-moves ,game-state)
+       caar
+       last
+       car)))
 
 (defmacro no-net-change (move game-state)
   "Produce t if MOVE didn't actively change GAME-STATE.
@@ -661,16 +661,16 @@ left, the SPEED at which I'm going and MY-ABS-X position on the
 board."
   `(with-initial-state ,game-state
      (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-      (-> (states-from ,game-state)
-        copy-seq
-        (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 boost-counter-2 emps-2) state))
-                                         (global-speed-score (car pos-2)
-                                                             (+ *current-turn* (length path))
-                                                             boosts-2
-                                                             lizards-2
-                                                             (cdr pos-2)
-                                                             boost-counter-2
-                                                             damage-2))))))))
+       (-> (states-from ,game-state)
+         copy-seq
+         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 boost-counter-2 emps-2) state))
+                                          (global-speed-score (car pos-2)
+                                                              (+ *current-turn* (length path))
+                                                              boosts-2
+                                                              lizards-2
+                                                              (cdr pos-2)
+                                                              boost-counter-2
+                                                              damage-2))))))))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
