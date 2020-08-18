@@ -1216,13 +1216,15 @@ Produces staged values of position speed and the new boost counter."
 
 (defmacro use-power-up-if-move-is (this-move accumulating-move)
   "Produce -1 if THIS-MOVE is ACCUMULATING-MOVE, otherwise 0."
-  (if (eq accumulating-move 'use_tweet)
-      `(if (eq ,(car this-move) ,accumulating-move)
-           (the fixnum -1)
-           (the fixnum 0))
-      `(if (eq ,this-move ,accumulating-move)
-           (the fixnum -1)
-           (the fixnum 0))))
+  `(if (eq ,this-move ,accumulating-move)
+       (the fixnum -1)
+       (the fixnum 0)))
+
+(defmacro use-tweet-powerup (this-move)
+  "Produce -1 if THIS-MOVE is a tweet move otherwise 0."
+  `(if (consp ,this-move)
+       (the fixnum -1)
+       (the fixnum 0)))
 
 (defun interact-with-map (collision-result
                           start-position
@@ -1263,7 +1265,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
            (new-lizards       (+ (use-power-up-if-move-is move 'use_lizard)
                                  (aref all-hit 4)
                                  lizards))
-           (new-trucks        (+ (use-power-up-if-move-is move 'use_tweet)
+           (new-trucks        (+ (use-tweet-powerup move)
                                  (aref all-hit 3)
                                  trucks))
            (new-emps          (+ (use-power-up-if-move-is move 'use_emp)
