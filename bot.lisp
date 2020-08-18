@@ -391,12 +391,15 @@ Unused values will be ignored."
                                                                               (damage-taken (- player-damage initial-damage)))
                                                                          (when (> y 0)
                                                                            (collecting (cons damage-taken
-                                                                                             (cons 'use_tweet (cons x (1- y))))))
+                                                                                             (cons player-move
+                                                                                                   (cons 'use_tweet (cons x (1- y)))))))
                                                                          (when (< y 3)
                                                                            (collecting (cons damage-taken
-                                                                                             (cons 'use_tweet (cons x (1+ y))))))
+                                                                                             (cons player-move
+                                                                                                   (cons 'use_tweet (cons x (1+ y)))))))
                                                                          (collecting (cons damage-taken
-                                                                                           (cons 'use_tweet (cons (1+ x) y))))))))
+                                                                                           (cons player-move
+                                                                                                 (cons 'use_tweet (cons (1+ x) y)))))))))
                                                        (t (intern (mkstr 'opponent  '- symbol))))))
                       (game       (symbol) (case symbol
                                              (map 'current-game-map)))
@@ -432,12 +435,15 @@ Unused values will be ignored."
                                                                               (damage-taken (- opponent-damage initial-damage)))
                                                                          (when (> y 0)
                                                                            (collecting (cons damage-taken
-                                                                                             (cons 'use_tweet (cons x (1- y))))))
+                                                                                             (cons opponent-move
+                                                                                                   (cons 'use_tweet (cons x (1- y)))))))
                                                                          (when (< y 3)
                                                                            (collecting (cons damage-taken
-                                                                                             (cons 'use_tweet (cons x (1+ y))))))
+                                                                                             (cons opponent-move
+                                                                                                   (cons 'use_tweet (cons x (1+ y)))))))
                                                                          (collecting (cons damage-taken
-                                                                                           (cons 'use_tweet (cons (1+ x) y))))))))
+                                                                                           (cons opponent-move
+                                                                                                 (cons 'use_tweet (cons (1+ x) y)))))))))
                                                        (t (intern (mkstr 'player    '- symbol))))))
                       (setting    (name value)
                         `(setf ,name ,value))
@@ -671,7 +677,7 @@ board."
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
 
-(defvar non-boost-straight-moves '(accelerate nothing decelerate)
+(defvar non-boost-straight-moves '(accelerate use_oil use_emp nothing decelerate)
   "All moves which will result in going straight without jumping.")
 
 (defmacro make-cyber-move (game-state)
@@ -689,16 +695,16 @@ board."
                                         'nothing
                                         'turn_right
                                         (= initial-damage (opponent damage)))))))
-           (iter
-             (for (damage-taken . move) in (player cyber-moves))
-             (when (and turn-available
-                        (or (eq move 'use_lizard)
-                            (member move non-boost-straight-moves)))
-               (next-iteration))
-             (when (> damage-taken 0)
-               (next-iteration))
-             (for (_ . (x . y)) = move)
-             (finding move maximizing (+ (* 10 x) (square-score (game map) x y))))))))
+         (iter
+           (for (damage-taken move . coord) in (player cyber-moves))
+           (when (and turn-available
+                      (or (eq move 'use_lizard)
+                          (member move non-boost-straight-moves)))
+             (next-iteration))
+           (when (> damage-taken 0)
+             (next-iteration))
+           (for (_ . (x . y)) = coord)
+           (finding coord maximizing (+ (* 10 x) (square-score (game map) x y))))))))
 
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
