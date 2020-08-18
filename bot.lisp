@@ -739,7 +739,7 @@ MY-ABS-X position on the board."
 
 (defun is-obstacle-at (game-map y x)
   "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
-  (and (< y 4) (> y 0) (> x 0) (< x 1500)
+  (and (< y 4) (>= y 0) (> x 0) (< x 1500)
        (member (aref-game-map game-map y x) '(mud wall))))
 
 (defun square-score (game-map x y)
