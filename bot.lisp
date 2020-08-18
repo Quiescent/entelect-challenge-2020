@@ -760,8 +760,8 @@ anyway."
                           (if (is-obstacle-at game-map (1- y) (1+ x)) 1 0)))
 
          (bad-squares (+ (if (is-obstacle-at game-map y (1+ x))  10 0)
-                         (if (is-obstacle-at game-map y (+ x 2)) 3 0)
-                         (if (is-obstacle-at game-map y (+ x 3)) 2 0)
+                         (if (is-obstacle-at game-map y (+ x 2)) 7 0)
+                         (if (is-obstacle-at game-map y (+ x 3)) 4 0)
                          (if (is-obstacle-at game-map y (+ x 4)) 1 0)))
 
          (is-obstacle-already (if (is-obstacle-at game-map y x) 20 0)))
