@@ -683,7 +683,8 @@ board."
            (iter
              (for (damage-taken . move) in (player cyber-moves))
              (when (and turn-available
-                        (eq move 'use_lizard))
+                        (eq move 'use_lizard)
+                        (member move all-straight-moves))
                (next-iteration))
              (when (> damage-taken 0)
                (next-iteration))
