@@ -695,7 +695,7 @@ board."
          (when (> damage-taken 0)
            (next-iteration))
          (for (_ . (x . y)) = move)
-         (finding move maximizing (square-score (game map) x y))))))
+         (finding move maximizing (+ (* 10 x) (square-score (game map) x y)))))))
 
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
@@ -773,8 +773,7 @@ anyway."
          (bad-squares (+ (if (is-obstacle-at game-map y x)      1 0)
                          (if (is-obstacle-at game-map y (1+ x)) 1 0)
                          (if (is-obstacle-at game-map y (1- x)) 1 0))))
-    (+ (* 10 x)
-       (- good-squares bad-squares))))
+    (- good-squares bad-squares)))
 
 (defun print-full-game-map-to-string (full-game-map)
   "Print FULL-GAME-MAP as a string."
