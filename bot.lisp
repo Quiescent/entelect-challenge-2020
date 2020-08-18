@@ -665,6 +665,9 @@ board."
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
 
+(defvar non-boost-straight-moves '(accelerate nothing decelerate)
+  "All moves which will result in going straight without jumping.")
+
 (defmacro make-cyber-move (game-state)
   "Produce the best cyber truck move against the opponent."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
@@ -683,8 +686,8 @@ board."
            (iter
              (for (damage-taken . move) in (player cyber-moves))
              (when (and turn-available
-                        (eq move 'use_lizard)
-                        (member move all-straight-moves))
+                        (or (eq move 'use_lizard)
+                            (member move non-boost-straight-moves)))
                (next-iteration))
              (when (> damage-taken 0)
                (next-iteration))
