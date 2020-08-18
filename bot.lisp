@@ -669,12 +669,26 @@ board."
   "Produce the best cyber truck move against the opponent."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (with-initial-state ,game-state
-       (iter
-         (for (damage-taken . move) in (player cyber-moves))
-         (when (> damage-taken 0)
-           (next-iteration))
-         (for (_ . (x . y)) = move)
-         (finding move maximizing (+ (* 10 x) (square-score (game map) x y)))))))
+       (bind ((initial-damage (opponent damage))
+              (turn-available (or (and (> (opponent y) 0)
+                                       (make-moves
+                                        'nothing
+                                        'turn_left
+                                        (= initial-damage (opponent damage))))
+                                  (and (< (opponent y) 3)
+                                       (make-moves
+                                        'nothing
+                                        'turn_right
+                                        (= initial-damage (opponent damage)))))))
+           (iter
+             (for (damage-taken . move) in (player cyber-moves))
+             (when (and turn-available
+                        (eq move 'use_lizard))
+               (next-iteration))
+             (when (> damage-taken 0)
+               (next-iteration))
+             (for (_ . (x . y)) = move)
+             (finding move maximizing (+ (* 10 x) (square-score (game map) x y))))))))
 
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
