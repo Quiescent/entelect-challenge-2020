@@ -1861,14 +1861,20 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                     current-move
                     computed
                     actual))
-          (bind ((next-map (fill-map next-state)))
-            (when (not (equal new-game-map next-map))
-              (format t "Game maps don't match~%")
-              (format t "Round: ~a~%" round)
-              (format t "Trucks computed: ~a~%" (cdr next-map))
-              (format t "Trucks new: ~a~%" (cdr new-game-map))
-              (format t "Computed:~%~A~%" (print-full-game-map-to-string new-game-map))
-              (format t "New:~%~A~%" (print-full-game-map-to-string next-map)))))))))
+          (bind ((my-new-x (car (my-abs-pos next-state))))
+            (labels ((off-my-map (coord) (or (< (car coord)  (- my-new-x 5))
+                                             (> (car coord) (+ my-new-x 20)))))
+             (bind ((next-map (fill-map next-state)))
+               (when (or (not (equal (car new-game-map) (car next-map)))
+                         (not (equal (remove-if #'off-my-map (cdr new-game-map))
+                                     (remove-if #'off-my-map (cdr next-map)))))
+                 (format t "Game maps don't match~%")
+                 (format t "Round: ~a~%" round)
+                 (format t "My pos: ~a~%" (my-abs-pos next-state))
+                 (format t "Trucks next: ~a~%" (cdr next-map))
+                 (format t "Trucks computed: ~a~%" (cdr new-game-map))
+                 (format t "Next:~%~A~%" (print-full-game-map-to-string new-game-map))
+                 (format t "Computed:~%~A~%" (print-full-game-map-to-string next-map)))))))))))
 
 #+nil
 (progn
