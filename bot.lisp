@@ -729,8 +729,11 @@ MY-ABS-X position on the board."
        (cond
          (emp-time   'use_emp)
          (cyber-time (bind ((cyber-move (make-cyber-move ,game-state)))
-                       (setf *player-cyber-truck-position* (cdr cyber-move))
-                       cyber-move))
+                       (if (> (cadr cyber-move) (+ 10 (player x)))
+                           (make-speed-move ,game-state)
+                           (progn
+                             (setf *player-cyber-truck-position* (cdr cyber-move))
+                             cyber-move))))
          (oil-time   'use-oil)
          (competitive-move
           (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
