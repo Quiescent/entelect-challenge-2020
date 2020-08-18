@@ -14,7 +14,6 @@ package:
 	cp *.asd target/
 	cp bot.json target/
 	cp -f score-config target/
-	cp -f speed-score-config target/
 	cp Makefile target/
 	cp Dockerfile target/
 	cd target/ && zip bot.zip *
