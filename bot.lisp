@@ -755,7 +755,7 @@ MY-ABS-X position on the board."
                            (progn
                              (setf *player-cyber-truck-position* (cdr cyber-move))
                              cyber-move))))
-         (oil-time   'use-oil)
+         (oil-time   'use_oil)
          (competitive-move
           (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
             (if (= depth 0) (make-speed-move ,game-state) my-move)))
