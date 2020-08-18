@@ -703,14 +703,16 @@ MY-ABS-X position on the board."
             (opponent-is-behind             (> (player x) (opponent x)))
             (opponent-damage-now            (opponent damage))
             (there-are-obstacles-next-to-us (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-                                              (or (make-moves
-                                                   'nothing
-                                                   'turn_left
-                                                   (> (opponent damage) opponent-damage-now))
-                                                  (make-moves
-                                                   'nothing
-                                                   'turn_right
-                                                   (> (opponent damage) opponent-damage-now)))))
+                                              (or (or (= 0 (opponent y))
+                                                      (make-moves
+                                                       'nothing
+                                                       'turn_left
+                                                       (> (opponent damage) opponent-damage-now)))
+                                                  (or (= 3 (opponent y))
+                                                      (make-moves
+                                                       'nothing
+                                                       'turn_right
+                                                       (> (opponent damage) opponent-damage-now))))))
             (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
             (oil-time                       (and (not will-crash)
                                                  (or (and opponent-right-behind
