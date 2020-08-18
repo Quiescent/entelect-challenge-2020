@@ -761,8 +761,10 @@ anyway."
 
          (bad-squares (+ (if (is-obstacle-at game-map y x)      1 0)
                          (if (is-obstacle-at game-map y (1+ x)) 1 0)
-                         (if (is-obstacle-at game-map y (1- x)) 1 0))))
-    (- good-squares bad-squares)))
+                         (if (is-obstacle-at game-map y (1- x)) 1 0)))
+
+         (is-obstacle-already (if (is-obstacle-at game-map y x) 20 0)))
+    (- good-squares bad-squares is-obstacle-already)))
 
 (defun print-full-game-map-to-string (full-game-map)
   "Print FULL-GAME-MAP as a string."
