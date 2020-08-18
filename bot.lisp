@@ -22,15 +22,6 @@
 (defvar *damage-score* 1.0)
 (defvar *current-turn-score* 1.0)
 
-(defvar *speed-x-score* 1.0)
-(defvar *speed-average-speed-score* 1.0)
-(defvar *speed-boosts-score* 1.0)
-(defvar *speed-lizards-score* 1.0)
-(defvar *speed-y-score* 1.0)
-(defvar *speed-boost-counter-score* 1.0)
-(defvar *speed-damage-score* 1.0)
-(defvar *speed-current-turn-score* 1.0)
-
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
@@ -43,15 +34,7 @@
                  *emp-score*
                  *y-score*
                  *damage-score*
-                 *current-turn-score*
-                 *speed-x-score*
-                 *speed-average-speed-score*
-                 *speed-boosts-score*
-                 *speed-lizards-score*
-                 *speed-y-score*
-                 *speed-boost-counter-score*
-                 *speed-damage-score*
-                 *speed-current-turn-score*)))
+                 *current-turn-score*)))
 
 (defun read-weights ()
   "Read all scores from the score config file."
@@ -73,25 +56,7 @@
               *emp-score*          emp-score
               *y-score*            y-score
               *damage-score*       damage-score
-              *current-turn-score* current-turn-score)))
-    (with-open-file (f "./speed-score-config")
-      (bind (((speed-x-score
-               speed-average-speed-score
-               speed-boosts-score
-               speed-lizards-score
-               speed-y-score
-               speed-boost-counter-score
-               speed-damage-score
-               speed-current-turn-score)
-              (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
-        (setf speed-x-score             *speed-x-score*
-              speed-average-speed-score *speed-average-speed-score*
-              speed-boosts-score        *speed-boosts-score*
-              speed-lizards-score       *speed-lizards-score*
-              speed-y-score             *speed-y-score*
-              speed-boost-counter-score *speed-boost-counter-score*
-              speed-damage-score        *speed-damage-score*
-              speed-current-turn-score  *speed-current-turn-score*)))))
+              *current-turn-score* current-turn-score)))))
 
 (defun main ()
   (iter
@@ -663,14 +628,16 @@ board."
      (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
        (-> (states-from ,game-state)
          copy-seq
-         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 boost-counter-2 emps-2) state))
-                                          (global-speed-score (car pos-2)
-                                                              (+ *current-turn* (length path))
-                                                              boosts-2
-                                                              lizards-2
-                                                              (cdr pos-2)
-                                                              boost-counter-2
-                                                              damage-2))))))))
+         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2) state))
+                                     (global-score (car pos-2)
+                                                   (opponent x)
+                                                   (+ *current-turn* (length path))
+                                                   boosts-2
+                                                   lizards-2
+                                                   trucks-2
+                                                   emps-2
+                                                   (cdr pos-2)
+                                                   damage-2))))))))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
@@ -960,21 +927,6 @@ anyway."
 Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
-
-(defun global-speed-score (absolute-x current-turn boosts lizards y boost-counter damage)
-  "Score the position described by ABSOLUTE-X BOOSTS LIZARDS."
-  (bind ((is-middle-two (if (or (= y 1)
-                                (= y 2))
-                            1
-                            0)))
-    (+ (* *speed-x-score*             absolute-x)
-       (* *speed-average-speed-score* (/ absolute-x current-turn))
-       (* *speed-boosts-score*        boosts)
-       (* *speed-lizards-score*       lizards)
-       (* *speed-y-score*             is-middle-two)
-       (* *speed-boost-counter-score* boost-counter)
-       (* *speed-damage-score*        damage)
-       (* *speed-current-turn-score*  current-turn))))
 
 ;; TODO: Include oils...
 (defun global-score (x other-x current-turn boosts lizards trucks emps y damage)
