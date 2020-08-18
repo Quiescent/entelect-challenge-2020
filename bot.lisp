@@ -163,9 +163,15 @@ Runs BODY and then restores the map."
          (with cells =
                (iter
                  (for player-move in (player moves))
+                 (when (and (eq player-move 'fix)
+                          (= (player damage) 0))
+                   (next-iteration))
                  (collecting
                   (iter
                     (for opponent-move in (opponent moves))
+                    (when (and (eq opponent-move 'fix)
+                          (= (opponent damage) 0))
+                      (next-iteration))
                     (make-moves
                      player-move
                      opponent-move
