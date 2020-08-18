@@ -727,6 +727,7 @@ MY-ABS-X position on the board."
                                                  (> (player emps) 0)
                                                  (not will-crash))))
        (cond
+         ((close-to-end (player x)) (make-finishing-move ,game-state))
          (emp-time   'use_emp)
          (cyber-time (bind ((cyber-move (make-cyber-move ,game-state)))
                        (if (> (cadr cyber-move) (+ 10 (player x)))
@@ -738,7 +739,6 @@ MY-ABS-X position on the board."
          (competitive-move
           (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
             (if (= depth 0) (make-speed-move ,game-state) my-move)))
-         ((close-to-end (player x)) (make-finishing-move ,game-state))
          (t (make-speed-move ,game-state))))))
 
 (defun is-obstacle-at (game-map y x)
