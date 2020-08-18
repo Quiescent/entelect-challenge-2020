@@ -376,7 +376,7 @@ Unused values will be ignored."
                                                                 opponent-emps
                                                                 all-makeable-moves))
                                                        (cyber-moves '(iter
-                                                                      (for player-move in (player moves))
+                                                                      (for player-move in   (player moves))
                                                                       (for initial-damage = (player damage))
                                                                       (make-moves
                                                                        player-move
