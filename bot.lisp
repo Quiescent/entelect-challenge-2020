@@ -1482,8 +1482,8 @@ Prepend 'WHICH-PLAYER - ' to the path for the players move and state."
                          (cl-ppcre:split " "))))
       (if (> (length move-parts) 1)
           (cons (read-from-string (car move-parts))
-                (cons (read-from-string (cadr move-parts))
-                      (read-from-string (caddr move-parts))))
+                (cons (1- (read-from-string (caddr move-parts)))
+                      (1- (read-from-string (cadr move-parts)))))
           (read-from-string (car move-parts))))))
 
 (defmacro should-equal (form-1 form-2)
