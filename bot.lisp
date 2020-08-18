@@ -734,6 +734,8 @@ MY-ABS-X position on the board."
                                                        (> (opponent damage) opponent-damage-now))))))
             (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
             (oil-time                       (and (not will-crash)
+                                                 (not (member (aref-game-map (game map) (player y) (player x))
+                                                              '(mud wall)))
                                                  (or (and opponent-right-behind
                                                           there-are-obstacles-next-to-us)
                                                      (and opponent-is-behind
