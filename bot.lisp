@@ -1272,7 +1272,7 @@ DAMAGE, SPEED, BOOSTS, LIZARDS and TRUCKS."
            (new-oils          (+ (use-power-up-if-move-is move 'use_oil)
                                  (aref all-hit 6)
                                  oils))
-           (new-damage        (min 6 (+ muds-hit
+           (new-damage        (min 5 (+ muds-hit
                                         (* 2 walls-hit)
                                         (max 0 (if (eq move 'fix) (- damage 2) damage)))))
            (final-speed       (min (maximum-speed new-damage)
