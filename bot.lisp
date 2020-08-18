@@ -704,35 +704,53 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((competitive-move              (opponent-is-close-by (player x) (opponent x)))
-            (opponent-is-way-ahead-of-me   (not competitive-move))
-            (cyber-truck-ahead-of-opponent (and *player-cyber-truck-position*
-                                                (> (car *player-cyber-truck-position*)
-                                                   (opponent x))))
-            (will-crash                    (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-                                             (> (make-moves
+     (bind ((competitive-move               (opponent-is-close-by (player x) (opponent x)))
+            (opponent-is-way-ahead-of-me    (not competitive-move))
+            (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
+                                                 (> (car *player-cyber-truck-position*)
+                                                    (opponent x))))
+            (will-crash                     (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+                                              (> (make-moves
+                                                  'nothing
+                                                  'nothing
+                                                  (player damage))
+                                                 (player damage))))
+            (cyber-time                     (and competitive-move
+                                                 (not will-crash)
+                                                 (not cyber-truck-ahead-of-opponent)
+                                                 (> (player trucks) 0)))
+            (hes-right-behind               (and (= (opponent y) (player y))
+                                                 (> (player x) (opponent x))
+                                                 (< (player x) (+ (opponent speed) (opponent x)))))
+            (opponent-damage-now            (opponent damage))
+            (there-are-obstacles-next-to-us (or (make-moves
                                                  'nothing
+                                                 'turn_left
+                                                 (> (opponent damage) opponent-damage-now))
+                                                (make-moves
                                                  'nothing
-                                                 (player damage))
-                                                (player damage))))
-            (cyber-time                    (and competitive-move
-                                                (not will-crash)
-                                                (not cyber-truck-ahead-of-opponent)
-                                                (> (player trucks) 0)))
-            (move (cond
-                    (cyber-time (make-cyber-move ,game-state))
-                    (competitive-move
-                     (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
-                       (if (= depth 0) (make-speed-move ,game-state) my-move)))
-                    ((close-to-end (player x)) (make-finishing-move ,game-state))
-                    (t (make-speed-move ,game-state)))))
-       (if (and opponent-is-way-ahead-of-me
-                (<= (abs (- (player y) (opponent y))) 1)
-                (not (eq *previous-move* 'use_emp))
-                (> (player emps) 0)
-                (not will-crash))
-           'use_emp
-           move))))
+                                                 'turn_right
+                                                 (> (opponent damage) opponent-damage-now))))
+            (oil-time                       (and (not will-crash)
+                                                 hes-right-behind
+                                                 there-are-obstacles-next-to-us
+                                                 (> (player oils) 0)))
+            (emp-time                       (and opponent-is-way-ahead-of-me
+                                                 (<= (abs (- (player y) (opponent y))) 1)
+                                                 (not (eq *previous-move* 'use_emp))
+                                                 (> (player emps) 0)
+                                                 (not will-crash))))
+       (cond
+         (emp-time   'use_emp)
+         (cyber-time (bind ((cyber-move (make-cyber-move ,game-state)))
+                       (setf *player-cyber-truck-position* (cdr cyber-move))
+                       cyber-move))
+         (oil-time   'use-oil)
+         (competitive-move
+          (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
+            (if (= depth 0) (make-speed-move ,game-state) my-move)))
+         ((close-to-end (player x)) (make-finishing-move ,game-state))
+         (t (make-speed-move ,game-state))))))
 
 (defun is-obstacle-at (game-map y x)
   "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
