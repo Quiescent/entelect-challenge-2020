@@ -1737,21 +1737,18 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
 
             new-game-map)))
 
-;; TODO: Shortcuts abound!
 (defun place-cyber-trucks (game-map player-move opponent-move)
   "Place cyber trucks on GAME-MAP if PLAYER-MOVE or OPPONENT-MOVE is a truck."
-  (bind ((trucks                 (cdr game-map))
-         (new-trucks-with-player (if (consp player-move)
-                                     (cons (cdr player-move) trucks)
-                                     trucks))
-         (new-trucks             (if (consp opponent-move)
-                                     (cons (cdr opponent-move)
-                                           new-trucks-with-player)
-                                     new-trucks-with-player)))
-    (cons (car game-map)
-          (subseq new-trucks
-                  0
-                  (min (max (length new-trucks) (length trucks)) 2)))))
+  (labels ((coord-same-as-player-truck (coord) (equal coord *player-cyber-truck-position*)))
+    (bind ((trucks                 (cdr game-map))
+           (player-move-is-cyber   (consp player-move))
+           (opponent-move-is-cyber (consp opponent-move))
+           (opponent-cyber-truck   (find-if-not #'coord-same-as-player-truck trucks))
+           (player-cyber-truck     (find-if     #'coord-same-as-player-truck trucks))
+           (new-player-truck       (if player-move-is-cyber   (cdr player-move)   player-cyber-truck))
+           (new-opponent-truck     (if opponent-move-is-cyber (cdr opponent-move) opponent-cyber-truck)))
+      (cons (car game-map)
+            (remove nil (list new-player-truck new-opponent-truck))))))
 
 (defun replay-from-folder (folder-path &rest rounds)
   "Check that `make-move' produces the same result as the target engine."
@@ -1864,19 +1861,26 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                     computed
                     actual))
           (bind ((my-new-x (car (my-abs-pos next-state))))
-            (labels ((off-my-map (coord) (or (< (car coord)  (- my-new-x 5))
+            (labels ((off-my-map (coord) (or (< (car coord) (- my-new-x 5))
                                              (> (car coord) (+ my-new-x 20)))))
              (bind ((next-map (fill-map next-state)))
                (when (or (not (equal (car new-game-map) (car next-map)))
-                         (not (equal (remove-if #'off-my-map (cdr new-game-map))
-                                     (remove-if #'off-my-map (cdr next-map)))))
+                         (not (equal (sort (remove-if #'off-my-map (cdr new-game-map))
+                                           (lambda (coord-1 coord-2) (< (car coord-1) (car coord-2))))
+                                     (sort (remove-if #'off-my-map (cdr next-map))
+                                           (lambda (coord-1 coord-2) (< (car coord-1) (car coord-2)))))))
+                 (format t "Trucks before: ~a~%" (cdr filled-game-map))
+                 (format t "Player move: ~a~%" current-move)
+                 (format t "Opponent move: ~a~%" opponent-move)
                  (format t "Game maps don't match~%")
                  (format t "Round: ~a~%" round)
                  (format t "My pos: ~a~%" (my-abs-pos next-state))
                  (format t "Trucks next: ~a~%" (cdr next-map))
                  (format t "Trucks computed: ~a~%" (cdr new-game-map))
                  (format t "Next:~%~A~%" (print-full-game-map-to-string new-game-map))
-                 (format t "Computed:~%~A~%" (print-full-game-map-to-string next-map)))))))))))
+                 (format t "Computed:~%~A~%" (print-full-game-map-to-string next-map)))))))
+        (when (consp current-move)
+          (setf *player-cyber-truck-position* (cdr current-move)))))))
 
 #+nil
 (progn
