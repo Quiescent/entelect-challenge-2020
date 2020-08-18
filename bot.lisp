@@ -74,7 +74,7 @@
     (for round-number = (read-line))
     (bind ((*current-turn* (read-from-string round-number)))
       (for move = (move-for-round round-number)))
-    (format t "C;~a;~a~%" round-number (move-to-string move))))
+    (format t "C;~a;~a~%" (read-from-string round-number) (move-to-string move))))
 
 (defun move-to-string (move)
   "Produce a string representation of MOVE."
@@ -1382,7 +1382,7 @@ If X, Y is OOB then produce DEFAULT."
 
 (defun load-state-file (round)
   "Load the state file for ROUND."
-  (load-state-from-file (make-pathname :directory (list :relative "rounds" (format nil "~a" round))
+  (load-state-from-file (make-pathname :directory (list :relative "rounds" (format nil "~a" (read-from-string round)))
                                        :name "state"
                                        :type "json")))
 
