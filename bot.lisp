@@ -1088,8 +1088,8 @@ When going at SPEED from X, Y on GAME-MAP."
       (1 9)
       (2 8)
       (3 6)
-      (4 5)
-      (5 3)
+      (4 3)
+      (5 0)
       (t 0)))
 
   (defun increase-speed (speed damage)
