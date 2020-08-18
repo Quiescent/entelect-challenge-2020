@@ -43,6 +43,7 @@
   (progn
     (with-open-file (f "./score-config")
       (bind (((x-score
+               margin-score
                boosts-score
                oils-score
                lizards-score
@@ -53,6 +54,7 @@
                current-turn-score)
               (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
         (setf *x-score*            x-score
+              *margin-score*       margin-score
               *boosts-score*       boosts-score
               *oils-score*         oils-score
               *lizards-score*      lizards-score
