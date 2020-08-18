@@ -1762,119 +1762,120 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
   "Check that `make-move' produces the same result as the target engine."
   (bind ((*full-game-map* (make-array '(4 1500) :initial-element nil)))
     (with-consecutive-states folder-path "Quantum" 'A
-     (when (or (null rounds)
-               (and rounds
-                    (member round rounds)))
-       (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-              (filled-game-map  (fill-map current-state))
-              (player-move      current-move)
+      (when (or (null rounds)
+                (and rounds
+                     (member round rounds)))
+        (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+               (filled-game-map  (fill-map current-state))
+               (player-move      current-move)
 
-              ((player-position . opponent-position) (positions current-state))
+               ((player-position . opponent-position) (positions current-state))
 
-              (player-speed         (my-speed current-state))
-              (player-boosts        (my-boosts current-state))
-              (player-oils          (my-oils current-state))
-              (player-lizards       (my-lizards current-state))
-              (player-trucks        (my-trucks current-state))
-              (player-emps          (my-emps   current-state))
-              (player-damage        (my-damage current-state))
-              (player-boost-counter (my-boost-counter current-state))
+               (player-speed         (my-speed current-state))
+               (player-boosts        (my-boosts current-state))
+               (player-oils          (my-oils current-state))
+               (player-lizards       (my-lizards current-state))
+               (player-trucks        (my-trucks current-state))
+               (player-emps          (my-emps   current-state))
+               (player-damage        (my-damage current-state))
+               (player-boost-counter (my-boost-counter current-state))
 
-              (opponent-speed         (opponent-speed current-state))
-              (opponent-boosts        0)
-              (opponent-oils          0)
-              (opponent-lizards       0)
-              (opponent-trucks        0)
-              (opponent-emps          0)
-              (opponent-damage        0)
-              (opponent-boost-counter 0)
+               (opponent-speed         (opponent-speed current-state))
+               (opponent-boosts        0)
+               (opponent-oils          0)
+               (opponent-lizards       0)
+               (opponent-trucks        0)
+               (opponent-emps          0)
+               (opponent-damage        0)
+               (opponent-boost-counter 0)
 
-              ((:values player-position-2
-                        player-boosts-2
-                        player-oils-2
-                        player-lizards-2
-                        player-trucks-2
-                        player-emps-2
-                        player-speed-2
-                        player-damage-2
-                        player-boost-counter-2
+               ((:values player-position-2
+                         player-boosts-2
+                         player-oils-2
+                         player-lizards-2
+                         player-trucks-2
+                         player-emps-2
+                         player-speed-2
+                         player-damage-2
+                         player-boost-counter-2
 
-                        opponent-position-2
-                        opponent-boosts-2
-                        opponent-oils-2
-                        opponent-lizards-2
-                        opponent-trucks-2
-                        opponent-emps-2
-                        opponent-speed-2
-                        opponent-damage-2
-                        opponent-boost-counter-2
+                         opponent-position-2
+                         opponent-boosts-2
+                         opponent-oils-2
+                         opponent-lizards-2
+                         opponent-trucks-2
+                         opponent-emps-2
+                         opponent-speed-2
+                         opponent-damage-2
+                         opponent-boost-counter-2
 
-                        new-game-map)
-               (process-moves player-position
-                              player-boosts
-                              player-oils
-                              player-lizards
-                              player-trucks
-                              player-emps
-                              player-speed
-                              player-damage
-                              player-boost-counter
+                         new-game-map)
+                (process-moves player-position
+                               player-boosts
+                               player-oils
+                               player-lizards
+                               player-trucks
+                               player-emps
+                               player-speed
+                               player-damage
+                               player-boost-counter
 
-                              opponent-position
-                              opponent-boosts
-                              opponent-oils
-                              opponent-lizards
-                              opponent-trucks
-                              opponent-emps
-                              opponent-speed
-                              opponent-damage
-                              opponent-boost-counter
+                               opponent-position
+                               opponent-boosts
+                               opponent-oils
+                               opponent-lizards
+                               opponent-trucks
+                               opponent-emps
+                               opponent-speed
+                               opponent-damage
+                               opponent-boost-counter
 
-                              filled-game-map
+                               filled-game-map
 
-                              player-move
-                              opponent-move))
-              (initial    (list (my-abs-pos       current-state)
-                                (my-speed         current-state)
-                                (my-boosts        current-state)
-                                (my-oils          current-state)
-                                (my-lizards       current-state)
-                                (my-trucks        current-state)
-                                (my-emps          current-state)
-                                (my-damage        current-state)
-                                (my-boost-counter current-state)))
-              (computed   (list player-position-2
-                                player-speed-2
-                                player-boosts-2
-                                player-oils-2
-                                player-lizards-2
-                                player-trucks-2
-                                player-emps-2
-                                player-damage-2
-                                player-boost-counter-2))
-              (actual     (list (my-abs-pos       next-state)
-                                (my-speed         next-state)
-                                (my-boosts        next-state)
-                                (my-oils          next-state)
-                                (my-lizards       next-state)
-                                (my-trucks        next-state)
-                                (my-emps          next-state)
-                                (my-damage        next-state)
-                                (my-boost-counter next-state))))
-         (when (not (equal computed actual))
-           (format t "~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
-                   round
-                   initial
-                   current-move
-                   computed
-                   actual))
-         (when (not (equal new-game-map filled-game-map))
-           (format t "Round: ~a~%" round)
-           (format t "Trucks old: ~a~%" (cdr filled-game-map))
-           (format t "Trucks new: ~a~%" (cdr new-game-map))
-           (format t "Old:~%~A~%" (print-full-game-map-to-string new-game-map))
-           (format t "New:~%~A~%" (print-full-game-map-to-string filled-game-map))
-           (format t "Game maps don't match~%")))))))
+                               player-move
+                               opponent-move))
+               (initial    (list (my-abs-pos       current-state)
+                                 (my-speed         current-state)
+                                 (my-boosts        current-state)
+                                 (my-oils          current-state)
+                                 (my-lizards       current-state)
+                                 (my-trucks        current-state)
+                                 (my-emps          current-state)
+                                 (my-damage        current-state)
+                                 (my-boost-counter current-state)))
+               (computed   (list player-position-2
+                                 player-speed-2
+                                 player-boosts-2
+                                 player-oils-2
+                                 player-lizards-2
+                                 player-trucks-2
+                                 player-emps-2
+                                 player-damage-2
+                                 player-boost-counter-2))
+               (actual     (list (my-abs-pos       next-state)
+                                 (my-speed         next-state)
+                                 (my-boosts        next-state)
+                                 (my-oils          next-state)
+                                 (my-lizards       next-state)
+                                 (my-trucks        next-state)
+                                 (my-emps          next-state)
+                                 (my-damage        next-state)
+                                 (my-boost-counter next-state))))
+          (when (not (equal computed actual))
+            (format t "~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
+                    round
+                    initial
+                    current-move
+                    computed
+                    actual))
+          (bind ((next-map (fill-map next-state)))
+            (when (not (equal new-game-map next-map))
+              (format t "Game maps don't match~%")
+              (format t "Round: ~a~%" round)
+              (format t "Trucks computed: ~a~%" (cdr next-map))
+              (format t "Trucks new: ~a~%" (cdr new-game-map))
+              (format t "Computed:~%~A~%" (print-full-game-map-to-string new-game-map))
+              (format t "New:~%~A~%" (print-full-game-map-to-string next-map)))))))))
 
 #+nil
 (progn
