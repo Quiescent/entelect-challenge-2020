@@ -14,6 +14,7 @@
 
 (defvar *x-score* 1.0)
 (defvar *boosts-score* 1.0)
+(defvar *oils-score* 1.0)
 (defvar *lizards-score* 1.0)
 (defvar *trucks-score* 1.0)
 (defvar *emp-score* 1.0)
@@ -29,6 +30,7 @@
                  *x-score*
                  *margin-score*
                  *boosts-score*
+                 *oils-score*
                  *lizards-score*
                  *trucks-score*
                  *emp-score*
@@ -42,6 +44,7 @@
     (with-open-file (f "./score-config")
       (bind (((x-score
                boosts-score
+               oils-score
                lizards-score
                trucks-score
                emp-score
@@ -51,6 +54,7 @@
               (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
         (setf *x-score*            x-score
               *boosts-score*       boosts-score
+              *oils-score*         oils-score
               *lizards-score*      lizards-score
               *trucks-score*       trucks-score
               *emp-score*          emp-score
@@ -355,6 +359,7 @@ Unused values will be ignored."
                                                                 (car player-position)
                                                                 game-turn
                                                                 opponent-boosts
+                                                                opponent-oils
                                                                 opponent-lizards
                                                                 opponent-trucks
                                                                 opponent-emps
@@ -395,6 +400,7 @@ Unused values will be ignored."
                                                                 (car opponent-position)
                                                                 game-turn
                                                                 player-boosts
+                                                                player-oils
                                                                 player-lizards
                                                                 player-trucks
                                                                 player-emps
@@ -565,7 +571,9 @@ Fourth is my boosts left.
 Fifth is my lizards left.
 Sixth is my trucks left.
 Seventh is my damage.
-Eighth is my boost counter."
+Eighth is my boost counter.
+Ninth is my emps.
+Tenth is my oils."
   `(bind ((path     '())
           (found    '())
           (explored (make-hash-table :test #'equal)))
@@ -581,7 +589,8 @@ Eighth is my boost counter."
                          (player trucks)
                          (player damage)
                          (player boost-counter)
-                         (player emps))
+                         (player emps)
+                         (player oils))
                    found)
              (iter
                (for move in (player moves))
@@ -928,11 +937,10 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
-;; TODO: Include oils...
-(defun global-score (x other-x current-turn boosts lizards trucks emps y damage)
+(defun global-score (x other-x current-turn boosts oils lizards trucks emps y damage)
   "Score the position described by X BOOSTS LIZARDS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type fixnum x other-x current-turn boosts lizards trucks emps y damage))
+           (type fixnum x other-x current-turn boosts oils lizards trucks emps y damage))
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1.0
@@ -941,6 +949,7 @@ POS."
     (+ (* *x-score*             x)
        (* *margin-score*        (the fixnum (- x other-x)))
        (* *boosts-score*        boosts)
+       (* *oils-score*          oils)
        (* *lizards-score*       lizards)
        (* *trucks-score*        trucks)
        (* *emp-score*           emps)
