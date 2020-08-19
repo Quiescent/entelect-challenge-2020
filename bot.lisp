@@ -950,7 +950,7 @@ anyway."
                                                       (emps 0) ; TODO: decide what's best here
                                                       (speed opponent-speed)
                                                       (damage 0)
-                                                      (boost-counter 0))))))
+                                                      (boost-counter 2))))))
      (setf *previous-move* move)
      (format *error-output*
              "My total/average speed: ~a - ~a~%"
