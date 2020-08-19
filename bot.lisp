@@ -689,7 +689,7 @@ board."
                                         (opponent x))))
               (straight-x         (or (make-moves
                                        'nothing
-                                       'accelerate
+                                       'use_boost
                                        (and (= initial-damage (opponent damage))
                                             (opponent x)))))
               (turn-available     (or (and (> (opponent y) 0)
