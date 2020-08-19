@@ -691,6 +691,11 @@ board."
                                        'nothing
                                        'use_boost
                                        (and (= initial-damage (opponent damage))
+                                            (opponent x)))
+                                      (make-moves
+                                       'nothing
+                                       'accelerate
+                                       (and (= initial-damage (opponent damage))
                                             (opponent x)))))
               (turn-available     (or (and (> (opponent y) 0)
                                            (make-moves
@@ -717,7 +722,8 @@ board."
            (when (and wont-crash
                       (eq move 'use_lizard))
              (next-iteration))
-           (when (and (> straight-x (cadr coord))
+           (when (and straight-x
+                      (> straight-x (cadr coord))
                       (or (eq move 'turn_left)
                           (eq move 'turn_right)))
              (next-iteration))
