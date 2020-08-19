@@ -1,0 +1,6 @@
+ - [X] 26 - Decelerate!?
+ - [X] 63 - Ends on truck!?
+ - [ ] 107 - I crashed and hit the truck!?
+ - [X] 127 - Ends on truck!?
+ - [X] 134 - Bad truck -- he can go straight!
+ - [X] 141 - Bad turck -- he can go straight!
