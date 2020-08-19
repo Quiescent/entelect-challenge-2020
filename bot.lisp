@@ -1968,13 +1968,13 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                     current-move
                     computed
                     actual))
-          (when (not (equal op-computed op-actual))
-            (format t "Opponent states don't match!~%~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
-                    round
-                    op-initial
-                    opponent-move
-                    op-computed
-                    op-actual))
+          ;; (when (not (equal op-computed op-actual))
+          ;;   (format t "Opponent states don't match!~%~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
+          ;;           round
+          ;;           op-initial
+          ;;           opponent-move
+          ;;           op-computed
+          ;;           op-actual))
           (bind ((my-new-x (car (my-abs-pos next-state))))
             (labels ((off-my-map (coord) (or (< (car coord) (- my-new-x 5))
                                              (> (car coord) (+ my-new-x 20)))))
