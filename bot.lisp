@@ -695,9 +695,15 @@ board."
                                         'nothing
                                         'turn_right
                                         (= initial-damage (opponent damage)))))))
+         (with-open-file (file (format nil "./map-round-~a" *current-turn*)
+                               :if-exists :supersede
+                               :if-does-not-exist :create
+                               :direction :output)
+             (format file "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
          (iter
            (for (damage-taken move . coord) in (player cyber-moves))
-           (when (eq move 'fix)
+           (when (or (eq move 'fix)
+                     (eq move 'decelerate))
              (next-iteration))
            (when (and turn-available
                       (or (eq move 'use_lizard)
@@ -795,16 +801,41 @@ MY-ABS-X position on the board."
 A square is good if GAME-MAP has obstacles which constrain moves
 around (X, Y), but not in such a way that it would be avoided usually
 anyway."
-  (bind ((good-squares (+ (if (is-obstacle-at game-map (1+ y) x)      1 0)
-                          (if (is-obstacle-at game-map (1- y) x)      1 0)
-                          (if (is-obstacle-at game-map (1+ y) (1+ x)) 1 0)
-                          (if (is-obstacle-at game-map (1+ y) (+ x 2)) 1 0)
-                          (if (is-obstacle-at game-map (1- y) (1+ x)) 1 0)
-                          (if (is-obstacle-at game-map (1- y) (+ x 2)) 1 0)
-                          (if (is-obstacle-at game-map (- y 2) (1+ x)) 1 0)
-                          (if (is-obstacle-at game-map (+ y 2) (1+ x)) 1 0)
-                          (if (is-obstacle-at game-map (- y 2) (+ x 2)) 1 0)
-                          (if (is-obstacle-at game-map (+ y 2) (+ x 2)) 1 0)))
+  (bind ((obstacle-u    (is-obstacle-at game-map (1- y) x))
+         (obstacle-ur   (is-obstacle-at game-map (1- y) (1+ x)))
+         (obstacle-urr  (is-obstacle-at game-map (1- y) (+ x 2)))
+         (obstacle-uur  (is-obstacle-at game-map (- y 2) (1+ x)))
+         (obstacle-uurr (is-obstacle-at game-map (- y 2) (+ x 2)))
+         (obstacle-up   (or obstacle-u
+                            obstacle-ur
+                            obstacle-urr
+                            obstacle-uur
+                            obstacle-uurr))
+
+         (obstacle-d    (is-obstacle-at game-map (1+ y) x))
+         (obstacle-dr   (is-obstacle-at game-map (1+ y) (1+ x)))
+         (obstacle-drr  (is-obstacle-at game-map (1+ y) (+ x 2)))
+         (obstacle-ddr  (is-obstacle-at game-map (+ y 2) (1+ x)))
+         (obstacle-ddrr (is-obstacle-at game-map (+ y 2) (+ x 2)))
+         (obstacle-down (or obstacle-d
+                            obstacle-dr
+                            obstacle-drr
+                            obstacle-ddr
+                            obstacle-ddrr))
+
+         (up-and-down  (if (and obstacle-up obstacle-down) 4 0))
+
+         (good-squares (+ (if obstacle-u    1 0)
+                          (if obstacle-ur   1 0)
+                          (if obstacle-urr  1 0)
+                          (if obstacle-uur  1 0)
+                          (if obstacle-uurr 1 0)
+
+                          (if obstacle-d    1 0)
+                          (if obstacle-dr   1 0)
+                          (if obstacle-drr  1 0)
+                          (if obstacle-ddr  1 0)
+                          (if obstacle-ddrr 1 0)))
 
          (bad-squares (+ (if (is-obstacle-at game-map y (1+ x))  10 0)
                          (if (is-obstacle-at game-map y (+ x 2)) 7 0)
@@ -812,7 +843,7 @@ anyway."
                          (if (is-obstacle-at game-map y (+ x 4)) 1 0)))
 
          (is-obstacle-already (if (is-obstacle-at game-map y x) 20 0)))
-    (- good-squares bad-squares is-obstacle-already)))
+    (- (+ up-and-down good-squares) bad-squares is-obstacle-already)))
 
 (defun print-full-game-map-to-string (full-game-map)
   "Print FULL-GAME-MAP as a string."
