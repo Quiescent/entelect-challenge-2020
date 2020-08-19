@@ -681,26 +681,45 @@ board."
   "Produce the best cyber truck move against the opponent."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (with-initial-state ,game-state
-       (bind ((initial-damage (opponent damage))
-              (turn-available (or (and (> (opponent y) 0)
-                                       (make-moves
-                                        'nothing
-                                        'turn_left
-                                        (= initial-damage (opponent damage))))
-                                  (and (< (opponent y) 3)
-                                       (make-moves
-                                        'nothing
-                                        'turn_right
-                                        (= initial-damage (opponent damage)))))))
+       (bind ((initial-damage     (opponent damage))
+              (wont-crash         (make-moves
+                                   'nothing
+                                   'nothing
+                                   (and (= initial-damage (opponent damage))
+                                        (opponent x))))
+              (straight-x         (or (make-moves
+                                       'nothing
+                                       'accelerate
+                                       (and (= initial-damage (opponent damage))
+                                            (opponent x)))))
+              (turn-available     (or (and (> (opponent y) 0)
+                                           (make-moves
+                                            'nothing
+                                            'turn_left
+                                            (= initial-damage (opponent damage))))
+                                      (and (< (opponent y) 3)
+                                           (make-moves
+                                            'nothing
+                                            'turn_right
+                                            (= initial-damage (opponent damage)))))))
          (with-open-file (file (format nil "./map-round-~a" *current-turn*)
                                :if-exists :supersede
                                :if-does-not-exist :create
                                :direction :output)
-             (format file "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
+           (format file "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
          (iter
            (for (damage-taken move . coord) in (player cyber-moves))
            (when (or (eq move 'fix)
-                     (eq move 'decelerate))
+                     (eq move 'decelerate)
+                     (eq move 'nothing)
+                     (eq move 'use_oil))
+             (next-iteration))
+           (when (and wont-crash
+                      (eq move 'use_lizard))
+             (next-iteration))
+           (when (and (> straight-x (cadr coord))
+                      (or (eq move 'turn_left)
+                          (eq move 'turn_right)))
              (next-iteration))
            (when (and turn-available
                       (or (eq move 'use_lizard)
