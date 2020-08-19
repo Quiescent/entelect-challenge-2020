@@ -191,14 +191,17 @@ up to POPULATION-SIZE."
                       (- 0 (/ (random 100000) 100000))
                       (- 0 (/ (random 100000) 100000))))))
 
+(defvar *fitness-runs* 10
+  "The number of times to run the bot to get an average score.")
+
 (defun fitness (optimisation-vector)
   "Produce a measure of the fitness of OPTIMISATION-VECTOR."
   (progn
     (write-config optimisation-vector)
     (uiop:chdir *game-runner-dir*)
     (iter
-      (for i from 0 below 5)
-      (format t "[~a/5]: ~a~%" (1+ i) optimisation-vector)
+      (for i from 0 below *fitness-runs*)
+      (format t "[~a/~a]: ~a~%" (1+ i) *fitness-runs* optimisation-vector)
       (uiop:delete-directory-tree (make-pathname :directory
                                                  (list :absolute
                                                        *game-runner-dir*
@@ -208,7 +211,7 @@ up to POPULATION-SIZE."
       (uiop:run-program (list "make" "run"))
       (summing (/ (- (final-x (csv-path "A" "Quantum"))
                      (final-x (csv-path "B" "23")))
-                  5)))))
+                  *fitness-runs*)))))
 
 (defun final-x (path)
   "Produce the final X position in the CSV file at PATH."
