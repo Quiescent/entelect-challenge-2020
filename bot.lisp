@@ -588,10 +588,9 @@ Seventh is my damage.
 Eighth is my boost counter.
 Ninth is my emps.
 Tenth is my oils."
-  `(bind ((path     '())
-          (found    '())
+  `(bind ((found    '())
           (explored (make-hash-table :test #'equal)))
-     (with-initial-state ,(cons `(iteration (count 3)) game-state)
+     (with-initial-state ,(cons `(iteration (count 5)) (cons `(recur (path '())) game-state))
        (when (null (gethash path explored))
          (if (or (<= (iteration count) 0)
                  (end-state (player position) (game map)))
@@ -613,12 +612,10 @@ Tenth is my oils."
                          (and (member move all-straight-moves)
                               (truck-infront-of (player position) (game map))))
                  (next-iteration))
-               (push move path)
                (make-moves
                 move
                 'nothing
-                (recur (1- (iteration count))))
-               (setf path (cdr path))))))
+                (recur (1- (iteration count)) (cons move path)))))))
      found))
 
 #+nil
