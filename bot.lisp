@@ -84,7 +84,7 @@
 
 (defun move-for-round (round-number)
   "Produce a move which is appropriate for ROUND-NUMBER."
-  (move-for-state (load-state-file round-number)))
+  (move-for-state (load-state-file round-number) #'identity))
 
 (defvar *ahead-of-cache* nil
   "A cache of obstacles ahead of certain points.
@@ -121,7 +121,7 @@ Value is [muds boosts walls tweets lizards].")
                           :report :flat
                           :loop t)
   (format t "Tick~%")
-  (move-for-state (load-state-from-file "./scratch/JsonMap.json")))
+  (move-for-state (load-state-from-file "./scratch/JsonMap.json") #'identity))
 
 (defmacro placing-oil (move position game-map &rest body)
   "If MOVE is 'USE_OIL then put oil on GAME-MAP at POSITION.
@@ -1955,4 +1955,4 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
       (format t "Tick~%")
       (with-consecutive-states folder-path "Quantum" 'A
         (declare (ignore current-move opponent-move next-state))
-        (move-for-state current-state)))))
+        (move-for-state current-state #'identity)))))
