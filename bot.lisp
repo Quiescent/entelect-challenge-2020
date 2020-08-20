@@ -401,6 +401,7 @@ Unused values will be ignored."
                                                                 (global-score
                                                                  game-turn
                                                                  (car player-position)
+                                                                 (+ (aref all-hit 0) (* 2 (aref all-hit 2)))
                                                                  player-boosts
                                                                  player-oils
                                                                  player-lizards
