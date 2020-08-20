@@ -819,8 +819,7 @@ MY-ABS-X position on the board."
                                                  (> (player emps) 0)
                                                  (not will-crash))))
        (labels ((competitive-move ()
-                  (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
-                    (if (= depth 0) (make-speed-move ,game-state) my-move))))
+                  (make-speed-move ,game-state)))
          (cond
            ((close-to-end (player x)) (make-finishing-move ,game-state))
            (emp-time   'use_emp)
