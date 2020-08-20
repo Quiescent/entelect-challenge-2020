@@ -774,7 +774,7 @@ LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
      (bind ((competitive-move               (opponent-is-close-by (player x) (opponent x)))
-            (opponent-is-way-ahead-of-me    (not competitive-move))
+            (opponent-ahead-of-me           (> (opponent x) (player x)))
             (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
                                                  (> (car *player-cyber-truck-position*)
                                                     (opponent x))))
@@ -813,7 +813,7 @@ MY-ABS-X position on the board."
                                                      (and opponent-is-behind
                                                           im-on-a-constriction))
                                                  (> (player oils) 0)))
-            (emp-time                       (and opponent-is-way-ahead-of-me
+            (emp-time                       (and opponent-ahead-of-me
                                                  (<= (abs (- (player y) (opponent y))) 1)
                                                  (not (eq *previous-move* 'use_emp))
                                                  (> (player emps) 0)
