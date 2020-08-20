@@ -390,16 +390,19 @@ Unused values will be ignored."
                                                                        (bind (((x . y) player-position)
                                                                               (damage-taken (- player-damage initial-damage)))
                                                                          (when (> y 0)
-                                                                           (collecting (cons damage-taken
-                                                                                             (cons player-move
-                                                                                                   (cons 'use_tweet (cons x (1- y)))))))
+                                                                           (collecting (cons 'up
+                                                                                             (cons damage-taken
+                                                                                                   (cons player-move
+                                                                                                         (cons 'use_tweet (cons x (1- y))))))))
                                                                          (when (< y 3)
-                                                                           (collecting (cons damage-taken
-                                                                                             (cons player-move
-                                                                                                   (cons 'use_tweet (cons x (1+ y)))))))
-                                                                         (collecting (cons damage-taken
-                                                                                           (cons player-move
-                                                                                                 (cons 'use_tweet (cons (1+ x) y)))))))))
+                                                                           (collecting (cons 'down
+                                                                                             (cons damage-taken
+                                                                                                   (cons player-move
+                                                                                                         (cons 'use_tweet (cons x (1+ y))))))))
+                                                                         (collecting (cons straight
+                                                                                           (cons damage-taken
+                                                                                                 (cons player-move
+                                                                                                       (cons 'use_tweet (cons (1+ x) y))))))))))
                                                        (t (intern (mkstr 'opponent  '- symbol))))))
                       (game       (symbol) (case symbol
                                              (map 'current-game-map)))
@@ -434,16 +437,19 @@ Unused values will be ignored."
                                                                        (bind (((x . y)      opponent-position)
                                                                               (damage-taken (- opponent-damage initial-damage)))
                                                                          (when (> y 0)
-                                                                           (collecting (cons damage-taken
-                                                                                             (cons opponent-move
-                                                                                                   (cons 'use_tweet (cons x (1- y)))))))
+                                                                           (collecting (cons 'up
+                                                                                             (cons damage-taken
+                                                                                                   (cons opponent-move
+                                                                                                         (cons 'use_tweet (cons x (1- y))))))))
                                                                          (when (< y 3)
-                                                                           (collecting (cons damage-taken
-                                                                                             (cons opponent-move
-                                                                                                   (cons 'use_tweet (cons x (1+ y)))))))
-                                                                         (collecting (cons damage-taken
-                                                                                           (cons opponent-move
-                                                                                                 (cons 'use_tweet (cons (1+ x) y)))))))))
+                                                                           (collecting (cons 'down
+                                                                                             (cons damage-taken
+                                                                                                   (cons opponent-move
+                                                                                                         (cons 'use_tweet (cons x (1+ y))))))))
+                                                                         (collecting (cons 'straight
+                                                                                           (cons damage-taken
+                                                                                                 (cons opponent-move
+                                                                                                       (cons 'use_tweet (cons (1+ x) y))))))))))
                                                        (t (intern (mkstr 'player    '- symbol))))))
                       (setting    (name value)
                         `(setf ,name ,value))
