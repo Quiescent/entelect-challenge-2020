@@ -800,13 +800,18 @@ MY-ABS-X position on the board."
   `(with-initial-state ,game-state
      (bind ((speed-move                     (make-speed-move ,game-state))
             (speed-move-does-nothing        (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-                                                   (speed-now    (player speed))
-                                                   (position-now (player position)))
+                                                   speed-after-speed-move
+                                                   position-after-speed-move)
                                               (make-moves
                                                speed-move
                                                'nothing
-                                               (and (= speed-now        (player speed))
-                                                    (equal position-now (player position)))))))
+                                               (setf speed-after-speed-move    (player speed))
+                                               (setf position-after-speed-move (player position)))
+                                              (make-moves
+                                               'nothing
+                                               'nothing
+                                               (and (= speed-after-speed-move        (player speed))
+                                                    (equal position-after-speed-move (player position)))))))
        (if speed-move-does-nothing
            (bind ((competitive-mode               (opponent-is-close-by-or-behind (player x) (opponent x)))
                   (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
