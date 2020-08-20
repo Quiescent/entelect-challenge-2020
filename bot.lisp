@@ -719,11 +719,29 @@ board."
                                :direction :output)
            (format file "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
          (iter
-           (for (damage-taken move . coord) in (player cyber-moves))
+           (for (truck-direction damage-taken move . coord) in (player cyber-moves))
            (when (or (eq move 'fix)
                      (eq move 'decelerate)
                      (eq move 'nothing)
                      (eq move 'use_oil))
+             (next-iteration))
+           (for straight-available-after-move =
+                (make-moves
+                 'nothing
+                 move
+                 (or (make-moves
+                      'nothing
+                      'use_boost
+                      (and (= initial-damage (opponent damage))
+                           (opponent x)))
+                     (make-moves
+                      'nothing
+                      'accelerate
+                      (and (= initial-damage (opponent damage))
+                           (opponent x))))))
+           (when (and straight-available-after-move
+                      (or (eq truck-direction 'up)
+                          (eq truck-direction 'down)))
              (next-iteration))
            (when (and wont-crash
                       (eq move 'use_lizard))
