@@ -536,9 +536,6 @@ Unused values will be ignored."
   "Produce the best speed move to make on GAME-STATE."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (-> (rank-order-all-moves ,game-state)
-       copy-seq
-       (stable-sort (lambda (this that) (< (length (car this))
-                                      (length (car that)))))
        caar
        last
        car)))
@@ -651,6 +648,34 @@ Tenth is my oils."
                           (damage 0)
                           (boost-counter 16)))))
 
+(defun move-to-rank (move)
+  "Produce a number for MOVE which indicates how we should order it in a rank ordering.
+
+Lower is better."
+  (case move
+    (accelerate 0)
+    (use_oil    1)
+    (nothing    2)
+    (decelerate 10)
+    (t 5)))
+
+(defun first-move (state)
+  "Produce the first move of STATE."
+  (-> state
+    car
+    last
+    car))
+
+(defun first-moves-rank (state)
+  "Produce the rank of the first move for STATE."
+  (-> state
+    first-move
+    move-to-rank))
+
+(defun path-length (state)
+  "Produce the length of the path in STATE."
+  (length (car state)))
+
 (defmacro rank-order-all-moves (game-state)
   "Produce all the moves from GAME-MAP ordered by best placement on the global map.
 
@@ -661,7 +686,8 @@ board."
      (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
        (-> (states-from ,game-state)
          copy-seq
-         (sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
+         (sort #'< :key #'first-moves-rank)
+         (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
                                      (global-score (car pos-2)
                                                    (opponent x)
                                                    (+ *current-turn* (length path))
@@ -671,7 +697,8 @@ board."
                                                    trucks-2
                                                    emps-2
                                                    (cdr pos-2)
-                                                   damage-2))))))))
+                                                   damage-2))))
+         (stable-sort #'< :key #'path-length)))))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
