@@ -207,9 +207,10 @@ up to POPULATION-SIZE."
                                   :validate t
                                   :if-does-not-exist :ignore)
       (uiop:run-program (list "make" "run"))
-      (summing (/ (- (final-x (csv-path "A" "Quantum"))
-                     (final-x (csv-path "B" "23")))
-                  *fitness-runs*)))))
+      (for margin = (- (final-x (csv-path "A" "Quantum"))
+                       (final-x (csv-path "B" "LCubed"))))
+      (format t "Margin: ~a~%" margin)
+      (summing (/ margin *fitness-runs*)))))
 
 (defun final-x (path)
   "Produce the final X position in the CSV file at PATH."
