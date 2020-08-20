@@ -14,10 +14,12 @@
 
 (defvar *x-score* 1.0)
 (defvar *boosts-score* 1.0)
+(defvar *oils-score* 1.0)
 (defvar *lizards-score* 1.0)
 (defvar *trucks-score* 1.0)
 (defvar *emp-score* 1.0)
 (defvar *y-score* 1.0)
+(defvar *margin-score* 1.0)
 (defvar *damage-score* 1.0)
 (defvar *current-turn-score* 1.0)
 
@@ -26,7 +28,9 @@
             :execute)
   (declaim (type single-float
                  *x-score*
+                 *margin-score*
                  *boosts-score*
+                 *oils-score*
                  *lizards-score*
                  *trucks-score*
                  *emp-score*
@@ -39,7 +43,9 @@
   (progn
     (with-open-file (f "./score-config")
       (bind (((x-score
+               margin-score
                boosts-score
+               oils-score
                lizards-score
                trucks-score
                emp-score
@@ -48,7 +54,9 @@
                current-turn-score)
               (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
         (setf *x-score*            x-score
+              *margin-score*       margin-score
               *boosts-score*       boosts-score
+              *oils-score*         oils-score
               *lizards-score*      lizards-score
               *trucks-score*       trucks-score
               *emp-score*          emp-score
@@ -1117,17 +1125,19 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
-(defun global-score (x current-turn boosts lizards trucks emps y damage)
+(defun global-score (x other-x current-turn boosts oils lizards trucks emps y damage)
   "Score the position described by X BOOSTS LIZARDS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type fixnum x current-turn boosts lizards trucks emps y damage))
+           (type fixnum x other-x current-turn boosts oils lizards trucks emps y damage))
   (bind ((is-middle-two (if (or (= y 1)
                                 (= y 2))
                             1.0
                             0.0)))
     (declare (type float is-middle-two))
     (+ (* *x-score*             x)
+       (* *margin-score*        (the fixnum (- x other-x)))
        (* *boosts-score*        boosts)
+       (* *oils-score*          oils)
        (* *lizards-score*       lizards)
        (* *trucks-score*        trucks)
        (* *emp-score*           emps)
