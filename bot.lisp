@@ -12,57 +12,49 @@
 (defvar *player-cyber-truck-position* nil
   "The position at which I last placed the cyber truck.")
 
-(defvar *x-score* 1.0)
+(defvar *speed-score* 1.0)
 (defvar *boosts-score* 1.0)
 (defvar *oils-score* 1.0)
 (defvar *lizards-score* 1.0)
 (defvar *trucks-score* 1.0)
 (defvar *emp-score* 1.0)
-(defvar *y-score* 1.0)
-(defvar *margin-score* 1.0)
+(defvar *obstacle-score* 1.0)
 (defvar *damage-score* 1.0)
-(defvar *current-turn-score* 1.0)
 
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
   (declaim (type single-float
-                 *x-score*
-                 *margin-score*
+                 *speed-score*
                  *boosts-score*
                  *oils-score*
                  *lizards-score*
                  *trucks-score*
                  *emp-score*
-                 *y-score*
-                 *damage-score*
-                 *current-turn-score*)))
+                 *obstacle-score*
+                 *damage-score*)))
 
 (defun read-weights ()
   "Read all scores from the score config file."
   (progn
     (with-open-file (f "./score-config")
-      (bind (((x-score
-               margin-score
+      (bind (((speed-score
                boosts-score
                oils-score
                lizards-score
                trucks-score
                emp-score
-               y-score
-               damage-score
-               current-turn-score)
+               obstacle-score
+               damage-score)
               (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
-        (setf *x-score*            x-score
-              *margin-score*       margin-score
+        (setf *speed-score*        speed-score
               *boosts-score*       boosts-score
               *oils-score*         oils-score
               *lizards-score*      lizards-score
               *trucks-score*       trucks-score
               *emp-score*          emp-score
-              *y-score*            y-score
-              *damage-score*       damage-score
-              *current-turn-score* current-turn-score)))))
+              *obstacle-score*     obstacle-score
+              *damage-score*       damage-score)))))
 
 (defun main ()
   (iter
@@ -136,6 +128,52 @@ Runs BODY and then restores the map."
            ,@body
            (setf-game-map ,game-map y x original-tile)))
        ,@body))
+
+(defmacro ahead-of (collision-result move game-map start-position end-position)
+  "Produce the appropriate `ahead-of' form.
+
+Take into account the nuances of changing direction and not counting
+the current square.  e.g. changing direction means that you travel
+diagonally ignoring the squars on the rectalinear path.
+
+MOVE can modify where we look.  For instance a MOVE of LIZARD means
+that we need to only look at the square which we land on.
+
+If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
+produce `mud-ahead-of' etc.
+
+SPEED, GAME-MAP, and POS should be un-adjusted values."
+  (bind ((direction `(case ,move
+                       (turn_left  'up)
+                       (turn_right 'down)
+                       (otherwise  'ahead)))
+         (adj-speed `(case ,move
+                       (use_lizard 0)
+                       (fix        0)
+                       (t (+ (- (car ,end-position)
+                                (car ,start-position))
+                             (if (or (eq ,direction 'ahead)
+                                     (eq ,collision-result 'side-collision))
+                                 -1
+                                 0)))))
+         (adj-x     `(if (eq ,move 'use_lizard)
+                         (car ,end-position)
+                         (if (eq ,move 'fix)
+                             (car ,start-position)
+                             (ecase ,direction
+                               (up    (+ (car ,start-position)
+                                         (if (eq ,collision-result 'side-collision) 1 0)))
+                               (down  (+ (car ,start-position)
+                                         (if (eq ,collision-result 'side-collision) 1 0)))
+                               (ahead (1+ (car ,start-position)))))))
+         (adj-y     `(cdr ,end-position)))
+    `(the (simple-array fixnum (7))
+          (if (eq ,move 'fix) (make-array '(7)
+                                          :initial-contents (list 0 0 0 0 0 0 0)
+                                          :element-type 'fixnum)
+              (or (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                  (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
+                        (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y)))))))
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
@@ -302,17 +340,22 @@ Unused values will be ignored."
                       (opponent   (symbol) (values   (case symbol
                                                        (x '(car opponent-position))
                                                        (y '(cdr opponent-position))
-                                                       (score '(global-score
-                                                                (car opponent-position)
-                                                                (car player-position)
-                                                                game-turn
-                                                                opponent-boosts
-                                                                opponent-oils
-                                                                opponent-lizards
-                                                                opponent-trucks
-                                                                opponent-emps
-                                                                (cdr opponent-position)
-                                                                opponent-damage))
+                                                       (score `(bind ((all-hit (ahead-of
+                                                                                'no-collision
+                                                                                'nothing
+                                                                                current-game-map
+                                                                                opponent-position
+                                                                                (cons (+ (car opponent-position) opponent-speed) (cdr opponent-position)))))
+                                                                (global-score
+                                                                 game-turn
+                                                                 (car opponent-position)
+                                                                 (+ (aref all-hit 0) (* 2 (aref all-hit 2)))
+                                                                 opponent-boosts
+                                                                 opponent-oils
+                                                                 opponent-lizards
+                                                                 opponent-trucks
+                                                                 opponent-emps
+                                                                 opponent-damage)))
                                                        (moves '(remove-impossible-moves
                                                                 opponent-boosts
                                                                 opponent-oils
@@ -349,17 +392,21 @@ Unused values will be ignored."
                       (player     (symbol) (values   (case symbol
                                                        (x '(car player-position))
                                                        (y '(cdr player-position))
-                                                       (score '(global-score
-                                                                (car player-position)
-                                                                (car opponent-position)
-                                                                game-turn
-                                                                player-boosts
-                                                                player-oils
-                                                                player-lizards
-                                                                player-trucks
-                                                                player-emps
-                                                                (cdr player-position)
-                                                                player-damage))
+                                                       (score `(bind ((all-hit (ahead-of
+                                                                                'no-collision
+                                                                                'nothing
+                                                                                current-game-map
+                                                                                player-position
+                                                                                (cons (+ (car player-position) player-speed) (cdr player-position)))))
+                                                                (global-score
+                                                                 game-turn
+                                                                 (car player-position)
+                                                                 player-boosts
+                                                                 player-oils
+                                                                 player-lizards
+                                                                 player-trucks
+                                                                 player-emps
+                                                                 player-damage)))
                                                        (moves '(remove-impossible-moves
                                                                 player-boosts
                                                                 player-oils
@@ -522,18 +569,10 @@ i.e. if we may as well not have mode MOVE."
 
 ;; TODO: Check.  There's something wrong here...
 (defmacro states-from (game-state)
-  "Produce all possible states using GAME-STATE.
+  "Produce all possible paths from GAME-STATE with their scores.
 
 First element of a path is the path taken.
-Second is my current position.
-Third is my speed.
-Fourth is my boosts left.
-Fifth is my lizards left.
-Sixth is my trucks left.
-Seventh is my damage.
-Eighth is my boost counter.
-Ninth is my emps.
-Tenth is my oils."
+Second is the score of the end state."
   `(bind ((found    '())
           initial-x
           (explored (make-hash-table :test #'equal)))
@@ -541,31 +580,22 @@ Tenth is my oils."
        (when (= (iteration count) 5)
          (setf initial-x (player x)))
        (when (null (gethash path explored))
-         (if (or (<= (iteration count) 0)
-                 (> (player x) (+ initial-x 20))
-                 (end-state (player position) (game map)))
-             (push (list path
-                         (player position)
-                         (player speed)
-                         (player boosts)
-                         (player lizards)
-                         (player trucks)
-                         (player damage)
-                         (player boost-counter)
-                         (player emps)
-                         (player oils))
-                   found)
-             (iter
-               (for move in (player moves))
-               (when (or (eq move 'use_oil)
-                         (eq move 'use_emp)
-                         (and (member move all-straight-moves)
-                              (truck-infront-of (player position) (game map))))
-                 (next-iteration))
-               (make-moves
-                move
-                'nothing
-                (recur (1- (iteration count)) (cons move path)))))))
+         (cond ((or (<= (iteration count) 0)
+                    (> (player x) (+ initial-x 20)))
+                (push (list path (player score)) found))
+               ((end-state (player position) (game map))
+                (push (list path (* 1000 (player speed))) found))
+               (t (iter
+                    (for move in (player moves))
+                    (when (or (eq move 'use_oil)
+                              (eq move 'use_emp)
+                              (and (member move all-straight-moves)
+                                   (truck-infront-of (player position) (game map))))
+                      (next-iteration))
+                    (make-moves
+                     move
+                     'nothing
+                     (recur (1- (iteration count)) (cons move path))))))))
      found))
 
 #+nil
@@ -627,19 +657,7 @@ board."
        (-> (states-from ,game-state)
          copy-seq
          (sort #'< :key #'first-moves-rank)
-         (stable-sort #'> :key (lambda (state) (bind (((path pos-2 speed-2 boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
-                                                 (if (end-state (pos-2) (game map))
-                                                     (* 1000 speed-2)
-                                                     (global-score (car pos-2)
-                                                                   (opponent x)
-                                                                   (+ *current-turn* (length path))
-                                                                   boosts-2
-                                                                   oils-2
-                                                                   lizards-2
-                                                                   trucks-2
-                                                                   emps-2
-                                                                   (cdr pos-2)
-                                                                   damage-2)))))
+         (stable-sort #'> :key #'cadr)
          (stable-sort #'< :key #'path-length)))))
 
 (defconstant window-ahead-to-consider-maximax 15
@@ -1074,25 +1092,18 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
-(defun global-score (x other-x current-turn boosts oils lizards trucks emps y damage)
+(defun global-score (current-turn x obstacles-ahead boosts oils lizards trucks emps damage)
   "Score the position described by X BOOSTS LIZARDS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type fixnum x other-x current-turn boosts oils lizards trucks emps y damage))
-  (bind ((is-middle-two (if (or (= y 1)
-                                (= y 2))
-                            1.0
-                            0.0)))
-    (declare (type float is-middle-two))
-    (+ (* *x-score*             x)
-       (* *margin-score*        (the fixnum (- x other-x)))
-       (* *boosts-score*        boosts)
-       (* *oils-score*          oils)
-       (* *lizards-score*       lizards)
-       (* *trucks-score*        trucks)
-       (* *emp-score*           emps)
-       (* *y-score*             is-middle-two)
-       (* *damage-score*        damage)
-       (* *current-turn-score*  current-turn))))
+           (type fixnum x obstacles-ahead current-turn boosts oils lizards trucks emps damage))
+  (+ (* *speed-score*         (/ x (coerce current-turn 'single-float)))
+     (* *boosts-score*        boosts)
+     (* *oils-score*          oils)
+     (* *lizards-score*       lizards)
+     (* *trucks-score*        trucks)
+     (* *emp-score*           emps)
+     (* *obstacle-score*      obstacles-ahead)
+     (* *damage-score*        damage)))
 
 (defun minimax-score (my-abs-x op-abs-x)
   "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X."
@@ -1118,52 +1129,6 @@ POS."
       (for (x-truck . y-truck) in trucks)
       (thereis (and (eq y-truck y)
                     (eq x (1- x-truck)))))))
-
-(defmacro ahead-of (collision-result move game-map start-position end-position)
-  "Produce the appropriate `ahead-of' form.
-
-Take into account the nuances of changing direction and not counting
-the current square.  e.g. changing direction means that you travel
-diagonally ignoring the squars on the rectalinear path.
-
-MOVE can modify where we look.  For instance a MOVE of LIZARD means
-that we need to only look at the square which we land on.
-
-If TYPE is 'SPEED then produce `boost-ahead-of' if it's 'MUD then
-produce `mud-ahead-of' etc.
-
-SPEED, GAME-MAP, and POS should be un-adjusted values."
-  (bind ((direction `(case ,move
-                       (turn_left  'up)
-                       (turn_right 'down)
-                       (otherwise  'ahead)))
-         (adj-speed `(case ,move
-                       (use_lizard 0)
-                       (fix        0)
-                       (t (+ (- (car ,end-position)
-                                (car ,start-position))
-                             (if (or (eq ,direction 'ahead)
-                                     (eq ,collision-result 'side-collision))
-                                 -1
-                                 0)))))
-         (adj-x     `(if (eq ,move 'use_lizard)
-                         (car ,end-position)
-                         (if (eq ,move 'fix)
-                             (car ,start-position)
-                             (ecase ,direction
-                               (up    (+ (car ,start-position)
-                                         (if (eq ,collision-result 'side-collision) 1 0)))
-                               (down  (+ (car ,start-position)
-                                         (if (eq ,collision-result 'side-collision) 1 0)))
-                               (ahead (1+ (car ,start-position)))))))
-         (adj-y     `(cdr ,end-position)))
-    `(the (simple-array fixnum (7))
-          (if (eq ,move 'fix) (make-array '(7)
-                                          :initial-contents (list 0 0 0 0 0 0 0)
-                                          :element-type 'fixnum)
-              (or (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-                  (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
-                        (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y)))))))
 
 (defun all-ahead-of (speed game-map x y)
   "Produce a count of all types of powerups and obstacles.
