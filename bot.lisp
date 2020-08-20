@@ -627,17 +627,19 @@ board."
        (-> (states-from ,game-state)
          copy-seq
          (sort #'< :key #'first-moves-rank)
-         (stable-sort #'> :key (lambda (state) (bind (((path pos-2 _ boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
-                                     (global-score (car pos-2)
-                                                   (opponent x)
-                                                   (+ *current-turn* (length path))
-                                                   boosts-2
-                                                   oils-2
-                                                   lizards-2
-                                                   trucks-2
-                                                   emps-2
-                                                   (cdr pos-2)
-                                                   damage-2))))
+         (stable-sort #'> :key (lambda (state) (bind (((path pos-2 speed-2 boosts-2 lizards-2 trucks-2 damage-2 _ emps-2 oils-2) state))
+                                                 (if (end-state (pos-2) (game map))
+                                                     (* 1000 speed-2)
+                                                     (global-score (car pos-2)
+                                                                   (opponent x)
+                                                                   (+ *current-turn* (length path))
+                                                                   boosts-2
+                                                                   oils-2
+                                                                   lizards-2
+                                                                   trucks-2
+                                                                   emps-2
+                                                                   (cdr pos-2)
+                                                                   damage-2)))))
          (stable-sort #'< :key #'path-length)))))
 
 (defconstant window-ahead-to-consider-maximax 15
