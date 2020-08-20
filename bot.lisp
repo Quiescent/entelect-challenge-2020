@@ -766,6 +766,48 @@ board."
              (next-iteration))
            (finding coord maximizing (+ (* 10 x) obstacle-score)))))))
 
+(defmacro max-x-opponent-end-states (game-state)
+  "Produce the greatest value of X that the opponent can have from GAME-STATE."
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+     (with-initial-state ,game-state
+       (iter
+         (for move in (opponent moves))
+         (for initial-opponent-x = (opponent x))
+         (for initial-player-x   = (player x))
+         (maximizing
+          (make-moves
+           'nothing
+           move
+           (if (and (= (opponent y) (player y))
+                    (< initial-opponent-x initial-player-x)
+                    (member move all-straight-moves))
+               (1- initial-player-x)
+               (opponent x))))))))
+
+#+nil
+(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+  (max-x-opponent-end-states ((game (turn 10))
+                              (iteration (count 3))
+                              (game-map empty-game-map)
+                              (player (position (cons 2 1))
+                                      (boosts 3)
+                                      (oils 0)
+                                      (emps 0)
+                                      (lizards 4)
+                                      (trucks 5)
+                                      (speed 6)
+                                      (damage 0)
+                                      (boost-counter 8))
+                              (opponent (position (cons 10 3))
+                                        (boosts 11)
+                                        (oils 0)
+                                        (emps 0)
+                                        (lizards 12)
+                                        (trucks 13)
+                                        (speed 14)
+                                        (damage 0)
+                                        (boost-counter 16)))))
+
 (defmacro determine-move (game-state)
   "Produce the best move for GAME-MAP.
 
@@ -819,7 +861,10 @@ MY-ABS-X position on the board."
                                                  (> (player emps) 0)
                                                  (not will-crash))))
        (labels ((competitive-move ()
-                  (make-speed-move ,game-state)))
+                  (if (and (< (max-x-opponent-end-states ,game-state) (player x))
+                           (> (player damage) 0))
+                      'fix
+                      (make-speed-move ,game-state))))
          (cond
            ((close-to-end (player x)) (make-finishing-move ,game-state))
            (emp-time   'use_emp)
