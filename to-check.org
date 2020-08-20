@@ -1,4 +1,4 @@
 * 2020.08.20.07.58.34
  - [X] Round 23.  He can just go straight!
 * Newest
- - [ ] Round 93.  I decelerate!?
+ - [X] Round 93.  I decelerate!?
