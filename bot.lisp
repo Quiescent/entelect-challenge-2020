@@ -536,6 +536,9 @@ Unused values will be ignored."
   "Produce the best speed move to make on GAME-STATE."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (-> (rank-order-all-moves ,game-state)
+       copy-seq
+       (stable-sort (lambda (this that) (< (length (car this))
+                                      (length (car that)))))
        caar
        last
        car)))
@@ -595,10 +598,14 @@ Eighth is my boost counter.
 Ninth is my emps.
 Tenth is my oils."
   `(bind ((found    '())
+          initial-x
           (explored (make-hash-table :test #'equal)))
      (with-initial-state ,(cons `(iteration (count 5)) (cons `(recur (path '())) game-state))
+       (when (= (iteration count) 5)
+         (setf initial-x (player x)))
        (when (null (gethash path explored))
          (if (or (<= (iteration count) 0)
+                 (> (player x) (+ initial-x 20))
                  (end-state (player position) (game map)))
              (push (list path
                          (player position)
