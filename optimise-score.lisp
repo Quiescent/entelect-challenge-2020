@@ -8,7 +8,7 @@
 
 (in-package :optimise-bot)
 
-(defvar population-size 100
+(defvar population-size 50
   "The number of solutions in the population.")
 
 (defvar *directory-of-bot-to-optimise* "home/edward/wip/entelect-challenge-2020/bots/to-optimise"
