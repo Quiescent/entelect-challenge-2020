@@ -137,66 +137,6 @@ Runs BODY and then restores the map."
            (setf-game-map ,game-map y x original-tile)))
        ,@body))
 
-(defun buffer-with-nothing (these-moves those-moves)
-  "Buffer THESE-MOVES with nothing until >= length as THOSE-MOVES."
-  (bind ((this-length (length these-moves))
-         (that-length (length those-moves)))
-    (if (> this-length that-length)
-        these-moves
-        (concatenate 'list
-                     these-moves
-                     (iter
-                       (for i from 0 below (- that-length this-length))
-                       (collecting 'nothing))))))
-
-(defmacro make-opposed-move (game-state)
-  "Produce the best move in GAME-STATE as determined by a few rounds of maximax."
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
-          max-x)
-     (declare (optimize (speed 3) (safety 0) (debug 0)))
-     (with-initial-state ,(cons `(iteration (count ,maximax-depth))
-                                (cons `(recur (alpha ,most-negative-fixnum) (beta ,most-positive-fixnum))
-                                      game-state))
-       (when (= (iteration count) ,maximax-depth)
-         (setf max-x (+ (player x) 20)))
-       (iter
-         (with cells =
-               (iter
-                 (for player-move in (player moves))
-                 (when (and (eq player-move 'fix)
-                          (= (player damage) 0))
-                   (next-iteration))
-                 (collecting
-                  (iter
-                    (for opponent-move in (opponent moves))
-                    (when (and (eq opponent-move 'fix)
-                          (= (opponent damage) 0))
-                      (next-iteration))
-                    (make-moves
-                     player-move
-                     opponent-move
-                     (bind (((player-score _ _ _ depth)
-                             (if (or (> (player   x) max-x)
-                                     (> (opponent x) max-x)
-                                     (< (iteration count) 1))
-                                 (list (player score) nil nil nil (- maximax-depth (iteration count)))
-                                 (recur (1- (iteration count)) alpha beta))))
-                       (finding (list player-score
-                                      nil
-                                      player-move
-                                      opponent-move
-                                      depth)
-                                minimizing player-score
-                                into best-cell)
-                       (setf alpha (max alpha player-score))
-                       (setf beta  (min beta  player-score))
-                       (when (<= beta alpha)
-                         (return best-cell))
-                       (finally
-                        (return best-cell))))))))
-         (for cell in cells)
-         (finding cell maximizing (car cell))))))
-
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
 
@@ -700,17 +640,6 @@ board."
                                                    damage-2))))
          (stable-sort #'< :key #'path-length)))))
 
-(defmacro make-finishing-move (game-state)
-  "Optimise for finishing and forget everything else."
-  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-     (-> (states-from ,game-state)
-       copy-seq
-       (sort #'> :key (lambda (state) (car (nth 1 state))))
-       (stable-sort #'< :key (lambda (state) (length (car state))))
-       caar
-       last
-       car)))
-
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
 
@@ -849,70 +778,61 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((competitive-move               (opponent-is-close-by (player x) (opponent x)))
-            (opponent-ahead-of-me           (> (opponent x) (player x)))
-            (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
-                                                 (> (car *player-cyber-truck-position*)
-                                                    (opponent x))))
-            (will-crash                     (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-                                              (> (make-moves
-                                                  'nothing
-                                                  'nothing
-                                                  (player damage))
-                                                 (player damage))))
-            (cyber-time                     (and competitive-move
-                                                 (not will-crash)
-                                                 (not cyber-truck-ahead-of-opponent)
-                                                 (> (player trucks) 0)))
-            (opponent-right-behind          (and (= (opponent y) (player y))
-                                                 (> (player x) (opponent x))
-                                                 (< (player x) (+ (opponent speed) (opponent x)))))
-            (opponent-is-behind             (> (player x) (opponent x)))
-            (opponent-damage-now            (opponent damage))
-            (there-are-obstacles-next-to-us (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
-                                              (or (or (= 0 (opponent y))
-                                                      (make-moves
-                                                       'nothing
-                                                       'turn_left
-                                                       (> (opponent damage) opponent-damage-now)))
-                                                  (or (= 3 (opponent y))
-                                                      (make-moves
-                                                       'nothing
-                                                       'turn_right
-                                                       (> (opponent damage) opponent-damage-now))))))
-            (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
-            (oil-time                       (and (not will-crash)
-                                                 (not (member (aref-game-map (game map) (player y) (player x))
-                                                              '(mud wall)))
-                                                 (or (and opponent-right-behind
-                                                          there-are-obstacles-next-to-us)
-                                                     (and opponent-is-behind
-                                                          im-on-a-constriction))
-                                                 (> (player oils) 0)))
-            (emp-time                       (and opponent-ahead-of-me
-                                                 (<= (abs (- (player y) (opponent y))) 1)
-                                                 (not (eq *previous-move* 'use_emp))
-                                                 (> (player emps) 0)
-                                                 (not will-crash))))
-       (labels ((competitive-move ()
-                  (if (and (< (max-x-opponent-end-states ,game-state) (player x))
-                           (> (player damage) 0))
-                      'fix
-                      (make-speed-move ,game-state))))
-         (cond
-           ((close-to-end (player x)) (make-finishing-move ,game-state))
-           (emp-time   'use_emp)
-           (cyber-time (bind ((cyber-move (make-cyber-move ,game-state)))
-                         (if (not cyber-move)
-                             (competitive-move)
-                             (if (> (cadr cyber-move) (+ 10 (player x)))
-                                 (make-speed-move ,game-state)
+     (bind ((speed-move                     (make-speed-move ,game-state))
+            (speed-move-does-nothing        (bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+                                                   (speed-now    (player speed))
+                                                   (position-now (player position)))
+                                              (make-moves
+                                               speed-move
+                                               'nothing
+                                               (and (= speed-now        (player speed))
+                                                    (equal position-now (player position)))))))
+       (if speed-move-does-nothing
+           (bind ((competitive-mode               (opponent-is-close-by-or-behind (player x) (opponent x)))
+                  (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
+                                                       (> (car *player-cyber-truck-position*)
+                                                          (opponent x))))
+                  (will-crash                     (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+                                                    (> (make-moves
+                                                        'nothing
+                                                        'nothing
+                                                        (player damage))
+                                                       (player damage))))
+                  (cyber-time                     (and competitive-mode
+                                                       (not will-crash)
+                                                       (not cyber-truck-ahead-of-opponent)
+                                                       (> (player trucks) 0)))
+                  (opponent-right-behind          (and (= (opponent y) (player y))
+                                                       (> (player x) (opponent x))
+                                                       (< (player x) (+ (opponent speed) (opponent x)))))
+                  (opponent-is-behind             (> (player x) (opponent x)))
+                  (opponent-damage-now            (opponent damage))
+                  (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
+                  (oil-time                       (and (not will-crash)
+                                                       (not (member (aref-game-map (game map) (player y) (player x))
+                                                                    '(mud wall)))
+                                                       (or opponent-right-behind
+                                                           (and opponent-is-behind
+                                                                im-on-a-constriction))
+                                                       (> (player oils) 0)))
+                  (opponent-ahead-of-me           (> (opponent x) (player x)))
+                  (emp-time                       (and opponent-ahead-of-me
+                                                       (<= (abs (- (player y) (opponent y))) 1)
+                                                       (not (eq *previous-move* 'use_emp))
+                                                       (> (player emps) 0)
+                                                       (not will-crash))))
+             (cond
+               (emp-time   'use_emp)
+               (cyber-time (bind ((cyber-move (make-cyber-move ,game-state)))
+                             (if (or (not cyber-move)
+                                     (> (cadr cyber-move) (+ 10 (player x))))
+                                 speed-move
                                  (progn
                                    (setf *player-cyber-truck-position* (cdr cyber-move))
-                                   cyber-move)))))
-           (oil-time   'use_oil)
-           (competitive-move (competitive-move))
-           (t (make-speed-move ,game-state)))))))
+                                   cyber-move))))
+               (oil-time   'use_oil)
+               (t          speed-move)))
+           speed-move))))
 
 (defun is-obstacle-at (game-map y x)
   "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
@@ -1184,7 +1104,7 @@ POS."
   "Produce the number of squares in the x dimension of GAME-MAP."
   (array-dimension (car game-map) 1))
 
-(defun opponent-is-close-by (my-abs-x opponent-abs-x)
+(defun opponent-is-close-by-or-behind (my-abs-x opponent-abs-x)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
   (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax)))
 
@@ -1779,9 +1699,9 @@ If they're not equal then pretty print both forms."
 ;;               (cond
 ;;                 ((and (> trucks 0)
 ;;                       (> op-speed 3)
-;;                       (opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos)))
+;;                       (opponent-is-close-by-or-behind my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos)))
 ;;                  'cyber)
-;;                 ((opponent-is-close-by my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos))
+;;                 ((opponent-is-close-by-or-behind my-abs-x (cdr my-pos) opponent-abs-x (cdr op-pos))
 ;;                  'opposed)
 ;;                 (t 'speed)))
 ;;       (format t "I would make:  ~a~%"   move-i-would-make)
