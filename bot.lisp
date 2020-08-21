@@ -697,11 +697,6 @@ board."
                                             'nothing
                                             'turn_right
                                             (= initial-damage (opponent damage)))))))
-         (with-open-file (file (format nil "./map-round-~a" *current-turn*)
-                               :if-exists :supersede
-                               :if-does-not-exist :create
-                               :direction :output)
-           (format file "~a~%" (print-full-game-map-to-string (list *full-game-map*))))
          (iter
            (for (truck-direction damage-taken move . coord) in (player cyber-moves))
            (when (or (eq move 'fix)
