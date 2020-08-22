@@ -202,12 +202,13 @@ up to POPULATION-SIZE."
     (iter
       (for i from 0 below *fitness-runs*)
       (format t "[~a/~a]: ~a~%" (1+ i) *fitness-runs* optimisation-vector)
-      (uiop:delete-directory-tree (make-pathname :directory
-                                                 (list :absolute
-                                                       runner-dir
-                                                       "match-logs"))
-                                  :validate t
-                                  :if-does-not-exist :ignore)
+      (ignore-errors
+       (uiop:delete-directory-tree (make-pathname :directory
+                                                  (list :absolute
+                                                        runner-dir
+                                                        "match-logs"))
+                                   :validate t
+                                   :if-does-not-exist :ignore))
       (uiop:run-program (list "make" "run"))
       (for margin = (- (final-x (csv-path "A" "Quantum" runner-dir))
                        (final-x (csv-path "B" "LCubed"  runner-dir))))
