@@ -585,9 +585,9 @@ MY-ABS-X position on the board."
                                            (cdr (opponent position)))
                      (bind (((_ _ my-move _ depth) (make-opposed-move ,game-state)))
                        (if (= depth 0) (make-speed-move ,game-state) my-move)))
-                    ((close-to-end (player x)) (make-finishing-move ,game-state))
                     (t (make-speed-move ,game-state)))))
        (cond
+         ((close-to-end (player x)) (make-finishing-move ,game-state))
          ((and (not (and (consp move) (eq (car move) 'USE_TWEET)))
                (no-net-change move ,game-state)
                opponent-is-behind-me
