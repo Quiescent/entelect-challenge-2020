@@ -801,7 +801,7 @@ board."
            ((end-state (opponent position) (game map)) 0)
            (playout
             (cond
-              ((<= (iteration count) 0) (player score))
+              ((<= (iteration count) 0) (/ (+ 1500 (- (player x) (opponent x))) 3000))
               (t (bind ((player-moves   (player   moves))
                         (opponent-moves (opponent moves)))
                    (make-moves
