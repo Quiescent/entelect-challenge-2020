@@ -1,4 +1,5 @@
 (ql:quickload :metabang-bind)
+(ql:quickload :inferior-shell)
 (ql:quickload :cl-ppcre)
 (ql:quickload :arrow-macros)
 (ql:quickload :iterate)
@@ -59,50 +60,53 @@
     (format t "Working on a new generation~%")
     (iter
       (for thread-index from 1 below 6)
-      (for bot-dir    = (format nil "/home/edward/wip/entelect-challenge-bots-2020/edward-~a" thread-index))
-      (for runner-dir = (format nil "/home/edward/wip/entelect-challenge-bots-2020/runner-~a" thread-index))
-      (for start      = (* (1- thread-index) chunk-size))
-      (format t "Thread ~a, handling ~a to ~a.~%" thread-index start (+ start chunk-size))
-      (format t "Bot dir: ~a~%Runner dir:~a~%" bot-dir runner-dir)
+      (for thread-bot-dir    = (format nil "/home/edward/wip/entelect-challenge-bots-2020/edward-~a" thread-index))
+      (for thread-runner-dir = (format nil "/home/edward/wip/entelect-challenge-bots-2020/runner-~a" thread-index))
+      (for thread-start      = (* (1- thread-index) chunk-size))
+      (format t "Thread ~a, handling ~a to ~a.~%" thread-index thread-start (+ thread-start chunk-size))
+      (format t "Bot dir: ~a~%Runner dir:~a~%" thread-bot-dir thread-runner-dir)
       (collecting
        (bordeaux-threads:make-thread
         (lambda ()
-          (with-open-file (next-generation-stream (make-pathname :directory
-                                                                 (list :absolute
-                                                                       bot-dir)
-                                                                 :name (format nil "next-generation-~a" thread-index))
-                                                  :if-exists :supersede
-                                                  :if-does-not-exist :create
-                                                  :direction :output)
-            (iter
-              (for i-idx from start below (+ start chunk-size))
-              (format t "==========[~a/~a]==========~%" i-idx population-size)
-              (for (current-score . i-vector) = (aref current-generation i-idx))
-              (for a-idx = (iter
-                             (for result = (random population-size))
-                             (when (/= result i-idx)
-                               (return result))))
-              (for (a-score . a-vector) = (aref current-generation a-idx))
-              (for b-idx = (iter
-                             (for result = (random population-size))
-                             (when (and (/= result i-idx)
-                                        (/= result a-idx))
-                               (return result))))
-              (for (b-score . b-vector) = (aref current-generation b-idx))
-              (for c-idx = (iter
-                             (for result = (random population-size))
-                             (when (and (/= result i-idx)
-                                        (/= result a-idx)
-                                        (/= result b-idx))
-                               (return result))))
-              (for (c-score . c-vector) = (aref current-generation c-idx))
-              (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
-              (for new-score  = (fitness new-vector runner-dir bot-dir))
-              (if (> new-score current-score)
-                  (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
-                         (format next-generation-stream "'~A~%" (cons new-score new-vector)))
-                  (format next-generation-stream "'~A~%" (cons current-score i-vector)))
-              (finish-output next-generation-stream)))))
+          (bind ((bot-dir    thread-bot-dir)
+                 (runner-dir thread-runner-dir)
+                 (start      thread-start))
+            (with-open-file (next-generation-stream (make-pathname :directory
+                                                                   (list :absolute
+                                                                         bot-dir)
+                                                                   :name (format nil "next-generation-~a" thread-index))
+                                                    :if-exists :supersede
+                                                    :if-does-not-exist :create
+                                                    :direction :output)
+              (iter
+                (for i-idx from start below (+ start chunk-size))
+                (format t "==========[~a/~a]==========~%" i-idx population-size)
+                (for (current-score . i-vector) = (aref current-generation i-idx))
+                (for a-idx = (iter
+                               (for result = (random population-size))
+                               (when (/= result i-idx)
+                                 (return result))))
+                (for (a-score . a-vector) = (aref current-generation a-idx))
+                (for b-idx = (iter
+                               (for result = (random population-size))
+                               (when (and (/= result i-idx)
+                                          (/= result a-idx))
+                                 (return result))))
+                (for (b-score . b-vector) = (aref current-generation b-idx))
+                (for c-idx = (iter
+                               (for result = (random population-size))
+                               (when (and (/= result i-idx)
+                                          (/= result a-idx)
+                                          (/= result b-idx))
+                                 (return result))))
+                (for (c-score . c-vector) = (aref current-generation c-idx))
+                (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
+                (for new-score  = (fitness new-vector runner-dir bot-dir))
+                (if (> new-score current-score)
+                    (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
+                           (format next-generation-stream "'~A~%" (cons new-score new-vector)))
+                    (format next-generation-stream "'~A~%" (cons current-score i-vector)))
+                (finish-output next-generation-stream))))))
        into threads)
       (finally
        (iter
@@ -198,7 +202,6 @@ up to POPULATION-SIZE."
   "Produce a measure of the fitness of OPTIMISATION-VECTOR."
   (progn
     (write-config optimisation-vector bot-dir)
-    (uiop:chdir runner-dir)
     (iter
       (for i from 0 below *fitness-runs*)
       (format t "[~a/~a]: ~a~%" (1+ i) *fitness-runs* optimisation-vector)
@@ -208,7 +211,7 @@ up to POPULATION-SIZE."
                                                        "match-logs"))
                                   :validate t
                                   :if-does-not-exist :ignore)
-      (uiop:run-program (list "make" "run"))
+      (inferior-shell:run (format nil "cd ~a && make run" runner-dir) :output nil :error-output nil)
       (for margin = (- (final-x (csv-path "A" "Quantum" runner-dir))
                        (final-x (csv-path "B" "LCubed"  runner-dir))))
       (format t "Margin: ~a~%" margin)
