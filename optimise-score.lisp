@@ -34,12 +34,33 @@
 
 (defun seed-results-file ()
   "Seed a results file in the target bot directory."
-  (bind ((individuals (seed-population))
-         (bot-dir     "/home/edward/wip/entelect-challenge-bots-2020/edward-1")
-         (runner-dir  "/home/edward/wip/entelect-challenge-bots-2020/edward-1")
-         (scores      (mapcar (lambda (vector) (fitness vector runner-dir bot-dir)) individuals))
-         (zipped      (mapcar #'cons scores individuals)))
-    (write-generation zipped)))
+  (bind ((current-generation (apply #'vector (seed-population)))
+         (chunk-size          (/ (length current-generation) 5)))
+    (iter
+      (for thread-index from 1 below 6)
+      (for thread-bot-dir    = (format nil "/home/edward/wip/entelect-challenge-bots-2020/edward-~a" thread-index))
+      (for thread-runner-dir = (format nil "/home/edward/wip/entelect-challenge-bots-2020/runner-~a" thread-index))
+      (for thread-start      = (* (1- thread-index) chunk-size))
+      (format t "Thread ~a, handling ~a to ~a.~%" thread-index thread-start (+ thread-start chunk-size))
+      (format t "Bot dir: ~a~%Runner dir:~a~%" thread-bot-dir thread-runner-dir)
+      (collecting
+       (bordeaux-threads:make-thread
+        (lambda ()
+          (bind ((bot-dir    thread-bot-dir)
+                 (runner-dir thread-runner-dir)
+                 (start      thread-start))
+            (iter
+              (for i-idx from start below (+ start chunk-size))
+              (format t "==========[~a/~a]==========~%" i-idx population-size)
+              (for i-vector   = (aref current-generation i-idx))
+              (for new-score  = (fitness i-vector runner-dir bot-dir))
+              (setf (aref current-generation i-idx) (cons new-score i-vector))))))
+       into threads)
+      (finally
+       (iter
+         (for thread in threads)
+         (bordeaux-threads:join-thread thread))))
+    (write-generation (map 'list #'identity current-generation))))
 
 (defconstant f-coefficient (/ 8 10)
   "Controls how much b and c contribute to the new coefficient.")
@@ -195,7 +216,7 @@ up to POPULATION-SIZE."
                       (/ (random 100000) 100000)
                       (/ (random 100000) 100000)))))
 
-(defvar *fitness-runs* 10
+(defvar *fitness-runs* 5
   "The number of times to run the bot to get an average score.")
 
 (defun fitness (optimisation-vector runner-dir bot-dir)
