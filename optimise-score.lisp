@@ -139,7 +139,7 @@ up to POPULATION-SIZE."
       (for member in generation)
       (format f "'~A~%" member))))
 
-(defvar *negative-coefficient-start* 6
+(defvar *negative-coefficient-start* 10
   "The start of negative coefficients in the optimisation vector.")
 
 (defun cross-over (i-vector a-vector b-vector c-vector)
@@ -192,8 +192,8 @@ up to POPULATION-SIZE."
                       (/ (random 100000) 100000)
                       (/ (random 100000) 100000)
                       (/ (random 100000) 100000)
-                      (- 0 (/ (random 100000) 100000))
-                      (- 0 (/ (random 100000) 100000))))))
+                      (/ (random 100000) 100000)
+                      (/ (random 100000) 100000)))))
 
 (defvar *fitness-runs* 10
   "The number of times to run the bot to get an average score.")
