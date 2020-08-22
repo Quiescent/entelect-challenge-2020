@@ -58,49 +58,56 @@
                                                           population-size))))
     (format t "Working on a new generation~%")
     (iter
-      (for thread-index from 0 below 5)
+      (for thread-index from 1 below 6)
       (for bot-dir    = (format nil "/home/edward/wip/entelect-challenge-bots-2020/edward-~a" thread-index))
       (for runner-dir = (format nil "/home/edward/wip/entelect-challenge-bots-2020/runner-~a" thread-index))
-      (for start      = (* thread-index chunk-size))
-      (bordeaux-threads:make-thread
-       (lambda ()
-         (with-open-file (next-generation-stream (make-pathname :directory
-                                                                (list :absolute
-                                                                      bot-dir)
-                                                                :name (format nil "next-generation-~a" thread-index))
-                                                 :if-exists :supersede
-                                                 :if-does-not-exist :create
-                                                 :direction :output)
-           (format t "Thread ~a, handling ~a to ~a." thread-index start (+ start chunk-size))
-           (iter
-             (for i-idx from start below (+ start chunk-size))
-             (format t "==========[~a/~a]==========~%" i-idx population-size)
-             (for (current-score . i-vector) = (aref current-generation i-idx))
-             (for a-idx = (iter
-                            (for result = (random population-size))
-                            (when (/= result i-idx)
-                              (return result))))
-             (for (a-score . a-vector) = (aref current-generation a-idx))
-             (for b-idx = (iter
-                            (for result = (random population-size))
-                            (when (and (/= result i-idx)
-                                       (/= result a-idx))
-                              (return result))))
-             (for (b-score . b-vector) = (aref current-generation b-idx))
-             (for c-idx = (iter
-                            (for result = (random population-size))
-                            (when (and (/= result i-idx)
-                                       (/= result a-idx)
-                                       (/= result b-idx))
-                              (return result))))
-             (for (c-score . c-vector) = (aref current-generation c-idx))
-             (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
-             (for new-score  = (fitness new-vector runner-dir bot-dir))
-             (if (> new-score current-score)
-                 (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
-                        (format next-generation-stream "'~A~%" (cons new-score new-vector)))
-                 (format next-generation-stream "'~A~%" (cons current-score i-vector)))
-             (finish-output next-generation-stream))))))
+      (for start      = (* (1- thread-index) chunk-size))
+      (format t "Thread ~a, handling ~a to ~a.~%" thread-index start (+ start chunk-size))
+      (format t "Bot dir: ~a~%Runner dir:~a~%" bot-dir runner-dir)
+      (collecting
+       (bordeaux-threads:make-thread
+        (lambda ()
+          (with-open-file (next-generation-stream (make-pathname :directory
+                                                                 (list :absolute
+                                                                       bot-dir)
+                                                                 :name (format nil "next-generation-~a" thread-index))
+                                                  :if-exists :supersede
+                                                  :if-does-not-exist :create
+                                                  :direction :output)
+            (iter
+              (for i-idx from start below (+ start chunk-size))
+              (format t "==========[~a/~a]==========~%" i-idx population-size)
+              (for (current-score . i-vector) = (aref current-generation i-idx))
+              (for a-idx = (iter
+                             (for result = (random population-size))
+                             (when (/= result i-idx)
+                               (return result))))
+              (for (a-score . a-vector) = (aref current-generation a-idx))
+              (for b-idx = (iter
+                             (for result = (random population-size))
+                             (when (and (/= result i-idx)
+                                        (/= result a-idx))
+                               (return result))))
+              (for (b-score . b-vector) = (aref current-generation b-idx))
+              (for c-idx = (iter
+                             (for result = (random population-size))
+                             (when (and (/= result i-idx)
+                                        (/= result a-idx)
+                                        (/= result b-idx))
+                               (return result))))
+              (for (c-score . c-vector) = (aref current-generation c-idx))
+              (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
+              (for new-score  = (fitness new-vector runner-dir bot-dir))
+              (if (> new-score current-score)
+                  (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
+                         (format next-generation-stream "'~A~%" (cons new-score new-vector)))
+                  (format next-generation-stream "'~A~%" (cons current-score i-vector)))
+              (finish-output next-generation-stream)))))
+       into threads)
+      (finally
+       (iter
+         (for thread in threads)
+         (bordeaux-threads:join-thread thread))))
     (write-generation (map 'list #'identity current-generation))
     (format t "Average score for new generation: ~a~%~%" (/ (apply #'+ (map 'list #'car current-generation)) population-size))))
 
