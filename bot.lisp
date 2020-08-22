@@ -943,7 +943,54 @@ board."
 Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
-  `(best-move (mc-search ,game-state)))
+  `(with-initial-state ,game-state
+     (bind ((competitive-mode               (opponent-is-close-by (player x) (opponent x)))
+            (cyber-truck-ahead-of-opponent  (and *player-cyber-truck-position*
+                                                 (> (car *player-cyber-truck-position*)
+                                                    (opponent x))))
+            (will-crash                     (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
+                                              (> (make-moves
+                                                  'nothing
+                                                  'nothing
+                                                  (player damage))
+                                                 (player damage))))
+            (cyber-time                     (and (opponent-is-close-by-or-behind (player x) (opponent x))
+                                                 (not will-crash)
+                                                 (not cyber-truck-ahead-of-opponent)
+                                                 (> (player trucks) 0)))
+            (opponent-right-behind          (and (= (opponent y) (player y))
+                                                 (> (player x) (opponent x))
+                                                 (< (player x) (+ (opponent speed) (opponent x)))))
+            (opponent-is-behind             (> (player x) (opponent x)))
+            (opponent-damage-now            (opponent damage))
+            (im-on-a-constriction           (>= (square-score (game map) (player x) (player y)) 2))
+            (oil-time                       (and (not will-crash)
+                                                 (not (member (aref-game-map (game map) (player y) (player x))
+                                                              '(mud wall)))
+                                                 (or opponent-right-behind
+                                                     (and opponent-is-behind
+                                                          im-on-a-constriction))
+                                                 (> (player oils) 0)))
+            (opponent-ahead-of-me           (> (opponent x) (player x)))
+            (emp-time                       (and opponent-ahead-of-me
+                                                 (<= (abs (- (player y) (opponent y))) 1)
+                                                 (not (eq *previous-move* 'use_emp))
+                                                 (> (player emps) 0)
+                                                 (not will-crash))))
+       (labels
+           ((speed-move () (make-speed-move ,game-state)))
+         (cond
+           (competitive-mode (best-move (mc-search ,game-state)))
+           (emp-time         'use_emp)
+           (cyber-time       (bind ((cyber-move (make-cyber-move ,game-state)))
+                               (if (or (not cyber-move)
+                                       (> (cadr cyber-move) (+ 10 (player x))))
+                                   (speed-move)
+                                   (progn
+                                     (setf *player-cyber-truck-position* (cdr cyber-move))
+                                     cyber-move))))
+           (oil-time         'use_oil)
+           (t                (speed-move)))))))
 
 (defun is-obstacle-at (game-map y x)
   "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
@@ -1180,6 +1227,11 @@ POS."
 (defun opponent-is-close-by-or-behind (my-abs-x opponent-abs-x)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
   (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax)))
+
+(defun opponent-is-close-by (my-abs-x opponent-abs-x)
+  "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
+  (and (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
+       (>  opponent-abs-x (- my-abs-x window-ahead-to-consider-maximax))))
 
 (defun truck-infront-of (current-pos game-map)
   "Produce t if there is a truck immediately in front of CURRENT-POS on GAME-MAP."
