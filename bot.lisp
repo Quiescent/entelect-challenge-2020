@@ -543,7 +543,7 @@ board."
   `(bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
      (-> (states-from ,game-state)
        copy-seq
-       (sort #'> :key (lambda (state) (car (nth 1 state))))
+       (sort #'> :key (lambda (state) (nth 2 state)))
        (stable-sort #'< :key (lambda (state) (length (car state))))
        caar
        last
