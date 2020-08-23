@@ -1356,10 +1356,12 @@ POS."
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
   (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax)))
 
-(defun opponent-is-close-by (my-abs-x opponent-abs-x)
+(defun opponent-is-close-by (my-abs-x my-y opponent-abs-x opponent-y)
   "Produce t if MY-ABS-X is at a position where I can see OPPONENT-ABS-X."
-  (and (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
-       (>  opponent-abs-x (- my-abs-x window-ahead-to-consider-maximax))))
+  (and (>= opponent-abs-x (- my-abs-x window-behind-to-consider-maximax))
+       (<= opponent-abs-x (+ my-abs-x window-ahead-to-consider-maximax))
+       (>= opponent-y     (- my-y     1))
+       (<= opponent-y     (+ my-y     1))))
 
 (defun truck-infront-of (current-pos game-map)
   "Produce t if there is a truck immediately in front of CURRENT-POS on GAME-MAP."
