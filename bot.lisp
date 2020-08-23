@@ -12,49 +12,49 @@
 (defvar *player-cyber-truck-position* nil
   "The position at which I last placed the cyber truck.")
 
-(defvar *speed-score* 1.0)
+(defvar *x-score* 1.0)
 (defvar *boosts-score* 1.0)
-(defvar *oils-score* 1.0)
 (defvar *lizards-score* 1.0)
 (defvar *trucks-score* 1.0)
 (defvar *emp-score* 1.0)
-(defvar *margin-score* 1.0)
+(defvar *y-score* 1.0)
 (defvar *damage-score* 1.0)
+(defvar *current-turn-score* 1.0)
 
 (eval-when (:compile-toplevel
             :load-toplevel
             :execute)
   (declaim (type single-float
-                 *speed-score*
+                 *x-score*
                  *boosts-score*
-                 *oils-score*
                  *lizards-score*
                  *trucks-score*
                  *emp-score*
-                 *margin-score*
-                 *damage-score*)))
+                 *y-score*
+                 *damage-score*
+                 *current-turn-score*)))
 
 (defun read-weights ()
   "Read all scores from the score config file."
   (progn
     (with-open-file (f "./score-config")
-      (bind (((speed-score
+      (bind (((x-score
                boosts-score
-               oils-score
                lizards-score
                trucks-score
                emp-score
-               margin-score
-               damage-score)
+               y-score
+               damage-score
+               current-turn-score)
               (mapcar (lambda (x) (coerce x 'float)) (eval (ignore-errors (read f))))))
-        (setf *speed-score*        speed-score
+        (setf *x-score*            x-score
               *boosts-score*       boosts-score
-              *oils-score*         oils-score
               *lizards-score*      lizards-score
               *trucks-score*       trucks-score
               *emp-score*          emp-score
-              *margin-score*       margin-score
-              *damage-score*       damage-score)))))
+              *y-score*            y-score
+              *damage-score*       damage-score
+              *current-turn-score* current-turn-score)))))
 
 (defun main ()
   (iter
@@ -449,14 +449,13 @@ Unused values will be ignored."
                                                (x '(car (opponent position)))
                                                (y '(cdr (opponent position)))
                                                (score '(global-score
-                                                        (game turn)
                                                         (car (opponent position))
-                                                        (car (player position))
+                                                        (game turn)
                                                         (opponent boosts)
-                                                        (opponent oils)
                                                         (opponent lizards)
                                                         (opponent trucks)
                                                         (opponent emps)
+                                                        (cdr (opponent position))
                                                         (opponent damage)))
                                                (moves '(remove-impossible-moves
                                                         (opponent boosts)
@@ -494,14 +493,13 @@ Unused values will be ignored."
                                                (x '(car (player position)))
                                                (y '(cdr (player position)))
                                                (score '(global-score
-                                                        (game turn)
                                                         (car (player position))
-                                                        (car (opponent position))
+                                                        (game turn)
                                                         (player boosts)
-                                                        (player oils)
                                                         (player lizards)
                                                         (player trucks)
                                                         (player emps)
+                                                        (cdr (player position))
                                                         (player damage)))
                                                (moves '(remove-impossible-moves
                                                         (player boosts)
@@ -1328,18 +1326,19 @@ Given that the player has BOOSTS, LIZARDS and TRUCKS left and is at
 POS."
   (remove-if (cannot-make-move boosts oils lizards trucks pos emps) all-makeable-moves))
 
-(defun global-score (current-turn x other-x boosts oils lizards trucks emps damage)
+(defun global-score (x current-turn boosts lizards trucks emps y damage)
   "Score the position described by X BOOSTS LIZARDS."
   (declare (optimize (speed 3) (safety 0) (debug 0))
            (type fixnum x other-x current-turn boosts oils lizards trucks emps damage))
-  (+ (* (* *speed-score*         (/ x (coerce current-turn 'single-float)))        (/ 1.0 15.0))
-     (* (* *boosts-score*        boosts)                                           (/ 1.0 10.0))
-     (* (* *oils-score*          oils)                                             (/ 1.0 10.0))
-     (* (* *lizards-score*       lizards)                                          (/ 1.0 10.0))
-     (* (* *trucks-score*        trucks)                                           (/ 1.0 10.0))
-     (* (* *emp-score*           emps)                                             (/ 1.0 10.0))
-     (* (* *damage-score*        (the fixnum (- 5 damage)))                        (/ 1.0 5.0))
-     (* (* *margin-score*        (the fixnum (+ 1500 (the fixnum (- x other-x))))) (/ 1.0 3000.0))))
+  (bind ((is-middle-two (if (or (= y 1) (= y 2)) 1 0)))
+    (+ (* x-score             x)
+       (* boosts-score        boosts)
+       (* lizards-score       lizards)
+       (* trucks-score        trucks)
+       (* emp-score           emps)
+       (* y-score             is-middle-two)
+       (* damage-score        damage)
+       (* current-turn-score  current-turn))))
 
 (defun minimax-score (my-abs-x op-abs-x)
   "Compute a score me on MY-ABS-X and the opponent is on OP-ABS-X."
