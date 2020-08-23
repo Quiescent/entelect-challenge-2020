@@ -175,45 +175,49 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                   (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
                         (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y)))))))
 
-(defun mapcar-dotted (f xs)
-  "Map F over the (possibly) dotted list XS."
-  (labels ((iter-dotted (ys acc)
-             (cond
-               ((null ys) (nreverse acc))
-               ((and (not (consp (cdr ys)))
-                     (not (null (cdr ys))))
-                (iter-dotted (list (cdr ys)) (cons (funcall f (car ys)) acc)))
-               (t (iter-dotted (cdr ys)        (cons (funcall f (car ys)) acc))))))
-    (iter-dotted xs nil)))
+(eval-when (:compile-toplevel
+            :load-toplevel
+            :execute)
 
-(defun find-conses (body &rest keywords)
-  "Produce all two element lists in BODY which start with one of KEYWARDS."
-  (cond
-    ((atom   body)    nil)
-    ((and (atom  (car body))
-          (consp (cdr body))
-          (null  (cddr body))
-          (every #'atom body)
-          (member (car body) keywords))
-     (list body))
-    (t (apply #'concatenate
-              'list
-              (mapcar-dotted (lambda (child) (apply #'find-conses child keywords))
-                             body)))))
+  (defun mapcar-dotted (f xs)
+    "Map F over the (possibly) dotted list XS."
+    (labels ((iter-dotted (ys acc)
+               (cond
+                 ((null ys) (nreverse acc))
+                 ((and (not (consp (cdr ys)))
+                       (not (null (cdr ys))))
+                  (iter-dotted (list (cdr ys)) (cons (funcall f (car ys)) acc)))
+                 (t (iter-dotted (cdr ys)        (cons (funcall f (car ys)) acc))))))
+      (iter-dotted xs nil)))
 
-(defun variable-type (type cells)
-  "Produce all values for CELLS begging with TYPE."
-  (->> cells
-    (remove-if-not (lambda (cell) (eq (car cell) type)))
-    (mapcar #'cadr)
-    (remove-duplicates)))
+  (defun find-conses (body &rest keywords)
+    "Produce all two element lists in BODY which start with one of KEYWARDS."
+    (cond
+      ((atom   body)    nil)
+      ((and (atom  (car body))
+            (consp (cdr body))
+            (null  (cddr body))
+            (every #'atom body)
+            (member (car body) keywords))
+       (list body))
+      (t (apply #'concatenate
+                'list
+                (mapcar-dotted (lambda (child) (apply #'find-conses child keywords))
+                               body)))))
 
-(defun find-make-moves (body)
-  "Find a child list in BODY which starts with the symbol MAKE-MOVES."
-  (cond
-    ((atom   body)               nil)
-    ((eq (car body) 'make-moves) t)
-    (t                           (some #'find-make-moves body))))
+  (defun variable-type (type cells)
+    "Produce all values for CELLS begging with TYPE."
+    (->> cells
+      (remove-if-not (lambda (cell) (eq (car cell) type)))
+      (mapcar #'cadr)
+      (remove-duplicates)))
+
+  (defun find-make-moves (body)
+    "Find a child list in BODY which starts with the symbol MAKE-MOVES."
+    (cond
+      ((atom   body)               nil)
+      ((eq (car body) 'make-moves) t)
+      (t                           (some #'find-make-moves body)))))
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
