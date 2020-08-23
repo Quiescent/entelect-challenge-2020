@@ -175,6 +175,46 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
                   (setf (gethash (list ,adj-speed ,adj-x ,adj-y) *ahead-of-cache*)
                         (all-ahead-of ,adj-speed ,game-map ,adj-x ,adj-y)))))))
 
+(defun mapcar-dotted (f xs)
+  "Map F over the (possibly) dotted list XS."
+  (labels ((iter-dotted (ys acc)
+             (cond
+               ((null ys) (nreverse acc))
+               ((and (not (consp (cdr ys)))
+                     (not (null (cdr ys))))
+                (iter-dotted (list (cdr ys)) (cons (funcall f (car ys)) acc)))
+               (t (iter-dotted (cdr ys)        (cons (funcall f (car ys)) acc))))))
+    (iter-dotted xs nil)))
+
+(defun find-conses (body &rest keywords)
+  "Produce all two element lists in BODY which start with one of KEYWARDS."
+  (cond
+    ((atom   body)    nil)
+    ((and (atom  (car body))
+          (consp (cdr body))
+          (null  (cddr body))
+          (every #'atom body)
+          (member (car body) keywords))
+     (list body))
+    (t (apply #'concatenate
+              'list
+              (mapcar-dotted (lambda (child) (apply #'find-conses child keywords))
+                             body)))))
+
+(defun variable-type (type cells)
+  "Produce all values for CELLS begging with TYPE."
+  (->> cells
+    (remove-if-not (lambda (cell) (eq (car cell) type)))
+    (mapcar #'cadr)
+    (remove-duplicates)))
+
+(defun find-make-moves (body)
+  "Find a child list in BODY which starts with the symbol MAKE-MOVES."
+  (cond
+    ((atom   body)               nil)
+    ((eq (car body) 'make-moves) t)
+    (t                           (some #'find-make-moves body))))
+
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
 
@@ -184,298 +224,331 @@ Use `making-moves' to make a move and an opponent move.
 
 Unused values will be ignored."
   (progn
-    (when (not (assoc 'game-map initial-state))
-      (error "Game map not specified"))
-    (when (not (assoc 'player initial-state))
-      (error "Player initial state not specified"))
-    (when (not (assoc 'opponent initial-state))
-      (error "Opponent initial state not specified"))
-    (when (not (assoc 'game initial-state))
-      (error "Game initial state not specified"))
-    (bind ((player-state     (cdr (assoc 'player    initial-state)))
-           (opponent-state   (cdr (assoc 'opponent  initial-state)))
-           (game-state       (cdr (assoc 'game  initial-state)))
-           (iteration-state  (when (assoc 'iteration initial-state)
-                               (cdr (assoc 'iteration initial-state))))
-           ((recur-args . recur-vals)
-            (if (assoc 'recur initial-state)
-                (iter
-                  (for arg in (cdr (assoc 'recur initial-state)))
-                  (collecting (car arg)  into names)
-                  (collecting (cadr arg) into values)
-                  (finally (return (cons names values))))
-                (cons nil nil))))
-      (labels ((player-not-defined (symbol)
-                 (when (not (assoc symbol player-state))
-                   (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
-               (opponent-not-defined (symbol)
-                 (when (not (assoc symbol opponent-state))
-                   (error (concatenate 'string "Opponent " (symbol-name symbol) " not defined"))))
-               (game-not-defined (symbol)
-                 (when (not (assoc symbol game-state))
-                   (error (concatenate 'string "Game " (symbol-name symbol) " not defined"))))
-               (iteration-is-not-defined (symbol)
-                 (when (not (assoc symbol iteration-state))
-                   (error (concatenate 'string "Iteration " (symbol-name symbol) " not defined")))))
-        (player-not-defined 'position)
-        (player-not-defined 'boosts)
-        (player-not-defined 'oils)
-        (player-not-defined 'lizards)
-        (player-not-defined 'trucks)
-        (player-not-defined 'emps)
-        (player-not-defined 'speed)
-        (player-not-defined 'damage)
-        (player-not-defined 'boost-counter)
+    (bind ((dsl-key-word-cells  (find-conses body 'player 'opponent 'game 'iteration 'recur))
+           (makes-move          (find-make-moves body))
+           (player-values       (if makes-move
+                                    '(position boosts oils lizards trucks emps speed damage boost-counter)
+                                    (variable-type 'player    dsl-key-word-cells)))
+           (player-variables    (mapcar (lambda (name) (cons name (gensym (mkstr 'player  '- name)))) player-values))
+           (opponent-values     (if makes-move
+                                    '(position boosts oils lizards trucks emps speed damage boost-counter)
+                                    (variable-type 'opponent  dsl-key-word-cells)))
+           (opponent-variables  (mapcar (lambda (name) (cons name (gensym (mkstr 'opponent '- name)))) opponent-values))
+           (game-values         (if makes-move
+                                    '(turn map)
+                                    (cons 'turn (variable-type 'game      dsl-key-word-cells))))
+           (game-variables      (mapcar (lambda (name) (cons name (gensym (mkstr 'game '- name)))) game-values))
+           (iteration-values    (variable-type 'iteration dsl-key-word-cells))
+           (iteration-variables (mapcar (lambda (name) (cons name (gensym (mkstr 'iteration '- name)))) iteration-values)))
 
-        (opponent-not-defined 'position)
-        (opponent-not-defined 'boosts)
-        (opponent-not-defined 'oils)
-        (opponent-not-defined 'lizards)
-        (opponent-not-defined 'trucks)
-        (opponent-not-defined 'emps)
-        (opponent-not-defined 'speed)
-        (opponent-not-defined 'damage)
-        (opponent-not-defined 'boost-counter)
+      (when (and (or makes-move
+                     (not (null player-values)))
+                 (not (assoc 'player initial-state)))
+        (error "Player initial state not specified"))
+      (when (and (or makes-move
+                     (not (null opponent-values)))
+                 (not (assoc 'opponent initial-state)))
+        (error "Opponent initial state not specified"))
+      (when (and (or makes-move
+                     (not (null game-values)))
+                 (not (assoc 'game initial-state)))
+        (error "Game initial state not specified"))
+      (bind ((player-state     (when (assoc 'player initial-state)
+                                 (remove-if (lambda (cell) (and (not makes-move)
+                                                           (not (member (car cell) player-values))))
+                                            (cdr (assoc 'player    initial-state)))))
+             (opponent-state   (when (assoc 'opponent initial-state)
+                                 (remove-if (lambda (cell) (and (not makes-move)
+                                                           (not (member (car cell) opponent-values))))
+                                            (cdr (assoc 'opponent  initial-state)))))
+             (game-state       (when (assoc 'game initial-state)
+                                 (remove-if (lambda (cell) (and (not makes-move)
+                                                           (not (member (car cell) game-values))))
+                                            (cdr (assoc 'game  initial-state)))))
+             (iteration-state  (when (assoc 'iteration initial-state)
+                                 (remove-if (lambda (cell) (not (member (car cell) iteration-values)))
+                                            (cdr (assoc 'iteration initial-state)))))
+             ((recur-args . recur-vals)
+              (if (assoc 'recur initial-state)
+                  (iter
+                    (for arg in (cdr (assoc 'recur initial-state)))
+                    (collecting (car arg)  into names)
+                    (collecting (cadr arg) into values)
+                    (finally (return (cons names values))))
+                  (cons nil nil))))
+        (labels ((player-not-defined (symbol)
+                   (when (not (assoc symbol player-state))
+                     (error (concatenate 'string "Player " (symbol-name symbol) " not defined"))))
+                 (opponent-not-defined (symbol)
+                   (when (not (assoc symbol opponent-state))
+                     (error (concatenate 'string "Opponent " (symbol-name symbol) " not defined"))))
+                 (game-not-defined (symbol)
+                   (when (not (assoc symbol game-state))
+                     (error (concatenate 'string "Game " (symbol-name symbol) " not defined"))))
+                 (iteration-is-not-defined (symbol)
+                   (when (not (assoc symbol iteration-state))
+                     (error (concatenate 'string "Iteration " (symbol-name symbol) " not defined")))))
+          ;; Refactor to list of required variables
+          (when (or makes-move
+                    (member 'position player-values))
+            (player-not-defined 'position))
+          (when (or makes-move
+                    (member 'boosts player-values))
+            (player-not-defined 'boosts))
+          (when (or makes-move
+                    (member 'oils player-values))
+            (player-not-defined 'oils))
+          (when (or makes-move
+                    (member 'lizards player-values))
+            (player-not-defined 'lizards))
+          (when (or makes-move
+                    (member 'trucks player-values))
+            (player-not-defined 'trucks))
+          (when (or makes-move
+                    (member 'emps player-values))
+            (player-not-defined 'emps))
+          (when (or makes-move
+                    (member 'speed player-values))
+            (player-not-defined 'speed))
+          (when (or makes-move
+                    (member 'damage player-values))
+            (player-not-defined 'damage))
+          (when (or makes-move
+                    (member 'boost-counter player-values))
+            (player-not-defined 'boost-counter))
 
-        (when iteration-state
-          (iteration-is-not-defined 'count))
+          (when (or makes-move
+                    (member 'position opponent-values))
+            (opponent-not-defined 'position))
+          (when (or makes-move
+                    (member 'boosts opponent-values))
+            (opponent-not-defined 'boosts))
+          (when (or makes-move
+                    (member 'oils opponent-values))
+            (opponent-not-defined 'oils))
+          (when (or makes-move
+                    (member 'lizards opponent-values))
+            (opponent-not-defined 'lizards))
+          (when (or makes-move
+                    (member 'trucks opponent-values))
+            (opponent-not-defined 'trucks))
+          (when (or makes-move
+                    (member 'emps opponent-values))
+            (opponent-not-defined 'emps))
+          (when (or makes-move
+                    (member 'speed opponent-values))
+            (opponent-not-defined 'speed))
+          (when (or makes-move
+                    (member 'damage opponent-values))
+            (opponent-not-defined 'damage))
+          (when (or makes-move
+                    (member 'boost-counter opponent-values))
+            (opponent-not-defined 'boost-counter))
 
-        (game-not-defined 'turn)
+          (when iteration-state
+            (iteration-is-not-defined 'count))
 
-        `(bind ((current-game-map ,@(cdr (assoc 'game-map initial-state)))
+          (game-not-defined 'turn)
 
-                (player-position      ,@(cdr (assoc 'position      player-state)))
-                (player-boosts        ,@(cdr (assoc 'boosts        player-state)))
-                (player-oils          ,@(cdr (assoc 'oils          player-state)))
-                (player-lizards       ,@(cdr (assoc 'lizards       player-state)))
-                (player-trucks        ,@(cdr (assoc 'trucks        player-state)))
-                (player-emps          ,@(cdr (assoc 'emps          player-state)))
-                (player-speed         ,@(cdr (assoc 'speed         player-state)))
-                (player-damage        ,@(cdr (assoc 'damage        player-state)))
-                (player-boost-counter ,@(cdr (assoc 'boost-counter player-state)))
+          `(bind (,@(mapcar (lambda (game-variable)
+                              (list (cdr (assoc (car game-variable) game-variables))
+                                    (cadr (assoc (car game-variable) game-state))))
+                            game-state)
+                  
+                  ,@(mapcar (lambda (player-variable)
+                              (list (cdr (assoc (car player-variable) player-variables))
+                                    (cadr (assoc (car player-variable) player-state))))
+                            player-state)
 
-                (opponent-position      ,@(cdr (assoc 'position      opponent-state)))
-                (opponent-boosts        ,@(cdr (assoc 'boosts        opponent-state)))
-                (opponent-oils          ,@(cdr (assoc 'oils          opponent-state)))
-                (opponent-lizards       ,@(cdr (assoc 'lizards       opponent-state)))
-                (opponent-trucks        ,@(cdr (assoc 'trucks        opponent-state)))
-                (opponent-emps          ,@(cdr (assoc 'emps          opponent-state)))
-                (opponent-speed         ,@(cdr (assoc 'speed         opponent-state)))
-                (opponent-damage        ,@(cdr (assoc 'damage        opponent-state)))
-                (opponent-boost-counter ,@(cdr (assoc 'boost-counter opponent-state)))
+                  ,@(mapcar (lambda (opponent-variable)
+                              (list (cdr (assoc (car opponent-variable) opponent-variables))
+                                    (cadr (assoc (car opponent-variable) opponent-state))))
+                            opponent-state)
 
-                (game-turn              ,@(cdr (assoc 'turn game-state)))
+                  ,@(mapcar (lambda (iteration-variable)
+                              (list (cdr (assoc (car iteration-variable) iteration-variables))
+                                    (cadr (assoc (car iteration-variable) iteration-state))))
+                            iteration-state))
+             (macrolet (,@(when makes-move
+                            `((make-moves (player-move opponent-move &rest subsequent)
+                                          `(bind (((:values player-position-2
+                                                            player-boosts-2
+                                                            player-oils-2
+                                                            player-lizards-2
+                                                            player-trucks-2
+                                                            player-emps-2
+                                                            player-speed-2
+                                                            player-damage-2
+                                                            player-boost-counter-2
 
-                (iteration-count        ,@(and iteration-state (cdr (assoc 'count iteration-state)))))
-           (macrolet ((make-moves (player-move opponent-move &rest subsequent)
-                        `(bind (((:values player-position-2
-                                          player-boosts-2
-                                          player-oils-2
-                                          player-lizards-2
-                                          player-trucks-2
-                                          player-emps-2
-                                          player-speed-2
-                                          player-damage-2
-                                          player-boost-counter-2
+                                                            opponent-position-2
+                                                            opponent-boosts-2
+                                                            opponent-oils-2
+                                                            opponent-lizards-2
+                                                            opponent-trucks-2
+                                                            opponent-emps-2
+                                                            opponent-speed-2
+                                                            opponent-damage-2
+                                                            opponent-boost-counter-2
 
-                                          opponent-position-2
-                                          opponent-boosts-2
-                                          opponent-oils-2
-                                          opponent-lizards-2
-                                          opponent-trucks-2
-                                          opponent-emps-2
-                                          opponent-speed-2
-                                          opponent-damage-2
-                                          opponent-boost-counter-2
+                                                            game-map-2)
+                                                   (process-moves (player position)
+                                                                  (player boosts)
+                                                                  (player oils)
+                                                                  (player lizards)
+                                                                  (player trucks)
+                                                                  (player emps)
+                                                                  (player speed)
+                                                                  (player damage)
+                                                                  (player boost-counter)
 
-                                          game-map-2)
-                                 (process-moves player-position
-                                                player-boosts
-                                                player-oils
-                                                player-lizards
-                                                player-trucks
-                                                player-emps
-                                                player-speed
-                                                player-damage
-                                                player-boost-counter
+                                                                  (opponent position)
+                                                                  (opponent boosts)
+                                                                  (opponent oils)
+                                                                  (opponent lizards)
+                                                                  (opponent trucks)
+                                                                  (opponent emps)
+                                                                  (opponent speed)
+                                                                  (opponent damage)
+                                                                  (opponent boost-counter)
 
-                                                opponent-position
-                                                opponent-boosts
-                                                opponent-oils
-                                                opponent-lizards
-                                                opponent-trucks
-                                                opponent-emps
-                                                opponent-speed
-                                                opponent-damage
-                                                opponent-boost-counter
+                                                                  (game map)
 
-                                                current-game-map
+                                                                  ,player-move
+                                                                  ,opponent-move)))
+                                             (bind ((,(cdr (assoc 'turn ',game-variables)) (1+ (game turn)))
+                                                    (,(cdr (assoc 'map ',game-variables)) game-map-2)
 
-                                                ,player-move
-                                                ,opponent-move)))
-                           (bind ((current-game-map game-map-2)
+                                                    (,(cdr (assoc 'position ',player-variables))      player-position-2)
+                                                    (,(cdr (assoc 'boosts ',player-variables))        player-boosts-2)
+                                                    (,(cdr (assoc 'oils ',player-variables))          player-oils-2)
+                                                    (,(cdr (assoc 'lizards ',player-variables))       player-lizards-2)
+                                                    (,(cdr (assoc 'trucks ',player-variables))        player-trucks-2)
+                                                    (,(cdr (assoc 'emps ',player-variables))          player-emps-2)
+                                                    (,(cdr (assoc 'speed ',player-variables))         player-speed-2)
+                                                    (,(cdr (assoc 'damage ',player-variables))        player-damage-2)
+                                                    (,(cdr (assoc 'boost-counter ',player-variables)) player-boost-counter-2)
 
-                                  (player-position      player-position-2)
-                                  (player-boosts        player-boosts-2)
-                                  (player-oils          player-oils-2)
-                                  (player-lizards       player-lizards-2)
-                                  (player-trucks        player-trucks-2)
-                                  (player-emps          player-emps-2)
-                                  (player-speed         player-speed-2)
-                                  (player-damage        player-damage-2)
-                                  (player-boost-counter player-boost-counter-2)
+                                                    (,(cdr (assoc 'position ',opponent-variables))      opponent-position-2)
+                                                    (,(cdr (assoc 'boosts ',opponent-variables))        opponent-boosts-2)
+                                                    (,(cdr (assoc 'oils ',opponent-variables))          opponent-oils-2)
+                                                    (,(cdr (assoc 'lizards ',opponent-variables))       opponent-lizards-2)
+                                                    (,(cdr (assoc 'trucks ',opponent-variables))        opponent-trucks-2)
+                                                    (,(cdr (assoc 'emps ',opponent-variables))          opponent-emps-2)
+                                                    (,(cdr (assoc 'speed ',opponent-variables))         opponent-speed-2)
+                                                    (,(cdr (assoc 'damage ',opponent-variables))        opponent-damage-2)
+                                                    (,(cdr (assoc 'boost-counter ',opponent-variables)) opponent-boost-counter-2))
+                                               (progn ,@subsequent))))))
+                        (opponent   (symbol) (case symbol
+                                               (x '(car (opponent position)))
+                                               (y '(cdr (opponent position)))
+                                               (score '(global-score
+                                                        (game turn)
+                                                        (car (opponent position))
+                                                        (car (player position))
+                                                        (opponent boosts)
+                                                        (opponent oils)
+                                                        (opponent lizards)
+                                                        (opponent trucks)
+                                                        (opponent emps)
+                                                        (opponent damage)))
+                                               (moves '(remove-impossible-moves
+                                                        (opponent boosts)
+                                                        (opponent oils)
+                                                        (opponent lizards)
+                                                        (opponent trucks)
+                                                        (opponent position)
+                                                        (opponent emps)
+                                                        all-makeable-moves))
+                                               (cyber-moves '(iter
+                                                              (for player-move in   (player moves))
+                                                              (for initial-damage = (player damage))
+                                                              (make-moves
+                                                               player-move
+                                                               'nothing
+                                                               (bind (((x . y) (player position))
+                                                                      (damage-taken (- (player damage) initial-damage)))
+                                                                 (when (> y 0)
+                                                                   (collecting (cons 'up
+                                                                                     (cons damage-taken
+                                                                                           (cons player-move
+                                                                                                 (cons 'use_tweet (cons x (1- y))))))))
+                                                                 (when (< y 3)
+                                                                   (collecting (cons 'down
+                                                                                     (cons damage-taken
+                                                                                           (cons player-move
+                                                                                                 (cons 'use_tweet (cons x (1+ y))))))))
+                                                                 (collecting (cons 'straight
+                                                                                   (cons damage-taken
+                                                                                         (cons player-move
+                                                                                               (cons 'use_tweet (cons (1+ x) y))))))))))
+                                               (t (cdr (assoc symbol ',opponent-variables)))))
+                        (game       (symbol) (cdr (assoc symbol ',game-variables)))
+                        (player     (symbol) (case symbol
+                                               (x '(car (player position)))
+                                               (y '(cdr (player position)))
+                                               (score '(global-score
+                                                        (game turn)
+                                                        (car (player position))
+                                                        (car (opponent position))
+                                                        (player boosts)
+                                                        (player oils)
+                                                        (player lizards)
+                                                        (player trucks)
+                                                        (player emps)
+                                                        (player damage)))
+                                               (moves '(remove-impossible-moves
+                                                        (player boosts)
+                                                        (player oils)
+                                                        (player lizards)
+                                                        (player trucks)
+                                                        (player position)
+                                                        (player emps)
+                                                        all-makeable-moves))
+                                               (cyber-moves '(iter
+                                                              (for opponent-move in (opponent moves))
+                                                              (for initial-damage = (opponent damage))
+                                                              (make-moves
+                                                               'nothing
+                                                               opponent-move
+                                                               (bind (((x . y) (opponent position))
+                                                                      (damage-taken (- (opponent damage) initial-damage)))
+                                                                 (when (> y 0)
+                                                                   (collecting (cons 'up
+                                                                                     (cons damage-taken
+                                                                                           (cons opponent-move
+                                                                                                 (cons 'use_tweet (cons x (1- y))))))))
+                                                                 (when (< y 3)
+                                                                   (collecting (cons 'down
+                                                                                     (cons damage-taken
+                                                                                           (cons opponent-move
+                                                                                                 (cons 'use_tweet (cons x (1+ y))))))))
+                                                                 (collecting (cons 'straight
+                                                                                   (cons damage-taken
+                                                                                         (cons opponent-move
+                                                                                               (cons 'use_tweet (cons (1+ x) y))))))))))
+                                               (t (cdr (assoc symbol ',player-variables)))))
+                        (setting    (name value) `(setf ,name ,value))
+                        (iteration  (symbol) (cdr (assoc symbol ',iteration-variables)))
+                        (recur      (,@(mapcar (lambda (x) (cdr x)) iteration-variables) ,@recur-args)
+                          `(recur-inner ,@(mapcar (lambda (x) (cdr x)) ',game-variables)
+                                        ,@(mapcar (lambda (x) (cdr x)) ',player-variables)
+                                        ,@(mapcar (lambda (x) (cdr x)) ',opponent-variables)
+                                        ,@(mapcar (lambda (x) (cdr x)) ',iteration-variables)
+                                        ,,@recur-args)))
+               (labels ((recur-inner (,@(mapcar #'cdr game-variables)
+                                      ,@(mapcar #'cdr player-variables)
+                                      ,@(mapcar #'cdr opponent-variables)
+                                      ,@(mapcar #'cdr iteration-variables)
+                                      ,@recur-args)
+                          (progn ,@body)))
+                 (recur ,@(mapcar #'cdr iteration-variables) ,@recur-vals)))))))))
 
-                                  (opponent-position      opponent-position-2)
-                                  (opponent-boosts        opponent-boosts-2)
-                                  (opponent-oils          opponent-oils-2)
-                                  (opponent-lizards       opponent-lizards-2)
-                                  (opponent-trucks        opponent-trucks-2)
-                                  (opponent-emps          opponent-emps-2)
-                                  (opponent-speed         opponent-speed-2)
-                                  (opponent-damage        opponent-damage-2)
-                                  (opponent-boost-counter opponent-boost-counter-2)
-
-                                  (game-turn (1+ game-turn)))
-                             (progn ,@subsequent))))
-                      (opponent   (symbol) (values   (case symbol
-                                                       (x '(car opponent-position))
-                                                       (y '(cdr opponent-position))
-                                                       (score '(global-score
-                                                                game-turn
-                                                                (car opponent-position)
-                                                                (car player-position)
-                                                                opponent-boosts
-                                                                opponent-oils
-                                                                opponent-lizards
-                                                                opponent-trucks
-                                                                opponent-emps
-                                                                opponent-damage))
-                                                       (moves '(remove-impossible-moves
-                                                                opponent-boosts
-                                                                opponent-oils
-                                                                opponent-lizards
-                                                                opponent-trucks
-                                                                opponent-position
-                                                                opponent-emps
-                                                                all-makeable-moves))
-                                                       (cyber-moves '(iter
-                                                                      (for player-move in   (player moves))
-                                                                      (for initial-damage = (player damage))
-                                                                      (make-moves
-                                                                       player-move
-                                                                       'nothing
-                                                                       (bind (((x . y) player-position)
-                                                                              (damage-taken (- player-damage initial-damage)))
-                                                                         (when (> y 0)
-                                                                           (collecting (cons 'up
-                                                                                             (cons damage-taken
-                                                                                                   (cons player-move
-                                                                                                         (cons 'use_tweet (cons x (1- y))))))))
-                                                                         (when (< y 3)
-                                                                           (collecting (cons 'down
-                                                                                             (cons damage-taken
-                                                                                                   (cons player-move
-                                                                                                         (cons 'use_tweet (cons x (1+ y))))))))
-                                                                         (collecting (cons 'straight
-                                                                                           (cons damage-taken
-                                                                                                 (cons player-move
-                                                                                                       (cons 'use_tweet (cons (1+ x) y))))))))))
-                                                       (t (intern (mkstr 'opponent  '- symbol))))))
-                      (game       (symbol) (case symbol
-                                             (map 'current-game-map)))
-                      (player     (symbol) (values   (case symbol
-                                                       (x '(car player-position))
-                                                       (y '(cdr player-position))
-                                                       (score '(global-score
-                                                                game-turn
-                                                                (car player-position)
-                                                                (car opponent-position)
-                                                                player-boosts
-                                                                player-oils
-                                                                player-lizards
-                                                                player-trucks
-                                                                player-emps
-                                                                player-damage))
-                                                       (moves '(remove-impossible-moves
-                                                                player-boosts
-                                                                player-oils
-                                                                player-lizards
-                                                                player-trucks
-                                                                player-position
-                                                                player-emps
-                                                                all-makeable-moves))
-                                                       (cyber-moves '(iter
-                                                                      (for opponent-move in (opponent moves))
-                                                                      (for initial-damage = (opponent damage))
-                                                                      (make-moves
-                                                                       'nothing
-                                                                       opponent-move
-                                                                       (bind (((x . y)      opponent-position)
-                                                                              (damage-taken (- opponent-damage initial-damage)))
-                                                                         (when (> y 0)
-                                                                           (collecting (cons 'up
-                                                                                             (cons damage-taken
-                                                                                                   (cons opponent-move
-                                                                                                         (cons 'use_tweet (cons x (1- y))))))))
-                                                                         (when (< y 3)
-                                                                           (collecting (cons 'down
-                                                                                             (cons damage-taken
-                                                                                                   (cons opponent-move
-                                                                                                         (cons 'use_tweet (cons x (1+ y))))))))
-                                                                         (collecting (cons 'straight
-                                                                                           (cons damage-taken
-                                                                                                 (cons opponent-move
-                                                                                                       (cons 'use_tweet (cons (1+ x) y))))))))))
-                                                       (t (intern (mkstr 'player    '- symbol))))))
-                      (setting    (name value)
-                        `(setf ,name ,value))
-                      (iteration  (symbol) (values   (intern (mkstr 'iteration '- symbol))))
-                      (recur      (iteration-count ,@recur-args) `(recur-inner current-game-map
-                                                                               player-position
-                                                                               player-boosts
-                                                                               player-oils
-                                                                               player-lizards
-                                                                               player-trucks
-                                                                               player-emps
-                                                                               player-speed
-                                                                               player-damage
-                                                                               player-boost-counter
-                                                                               opponent-position
-                                                                               opponent-boosts
-                                                                               opponent-oils
-                                                                               opponent-lizards
-                                                                               opponent-trucks
-                                                                               opponent-emps
-                                                                               opponent-speed
-                                                                               opponent-damage
-                                                                               opponent-boost-counter
-                                                                               game-turn
-                                                                               ,iteration-count
-                                                                               ,,@recur-args)))
-             (labels ((recur-inner (current-game-map
-                                    player-position
-                                    player-boosts
-                                    player-oils
-                                    player-lizards
-                                    player-trucks
-                                    player-emps
-                                    player-speed
-                                    player-damage
-                                    player-boost-counter
-                                    opponent-position
-                                    opponent-boosts
-                                    opponent-oils
-                                    opponent-lizards
-                                    opponent-trucks
-                                    opponent-emps
-                                    opponent-speed
-                                    opponent-damage
-                                    opponent-boost-counter
-                                    game-turn
-                                    iteration-count
-                                    ,@recur-args)
-                        (progn ,@body)))
-               (recur iteration-count ,@recur-vals))))))))
+#+nil
+(with-initial-state ((game (turn 2)) (player (speed 5) (damage 2)))
+  (format t "~a~%" (player speed))
+  (player speed)
+  (player damage))
 
 #+nil
 (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
@@ -502,9 +575,10 @@ Unused values will be ignored."
     (if (> (iteration count) 0)
         (progn
           (format t "Count: ~a~%" (iteration count))
-          (make-moves 'accelerate 'accelerate
-                      (format t "Speed: ~a~%" (player speed))
-                      (recur (1- (iteration count)))))
+          ;; (make-moves 'accelerate 'accelerate
+          ;;             (format t "Speed: ~a~%" (player speed))
+          ;;             (recur (1- (iteration count))))
+          )
         (progn (format t "Speed: ~a~%" (player speed))
                (format t "done!~%")))))
 
@@ -992,6 +1066,29 @@ MY-ABS-X position on the board."
            (oil-time         'use_oil)
            (t                (speed-move)))))))
 
+#+nil
+(mc-search ((game (turn *current-turn*) (map filled-game-map))
+              (player
+               (position player-position)
+               (boosts player-boosts)
+               (oils player-oils)
+               (lizards player-lizards)
+               (trucks player-trucks)
+               (emps player-emps)
+               (speed player-speed)
+               (damage player-damage)
+               (boost-counter player-boost-counter))
+              (opponent
+               (position opponent-position)
+               (boosts (max 1 player-boosts))
+               (oils player-oils)
+               (lizards player-lizards)
+               (trucks player-trucks)
+               (emps player-emps)
+               (speed opponent-speed)
+               (damage 0)
+               (boost-counter 2))))
+
 (defun is-obstacle-at (game-map y x)
   "Produce t if there's an obstacle at (X, Y) on GAME-MAP."
   (and (< y 4) (>= y 0) (> x 0) (< x 1500)
@@ -1100,8 +1197,7 @@ anyway."
 
           (filled-game-map          (fill-map state))
 
-          (move                     (determine-move ((game (turn *current-turn*))
-                                                     (game-map filled-game-map)
+          (move                     (determine-move ((game (turn *current-turn*) (map filled-game-map))
                                                      (player
                                                       (position player-position)
                                                       (boosts player-boosts)
