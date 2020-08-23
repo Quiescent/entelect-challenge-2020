@@ -1473,10 +1473,10 @@ Produces staged values of position speed and the new boost counter."
          ((other-start-x . other-start-y) other-start)
          ((one-end-x     . one-end-y)     one-end)
          ((other-end-x   . other-end-y)   other-end)
-         (one-got-ahead                   (and (>= one-end-x other-end-x)
-                                               (< one-start-x other-start-x)))
-         (start-lane-same                 (= one-start-y other-start-y))
-         (end-lane-same                   (= one-end-y other-end-y))
+         (one-got-ahead                   (and (>= (the fixnum one-end-x) (the fixnum other-end-x))
+                                               (< (the fixnum one-start-x) (the fixnum other-start-x))))
+         (start-lane-same                 (= (the fixnum one-start-y) (the fixnum other-start-y)))
+         (end-lane-same                   (= (the fixnum one-end-y) (the fixnum other-end-y)))
          (side-collision                  (and (not start-lane-same)
                                                (equal one-end other-end)))
          (truck-x                         (hit-a-truck game-map one-start-x one-end-x one-start-y one-end-y))
@@ -1485,15 +1485,15 @@ Produces staged values of position speed and the new boost counter."
                                                start-lane-same
                                                end-lane-same))
          (one-hit-truck-before-other      (and truck-x (or (not (or one-hit-other-back side-collision))
-                                                           (< truck-x other-end-x))))
+                                                           (< (the fixnum truck-x) (the fixnum other-end-x)))))
          (boost-counter-2                 (if (and (eq empd 'not-empd)
                                                    (eq move 'use_boost))
                                               5
-                                              (max 0 (1- boost-counter)))))
+                                              (max 0 (1- (the fixnum boost-counter))))))
     (cond
       (one-hit-truck-before-other (values 'hit-truck
-                                          (cons (1- truck-x) one-end-y)
-                                          (+ damage 2)
+                                          (cons (1- (the fixnum truck-x)) one-end-y)
+                                          (+ (the fixnum damage) 2)
                                           3
                                           0))
       (one-hit-other-back         (values 'hit-back
