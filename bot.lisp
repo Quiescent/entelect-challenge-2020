@@ -2149,14 +2149,16 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                                  (my-trucks        next-state)
                                  (my-emps          next-state)
                                  (my-damage        next-state)
-                                 (my-boost-counter next-state)))
-
-               (op-initial    (list (cdr (positions current-state))
-                                    (opponent-speed  current-state)))
-               (op-computed   (list opponent-position-2
-                                    opponent-speed-2))
-               (op-actual     (list (cdr (positions next-state))
-                                    (opponent-speed  next-state))))
+                                 (my-boost-counter next-state))))
+          (declare (ignore opponent-position-2
+                           opponent-speed-2
+                           opponent-boosts-2
+                           opponent-oils-2
+                           opponent-lizards-2
+                           opponent-trucks-2
+                           opponent-emps-2
+                           opponent-damage-2
+                           opponent-boost-counter-2))
           (when (not (equal computed actual))
             (format t "~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
                     round
@@ -2164,13 +2166,6 @@ Where the players make PLAYER-MOVE and OPPONENT-MOVE respectively."
                     current-move
                     computed
                     actual))
-          ;; (when (not (equal op-computed op-actual))
-          ;;   (format t "Opponent states don't match!~%~s:~6T~a~%~a~%~6T~a~%~6T~a~%========================================~%"
-          ;;           round
-          ;;           op-initial
-          ;;           opponent-move
-          ;;           op-computed
-          ;;           op-actual))
           (bind ((my-new-x (car (my-abs-pos next-state))))
             (labels ((off-my-map (coord) (or (< (car coord) (- my-new-x 5))
                                              (> (car coord) (+ my-new-x 20)))))
