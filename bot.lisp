@@ -753,6 +753,9 @@ board."
 (defconstant window-ahead-to-consider-maximax 15
   "The window ahead me that I should use to consider using maximax.")
 
+(defconstant window-behind-to-consider-maximax 5
+  "The window behind me that I should use to consider using maximax.")
+
 (defvar non-boost-straight-moves '(accelerate use_oil use_emp nothing decelerate)
   "All moves which will result in going straight without jumping.")
 
