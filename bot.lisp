@@ -230,7 +230,7 @@ Use `making-moves' to make a move and an opponent move.
 
 Unused values will be ignored."
   (progn
-    (bind ((dsl-key-word-cells  (print (find-conses body 'player 'opponent 'game 'iteration 'recur)))
+    (bind ((dsl-key-word-cells  (find-conses body 'player 'opponent 'game 'iteration 'recur))
            (makes-move          (find-make-moves body))
            (player-values       (if makes-move
                                     '(position boosts oils lizards trucks emps speed damage boost-counter)
