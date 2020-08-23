@@ -194,6 +194,7 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
     "Produce all two element lists in BODY which start with one of KEYWARDS."
     (cond
       ((atom   body)    nil)
+      ((eq (car body) 'with-initial-state) nil)
       ((and (atom  (car body))
             (consp (cdr body))
             (null  (cddr body))
@@ -215,9 +216,10 @@ SPEED, GAME-MAP, and POS should be un-adjusted values."
   (defun find-make-moves (body)
     "Find a child list in BODY which starts with the symbol MAKE-MOVES."
     (cond
-      ((atom   body)               nil)
-      ((eq (car body) 'make-moves) t)
-      (t                           (some #'find-make-moves body)))))
+      ((atom   body)                       nil)
+      ((eq (car body) 'with-initial-state) nil)
+      ((eq (car body) 'make-moves)         t)
+      (t                                   (some #'find-make-moves body)))))
 
 (defmacro with-initial-state (initial-state &rest body)
   "Conveniently advance INITIAL-STATE via BODY.
@@ -228,7 +230,7 @@ Use `making-moves' to make a move and an opponent move.
 
 Unused values will be ignored."
   (progn
-    (bind ((dsl-key-word-cells  (find-conses body 'player 'opponent 'game 'iteration 'recur))
+    (bind ((dsl-key-word-cells  (print (find-conses body 'player 'opponent 'game 'iteration 'recur)))
            (makes-move          (find-make-moves body))
            (player-values       (if makes-move
                                     '(position boosts oils lizards trucks emps speed damage boost-counter)
@@ -552,7 +554,30 @@ Unused values will be ignored."
 (with-initial-state ((game (turn 2)) (player (speed 5) (damage 2)))
   (format t "~a~%" (player speed))
   (player speed)
-  (player damage))
+  (player damage)
+  (with-initial-state ((game (turn 10))
+                       (iteration (count 3))
+                       (game-map empty-game-map)
+                       (player (position (cons 2 1))
+                               (boosts 3)
+                               (oils 1)
+                               (lizards 4)
+                               (trucks 5)
+                               (speed 6)
+                               (damage 0)
+                               (emps 10)
+                               (boost-counter 8))
+                       (opponent (position (cons 10 3))
+                                 (boosts 11)
+                                 (oils 20)
+                                 (lizards 12)
+                                 (trucks 13)
+                                 (speed 14)
+                                 (damage 0)
+                                 (emps 12)
+                                 (boost-counter 16)))
+    (make-moves 'accelerate 'accelerate
+                (format t "Speed: ~a~%" (player speed)))))
 
 #+nil
 (bind ((*ahead-of-cache* (make-hash-table :test #'equal)))
