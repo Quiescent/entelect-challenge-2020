@@ -538,7 +538,7 @@ Unused values will be ignored."
                           `(recur-inner ,@(mapcar (lambda (x) (cdr x)) ',game-variables)
                                         ,@(mapcar (lambda (x) (cdr x)) ',player-variables)
                                         ,@(mapcar (lambda (x) (cdr x)) ',opponent-variables)
-                                        ,@(mapcar (lambda (x) (cdr x)) ',iteration-variables)
+                                        ,,@(mapcar (lambda (x) (cdr x)) iteration-variables)
                                         ,,@recur-args)))
                (labels ((recur-inner (,@(mapcar #'cdr game-variables)
                                       ,@(mapcar #'cdr player-variables)
