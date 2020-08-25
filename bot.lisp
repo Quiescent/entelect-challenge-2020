@@ -360,7 +360,7 @@ Unused values will be ignored."
                               (list (cdr (assoc (car game-variable) game-variables))
                                     (cadr (assoc (car game-variable) game-state))))
                             game-state)
-                  
+
                   ,@(mapcar (lambda (player-variable)
                               (list (cdr (assoc (car player-variable) player-variables))
                                     (cadr (assoc (car player-variable) player-state))))
@@ -882,95 +882,107 @@ board."
 (defun best-move (tree)
   "Produce the best player move from TREE."
   (iter
-    (for (player-move trials-cell . opponent-cells) in tree)
-    (for trials = (cdr trials-cell))
+    (for (player-move (payoff trials) . _) in (cddr tree))
     (finding player-move maximizing trials)))
 
 (defmacro mc-search (game-state)
   "Perform a monte-carlo tree search from GAME-STATE to find the best move."
   (declare (optimize (speed 3) (safety 0) (debug 0)))
-  `(bind ((*ahead-of-cache*   (make-hash-table :test #'equal))
-          (tree               nil)
-          (opponent-move-cell nil)
-          (end-time           (+ 750 (get-internal-real-time))))
+  `(bind ((*ahead-of-cache* (make-hash-table :test #'equal))
+          (player-tree      nil)
+          (opponent-tree    nil)
+          (end-time         (+ 850 (get-internal-real-time))))
      (dotimes (i 50000)
        (when (> (get-internal-real-time) end-time)
          (return))
        (with-initial-state
            ,(cons `(iteration (count 2))
-                  (cons `(recur (current-node tree) (playout nil))
+                  (cons `(recur (player-node     player-tree)
+                                (opponent-node   opponent-tree)
+                                (playout         nil))
                         game-state))
          (cond
-           ((end-state (player position)   (game map)) 1)
-           ((end-state (opponent position) (game map)) 0)
+           ;; Player wins
+           ((end-state (player position)   (game map)) (cons 1 0))
+           ;; Opponent wins
+           ((end-state (opponent position) (game map)) (cons 0 1))
+           ;; Random playout
            (playout
             (cond
-              ((<= (iteration count) 0) (/ (+ 1500 (- (player x) (opponent x))) 3000))
+              ((<= (iteration count) 0) (cons (/ (+ 1500 (- (player x)   (opponent x))) 3000)
+                                              (/ (+ 1500 (- (opponent x) (player x)))   3000)))
               (t (bind ((player-moves   (player   moves))
                         (opponent-moves (opponent moves)))
                    (make-moves
                     (nth (random (length player-moves))   player-moves)
                     (nth (random (length opponent-moves)) opponent-moves)
-                    (recur (1- (iteration count)) nil t))))))
-           ((<= (iteration count) 0) (recur 5 nil t))
-           ((null tree)
-            (setf tree
-                  (iter
-                    (with player-cyber-moves = (if (> (player trucks) 0)
-                                                   (remove-if (lambda (x) (or (> x (+ 10 (player x)))
-                                                                         (> (+ (opponent x)
-                                                                               (opponent speed))
-                                                                            x)))
-                                                              (mapcar #'cdddr (player cyber-moves))
-                                                              :key #'cadr)
-                                                   nil))
-                    (with player-moves = (concatenate 'list
-                                                      player-cyber-moves
-                                                      (player moves)))
-                    (with opponent-cyber-moves = (if (> (opponent trucks) 0)
-                                                     (remove-if (lambda (x) (or (> x (+ 10 (opponent x)))
-                                                                           (> (+ (player x)
-                                                                                 (player speed))
-                                                                              x)))
-                                                                (mapcar #'cdddr (opponent cyber-moves))
-                                                                :key #'cadr)
-                                                     nil))
-                    (with opponent-moves = (concatenate 'list
-                                                        opponent-cyber-moves
-                                                        (opponent moves)))
-                    (for player-move in player-moves)
-                    (when (or (and (= 0 (player damage))
-                                   (eq player-move 'fix))
-                              (and (= 3 (player speed))
-                                   (eq player-move 'decelerate))
-                              (and (eq player-move 'use_emp)
-                                   (not (and (> (opponent x) (player x))
-                                             (<= (abs (- (player y) (opponent y))) 1))))
-                              (and (eq player-move 'use_oil)
-                                     (not (> (player x) (opponent x)))))
-                      (next-iteration))
-                    (collecting (cons player-move
-                                      (cons (cons 'trials 0)
-                                            (iter
-                                              (for opponent-move in opponent-moves)
-                                              (when (or (and (= 0 (opponent damage))
-                                                             (eq opponent-move 'fix))
-                                                        (and (= 3 (opponent speed))
-                                                             (eq opponent-move 'decelerate))
-                                                        (and (eq opponent-move 'use_emp)
-                                                             (not (and (> (player x) (opponent x))
-                                                                       (<= (abs (- (opponent y) (player y))) 1))))
-                                                        (and (eq opponent-move 'use_oil)
-                                                               (not (> (opponent x) (player x)))))
-                                                (next-iteration))
-                                              (collecting (cons opponent-move (list 0 0))))))))))
-           ((null current-node)
+                    (recur (1- (iteration count)) nil nil t))))))
+           ;; Finished in-tree
+           ((<= (iteration count) 0) (recur 5 nil nil t))
+           ;; Initialise root node
+           ((or (null player-tree)
+                (null opponent-tree))
+            (setf player-tree
+                  (cons 'root
+                        (cons (list 0 0)
+                              (iter
+                                (with player-cyber-moves = (if (> (player trucks) 0)
+                                                               (remove-if (lambda (x) (or (> x (+ 10 (player x)))
+                                                                                          (> (+ (opponent x)
+                                                                                                (opponent speed))
+                                                                                             x)))
+                                                                          (mapcar #'cdddr (player cyber-moves))
+                                                                          :key #'cadr)
+                                                               nil))
+                                (with player-moves = (concatenate 'list
+                                                                  player-cyber-moves
+                                                                  (player moves)))
+
+                                (for player-move in player-moves)
+                                (when (or (and (= 0 (player damage))
+                                               (eq player-move 'fix))
+                                          (and (= 3 (player speed))
+                                               (eq player-move 'decelerate))
+                                          (and (eq player-move 'use_emp)
+                                               (not (and (> (opponent x) (player x))
+                                                         (<= (abs (- (player y) (opponent y))) 1))))
+                                          (and (eq player-move 'use_oil)
+                                               (not (> (player x) (opponent x)))))
+                                  (next-iteration))
+                                (collecting (list player-move (list 0 0))))))
+                  opponent-tree
+                  (cons 'root
+                        (cons (list 0 0)
+                              (iter
+                                (with opponent-cyber-moves = (if (> (opponent trucks) 0)
+                                                                 (remove-if (lambda (x) (or (> x (+ 10 (opponent x)))
+                                                                                            (> (+ (player x)
+                                                                                                  (player speed))
+                                                                                               x)))
+                                                                            (mapcar #'cdddr (opponent cyber-moves))
+                                                                            :key #'cadr)
+                                                                 nil))
+                                (with opponent-moves = (concatenate 'list
+                                                                    opponent-cyber-moves
+                                                                    (opponent moves)))
+                                (for opponent-move in opponent-moves)
+                                (when (or (and (= 0 (opponent damage))
+                                               (eq opponent-move 'fix))
+                                          (and (= 3 (opponent speed))
+                                               (eq opponent-move 'decelerate))
+                                          (and (eq opponent-move 'use_emp)
+                                               (not (and (> (player x) (opponent x))
+                                                         (<= (abs (- (opponent y) (player y))) 1))))
+                                          (and (eq opponent-move 'use_oil)
+                                               (not (> (opponent x) (player x)))))
+                                  (next-iteration))
+                                (collecting (list opponent-move (list 0 0))))))))
+           ;; Initialise player node
+           ((null (cddr player-node))
             (progn
-              (setf (cdddr opponent-move-cell)
+              (setf (cddr player-node)
                     (iter
-                      (with player-moves   = (player moves))
-                      (with opponent-moves = (opponent moves))
-                      (for player-move in player-moves)
+                      (for player-move in all-makeable-moves)
                       (when (or (and (= 0 (player damage))
                                      (eq player-move 'fix))
                                 (and (= 3 (player speed))
@@ -981,65 +993,117 @@ board."
                                 (and (eq player-move 'use_oil)
                                      (not (> (player x) (opponent x)))))
                         (next-iteration))
-                      (collecting (cons player-move
-                                        (cons (cons 'trials 1)
-                                              (iter
-                                                (for opponent-move in opponent-moves)
-                                                (when (or (and (= 0 (opponent damage))
-                                                               (eq opponent-move 'fix))
-                                                          (and (= 3 (opponent speed))
-                                                               (eq opponent-move 'decelerate))
-                                                          (and (eq opponent-move 'use_emp)
-                                                             (not (and (> (player x) (opponent x))
-                                                                       (<= (abs (- (opponent y) (player y))) 1))))
-                                                          (and (eq opponent-move 'use_oil)
-                                                               (not (> (opponent x) (player x)))))
-                                                  (next-iteration))
-                                                (collecting (cons opponent-move (list 0 0)))))))))
-              (recur (iteration count) (cdddr opponent-move-cell) nil)))
-           ((every (lambda (player-cell)
-                     (every (lambda (opponent-cell) (> (caddr opponent-cell) 0))
-                            (cddr player-cell)))
-                   current-node)
-            (bind (((selection other-cell)
+                      (collecting (list player-move (list 0 0)))))
+              (recur (iteration count)
+                     player-node
+                     opponent-node
+                     nil)))
+           ;; Initialise opponent node
+           ((null (cddr opponent-node))
+            (progn
+              (setf (cddr opponent-node)
                     (iter
-                      (for selection in current-node)
-                      (for (player-move trials-cell . opponent-cells) = selection)
-                      (for trials = (cdr trials-cell))
-                      (for (best-score opponent-cell) =
-                           (iter
-                             (for opponent-cell in opponent-cells)
-                             (for (move payoff attempts . children) = opponent-cell)
-                             (for cell-score = (+ (/ payoff attempts)
-                                                  (* (sqrt 2)
-                                                     (sqrt (/ (log trials) attempts)))))
-                             (finding (list cell-score opponent-cell)
-                                      maximizing cell-score)))
-                      (finding (list selection opponent-cell) maximizing best-score)))
-                   (trials-cell (cadr selection)))
-              (incf (cdr trials-cell))
-              (setf opponent-move-cell other-cell)
+                      (for opponent-move in all-makeable-moves)
+                      (when (or (and (= 0 (opponent damage))
+                                     (eq opponent-move 'fix))
+                                (and (= 3 (opponent speed))
+                                     (eq opponent-move 'decelerate))
+                                (and (eq opponent-move 'use_emp)
+                                     (not (and (> (player x) (opponent x))
+                                               (<= (abs (- (opponent y) (player y))) 1))))
+                                (and (eq opponent-move 'use_oil)
+                                     (not (> (opponent x) (player x)))))
+                        (next-iteration))
+                      (collecting (list opponent-move (list 0 0)))))
+              (recur (iteration count)
+                     player-node
+                     opponent-node
+                     nil)))
+           ;; Search in-tree for complete levels
+           ((and (every (lambda (cell) (> (cadadr cell) 0)) (cddr player-node))
+                 (every (lambda (cell) (> (cadadr cell) 0)) (cddr opponent-node)))
+            (bind ((player-child
+                    (iter
+                      (for player-child in (cddr player-node))
+                      (for (player-move (payoff attempts) . _) = player-child)
+                      (when (not (move-can-be-made player-move
+                                                   (player boosts)
+                                                   (player oils)
+                                                   (player lizards)
+                                                   (player trucks)
+                                                   (player y)
+                                                   (player emps)))
+                        (next-iteration))
+                      (for trials = (cadadr player-node))
+                      (finding player-child
+                               maximizing (+ (/ payoff attempts)
+                                             (* (sqrt 2)
+                                                (sqrt (/ (log trials) attempts)))))))
+                   (opponent-child
+                    (iter
+                      (for opponent-child in (cddr opponent-node))
+                      (for (opponent-move (payoff attempts) . _) = opponent-child)
+                      (when (not (move-can-be-made opponent-move
+                                                   (opponent boosts)
+                                                   (opponent oils)
+                                                   (opponent lizards)
+                                                   (opponent trucks)
+                                                   (opponent y)
+                                                   (opponent emps)))
+                        (next-iteration))
+                      (for trials = (cadadr opponent-node))
+                      (finding opponent-child
+                               maximizing (+ (/ payoff attempts)
+                                             (* (sqrt 2)
+                                                (sqrt (/ (log trials) attempts))))))))
+              (incf (cadadr player-node))
+              (incf (cadadr opponent-node))
               (bind ((payoff (make-moves
-                              (car selection)
-                              (car other-cell)
-                              (recur (1- (iteration count)) (cdddr other-cell) nil))))
-                (incf (cadr  other-cell) payoff)
-                (incf (caddr other-cell))
+                              (car player-child)
+                              (car opponent-child)
+                              (recur (1- (iteration count))
+                                     player-child
+                                     opponent-child
+                                     nil))))
+                (incf (caadr  player-child)   (car payoff))
+                (incf (cadadr player-child))
+                (incf (caadr  opponent-child) (cdr payoff))
+                (incf (cadadr opponent-child))
                 payoff)))
-           (t (bind ((selection   (nth (random (length current-node)) current-node))
-                     (trials-cell (cadr selection))
-                     (other-moves (cddr selection)))
-                (incf (cdr trials-cell))
-                (bind ((other-cell (nth (random (length other-moves)) other-moves)))
-                  (setf opponent-move-cell other-cell)
-                  (bind ((payoff (make-moves
-                                  (car selection)
-                                  (car other-cell)
-                                  (recur (1- (iteration count)) (cdddr other-cell) nil))))
-                    (incf (cadr  other-cell) payoff)
-                    (incf (caddr other-cell))
-                    payoff)))))))
-     tree))
+           ;; Choose a random in-tree move
+           (t (bind ((player-playable   (remove-if (lambda (cell) (not (move-can-be-made (car cell)
+                                                                                         (player boosts)
+                                                                                         (player oils)
+                                                                                         (player lizards)
+                                                                                         (player trucks)
+                                                                                         (player y)
+                                                                                         (player emps))))
+                                                   (cddr player-node)))
+                     (player-child      (nth (random (length player-playable)) player-playable))
+                     (opponent-playable (remove-if (lambda (cell) (not (move-can-be-made (car cell)
+                                                                                         (opponent boosts)
+                                                                                         (opponent oils)
+                                                                                         (opponent lizards)
+                                                                                         (opponent trucks)
+                                                                                         (opponent y)
+                                                                                         (opponent emps))))
+                                                   (cddr opponent-node)))
+                     (opponent-child    (nth (random (length opponent-playable)) opponent-playable)))
+                (incf (cadadr player-node))
+                (incf (cadadr opponent-node))
+                (bind ((payoff (make-moves
+                                (car player-child)
+                                (car opponent-child)
+                                (recur (1- (iteration count))
+                                       player-child
+                                       opponent-child
+                                       nil))))
+                  (incf (caadr  player-child)   (car payoff))
+                  (incf (cadadr player-child))
+                  (incf (caadr  opponent-child) (cdr payoff))
+                  (incf (cadadr opponent-child))
+                  payoff))))))
+     player-tree))
 
 (defmacro make-finishing-move (game-state)
   "Optimise for finishing and forget everything else."
