@@ -1165,15 +1165,7 @@ Given that I'm at MY-POS, whether I'm BOOSTING, how many BOOSTS,
 LIZARDS and TRUCKS I have left, the SPEED at which I'm going and
 MY-ABS-X position on the board."
   `(with-initial-state ,game-state
-     (bind ((tree (mc-search ,game-state))
-            (*ahead-of-cache* (make-hash-table :test #'equal)))
-       (format t "Before: ~a~%" (list (player speed) (player position)))
-       (format t "~A~%" tree)
-       (format t "Best: ~a~%" (best-move tree))
-       (make-moves
-        (best-move tree)
-        'nothing
-        (format t "After: ~a~%" (list (player speed) (player position)))))))
+     (best-move (mc-search ,game-state))))
 
 #+nil
 (mc-search ((game (turn *current-turn*) (map filled-game-map))
