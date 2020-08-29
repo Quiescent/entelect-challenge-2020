@@ -123,7 +123,7 @@
                 (for (c-score . c-vector) = (aref current-generation c-idx))
                 (for new-vector = (cross-over i-vector a-vector b-vector c-vector))
                 (for new-score  = (fitness new-vector runner-dir bot-dir))
-                (if (< new-score current-score)
+                (if (> new-score current-score)
                     (progn (setf (aref current-generation i-idx) (cons new-score new-vector))
                            (format next-generation-stream "'~A~%" (cons new-score new-vector)))
                     (format next-generation-stream "'~A~%" (cons current-score i-vector)))
@@ -234,9 +234,10 @@ up to POPULATION-SIZE."
                                   :validate t
                                   :if-does-not-exist :ignore)
       (inferior-shell:run (format nil "cd ~a && make run" runner-dir) :output nil :error-output nil)
-      (for length = (game-length (csv-path "A" "Quantum" runner-dir)))
-      (format t "Length: ~a~%" length)
-      (summing (/ length *fitness-runs*)))))
+      (for margin = (- (final-x (csv-path "A" "Quantum" runner-dir))
+                       (final-x (csv-path "B" "LCubed"  runner-dir))))
+      (format t "Margin: ~a~%" margin)
+      (summing (/ margin *fitness-runs*)))))
 
 (defun final-x (path)
   "Produce the final X position in the CSV file at PATH."
@@ -252,14 +253,6 @@ up to POPULATION-SIZE."
            (cl-ppcre:split ",")
            (nth 3)
            (read-from-string)))))))
-
-(defun game-length (path)
-  "Produce the length of the game in the CSV file at PATH."
-  (with-open-file (file path)
-    (iter
-      (for next-line = (ignore-errors (read-line file)))
-      (while next-line)
-      (counting t))))
 
 (defun csv-path (letter bot-name runner-dir)
   "Produce the CSV file for BOT-NAME in the latest game."
